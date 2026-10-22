@@ -1,0 +1,295 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens ported 1:1 from the approved Stitch export (its tailwind.config).
+ * The Stitch preview ran on Tailwind v3; a few v4 defaults are pinned back to
+ * their v3 values below so shadows, blurs and radii render as approved.
+ */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-outline-variant: #c5c6cd;
+  --color-primary-fixed-dim: #b9c7e4;
+  --color-surface-bright: #f8f9ff;
+  --color-primary-container: #0a192f;
+  --color-secondary-container: #c2e9d1;
+  --color-on-primary-container: #8892b0;
+  --color-secondary-fixed-dim: #aacfb8;
+  --color-on-surface-variant: #44474d;
+  --color-on-secondary-container: #1b4332;
+  --color-on-error-container: #93000a;
+  --color-on-background: #0b1c30;
+  --color-background: #f8f9ff;
+  --color-inverse-primary: #b9c7e4;
+  --color-on-error: #ffffff;
+  --color-surface-variant: #d3e4fe;
+  --color-surface-container-high: #dce9ff;
+  --color-tertiary-container: #241804;
+  --color-error-container: #ffdad6;
+  --color-primary-fixed: #d6e3ff;
+  --color-surface: #f8f9ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-secondary: #ffffff;
+  --color-inverse-on-surface: #eaf1ff;
+  --color-on-secondary-fixed: #002113;
+  --color-on-tertiary-container: #bfa054;
+  --color-error: #ba1a1a;
+  --color-surface-container: #e5eeff;
+  --color-on-tertiary-fixed: #261900;
+  --color-primary: #000000;
+  --color-on-primary: #ffffff;
+  --color-secondary-fixed: #c5ebd4;
+  --color-on-tertiary: #ffffff;
+  --color-on-primary-fixed-variant: #39475f;
+  --color-surface-dim: #cbdbf5;
+  --color-tertiary-fixed: #ffd782;
+  --color-inverse-surface: #213145;
+  --color-tertiary-fixed-dim: #d4af37;
+  --color-tertiary: #000000;
+  --color-surface-container-low: #eff4ff;
+  --color-surface-container-highest: #d3e4fe;
+  --color-on-secondary-fixed-variant: #2c4d3c;
+  --color-surface-tint: #515f78;
+  --color-secondary: #1b4332;
+  --color-on-tertiary-fixed-variant: #5d4201;
+  --color-on-primary-fixed: #0d1c32;
+  --color-outline: #75777e;
+  --color-on-surface: #0b1c30;
+
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2.5rem;
+  --spacing-gutter: 1.5rem;
+  --spacing-gutter-mobile: 1rem;
+  --spacing-margin: 3rem;
+  --spacing-margin-tablet: 2rem;
+  --spacing-margin-mobile: 1rem;
+
+  --font-label-sm: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-label-md: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-label-lg: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body-sm: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body-md: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body-lg: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-sm: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-md: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-lg: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-xl: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-xl-mobile: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display-lg: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display-lg-mobile: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 14px;
+  --text-label-sm--letter-spacing: 0.03em;
+  --text-label-sm--font-weight: 500;
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.02em;
+  --text-label-md--font-weight: 600;
+  --text-label-lg: 14px;
+  --text-label-lg--line-height: 20px;
+  --text-label-lg--letter-spacing: 0.01em;
+  --text-label-lg--font-weight: 600;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 18px;
+  --text-body-sm--letter-spacing: 0.005em;
+  --text-body-sm--font-weight: 400;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 22px;
+  --text-body-md--letter-spacing: 0em;
+  --text-body-md--font-weight: 400;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 26px;
+  --text-body-lg--letter-spacing: 0em;
+  --text-body-lg--font-weight: 400;
+  --text-headline-sm: 18px;
+  --text-headline-sm--line-height: 26px;
+  --text-headline-sm--letter-spacing: -0.005em;
+  --text-headline-sm--font-weight: 600;
+  --text-headline-md: 22px;
+  --text-headline-md--line-height: 30px;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-md--font-weight: 600;
+  --text-headline-lg: 28px;
+  --text-headline-lg--line-height: 36px;
+  --text-headline-lg--letter-spacing: -0.015em;
+  --text-headline-lg--font-weight: 600;
+  --text-headline-xl: 36px;
+  --text-headline-xl--line-height: 44px;
+  --text-headline-xl--letter-spacing: -0.02em;
+  --text-headline-xl--font-weight: 700;
+  --text-headline-xl-mobile: 26px;
+  --text-headline-xl-mobile--line-height: 34px;
+  --text-headline-xl-mobile--letter-spacing: -0.015em;
+  --text-headline-xl-mobile--font-weight: 600;
+  --text-display-lg: 48px;
+  --text-display-lg--line-height: 56px;
+  --text-display-lg--letter-spacing: -0.025em;
+  --text-display-lg--font-weight: 700;
+  --text-display-lg-mobile: 32px;
+  --text-display-lg-mobile--line-height: 40px;
+  --text-display-lg-mobile--letter-spacing: -0.02em;
+  --text-display-lg-mobile--font-weight: 700;
+
+  /* Tailwind v3 values (what the Stitch preview rendered with) */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --blur-sm: 4px;
+  --drop-shadow-sm: 0 1px 1px rgb(0 0 0 / 0.05);
+  --drop-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    overscroll-behavior-y: none;
+  }
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  /* Visible keyboard focus everywhere (the Stitch export suppressed outlines). */
+  :focus-visible {
+    outline: 2px solid var(--color-secondary);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+  .on-dark :focus-visible,
+  .on-dark:focus-visible {
+    outline-color: var(--color-tertiary-fixed);
+  }
+}
+
+/* Icon font (Material Symbols, subset loaded in index.html). */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  user-select: none;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ---- Executive depth & micro-animation utilities (from Stitch) ---- */
+.depth-card {
+  box-shadow: 0 16px 36px -12px rgba(10, 25, 47, 0.08), 0 2px 8px -2px rgba(10, 25, 47, 0.04),
+    0 0 0 1px rgba(10, 25, 47, 0.05);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.depth-card:hover,
+.depth-card:active {
+  box-shadow: 0 20px 40px -10px rgba(10, 25, 47, 0.12), 0 4px 12px -2px rgba(10, 25, 47, 0.06),
+    0 0 0 1px rgba(27, 67, 50, 0.15);
+  transform: translateY(-2px);
+}
+.depth-card-dark {
+  box-shadow: 0 24px 48px -12px rgba(2, 12, 27, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+.metallic-rim {
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.25), 0 12px 28px -8px rgba(10, 25, 47, 0.18);
+}
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  transform: rotate(25deg);
+  animation: sheen 6s infinite ease-in-out;
+  pointer-events: none;
+}
+@keyframes sheen {
+  0%,
+  75% {
+    left: -60%;
+  }
+  100% {
+    left: 140%;
+  }
+}
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.08);
+  }
+}
+.pulse-dot {
+  animation: pulse-subtle 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Range slider (simulator) */
+.range-gold {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.range-gold::-webkit-slider-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #ffd782;
+  border: 3px solid #0a192f;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: transform 0.15s ease;
+}
+.range-gold::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.range-gold::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: #ffd782;
+  border: 3px solid #0a192f;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-sheen::after,
+  .pulse-dot,
+  .animate-ping {
+    animation: none;
+  }
+  .depth-card {
+    transition: none;
+  }
+  .depth-card:hover,
+  .depth-card:active {
+    transform: none;
+  }
+}
