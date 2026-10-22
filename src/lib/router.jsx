@@ -33,12 +33,16 @@ export function Router({ children }) {
     const next = url.pathname + url.search + url.hash;
     window.history[replace ? 'replaceState' : 'pushState']({}, '', next);
     setLocation(readLocation());
-    if (url.hash) {
-      document.getElementById(url.hash.slice(1))?.scrollIntoView();
-    } else {
-      window.scrollTo(0, 0);
-    }
+    if (!url.hash) window.scrollTo(0, 0);
   }, []);
+
+  // Scroll to #fragment once the target page has rendered (also on first load).
+  useEffect(() => {
+    if (!location.hash) return;
+    const id = decodeURIComponent(location.hash.slice(1));
+    const frame = requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView());
+    return () => cancelAnimationFrame(frame);
+  }, [location]);
 
   const value = useMemo(() => ({ location, navigate }), [location, navigate]);
   return <RouterContext.Provider value={value}>{children}</RouterContext.Provider>;

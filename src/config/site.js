@@ -26,6 +26,14 @@ export const site = {
     linkedinCompany: null,
   },
 
+  founder: {
+    name: 'Adebisi Wasiu Shina',
+    role: 'Founder',
+    // PLACEHOLDER: add a short verified biography and a photo before launch. Hidden while null.
+    bio: null,
+    photo: null,
+  },
+
   features: {
     // Case studies stay hidden until verified results (with client permission) exist.
     caseStudies: false,

@@ -5,9 +5,9 @@ import { checklistItemCount, checklistSections, checklistTeaser, checklistTitle 
 import Icon from '../components/Icon.jsx';
 import LeakageEstimator from '../components/LeakageEstimator.jsx';
 import usePageTitle from '../lib/usePageTitle.js';
+import { SectionIntro, serviceTone as tone, wrap, inner } from '../components/ui.jsx';
+import { steps } from '../content/process.js';
 
-const wrap = 'px-gutter-mobile md:px-margin-tablet';
-const inner = 'mx-auto w-full max-w-6xl';
 
 const pillars = [
   { icon: 'account_balance_wallet', title: 'Financial Control', sub: 'Margins & Ledger' },
@@ -33,70 +33,6 @@ const challenges = [
     control: 'Clear delegation of authority and cross-checked staff sign-offs.',
   },
 ];
-
-const steps = [
-  {
-    n: 1,
-    title: 'Assess',
-    when: 'Days 1 - 7',
-    text: 'On-site review of waybills, loading procedures, store logs and financial records.',
-  },
-  {
-    n: 2,
-    title: 'Plan',
-    when: 'Days 8 - 14',
-    text: 'A tailored operating roadmap: standard logbooks, approval limits and loss-reduction controls.',
-  },
-  {
-    n: 3,
-    title: 'Implement',
-    when: 'Days 15 - 45',
-    text: 'Hands-on rollout with your staff: coaching, shift logs and supervisor follow-through.',
-  },
-  {
-    n: 4,
-    title: 'Review & Scale',
-    when: 'Day 46 & Beyond',
-    text: 'Routine reviews, monthly performance scorecards and steady strengthening of the business.',
-    final: true,
-  },
-];
-
-const tone = {
-  secondary: {
-    bar: 'from-secondary via-secondary/70',
-    iconBox: 'bg-secondary/10 border-secondary/20 text-secondary',
-    badge: 'bg-secondary-container text-on-secondary-container border-secondary/20',
-    tag: 'text-secondary',
-  },
-  primary: {
-    bar: 'from-primary-container via-primary-container/70',
-    iconBox: 'bg-primary-container/10 border-primary-container/20 text-primary-container',
-    badge: 'bg-surface-container-high text-on-surface border-primary-container/20',
-    tag: 'text-primary-container',
-  },
-  tertiary: {
-    bar: 'from-tertiary-fixed-dim via-tertiary-fixed/70',
-    iconBox: 'bg-tertiary-fixed/30 border-tertiary-fixed-dim/40 text-on-tertiary-container',
-    badge: 'bg-tertiary-container text-tertiary-fixed border-tertiary-fixed/40',
-    tag: 'text-on-tertiary-container',
-  },
-};
-
-function SectionIntro({ icon, eyebrow, title, text, id }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="inline-flex items-center gap-1.5 font-label-sm text-label-sm text-secondary uppercase tracking-wider font-bold">
-        <Icon name={icon} className="text-[16px]" />
-        <span>{eyebrow}</span>
-      </div>
-      <h2 id={id} className="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">
-        {title}
-      </h2>
-      <p className="font-body-md text-body-md text-on-surface-variant text-[14px]">{text}</p>
-    </div>
-  );
-}
 
 function Hero() {
   return (

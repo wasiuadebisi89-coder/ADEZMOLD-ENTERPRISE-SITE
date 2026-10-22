@@ -27,7 +27,7 @@ test('every icon used in src is included in the icon-font subset in index.html',
   const used = new Set();
   for (const f of await sourceFiles()) {
     const text = await readFile(f, 'utf8');
-    for (const m of text.matchAll(/(?:<Icon[^>]*\bname=|\bicon:\s*)["']([a-z0-9_]+)["']/g)) used.add(m[1]);
+    for (const m of text.matchAll(/(?:<Icon[^>]*\bname=|\bicon[:=]\s*)["']([a-z0-9_]+)["']/g)) used.add(m[1]);
   }
   const missing = [...used].filter((n) => !subset.has(n));
   assert.deepEqual(missing, [], `icons missing from subset: ${missing.join(', ')}`);
