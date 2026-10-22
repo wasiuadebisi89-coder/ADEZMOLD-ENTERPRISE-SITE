@@ -1,6 +1,6 @@
 {
   "name": "adezmold-business-consulting-site",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,9 @@
     "test:emulator": "firebase emulators:exec --only firestore --project demo-adezmold \"node --test tests/server/firestore.emulator.test.mjs\"",
     "test:e2e": "node --test \"tests/e2e/*.test.mjs\"",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
-    "build:pdf": "node scripts/build-checklist-pdf.mjs"
+    "build:pdf": "node scripts/build-checklist-pdf.mjs",
+    "test:auth-emulator": "firebase emulators:exec --only auth --project demo-adezmold \"node --test tests/server/admin-auth.emulator.test.mjs\"",
+    "staff": "node scripts/manage-staff.mjs"
   },
   "dependencies": {
     "firebase-admin": "^14.5.0",

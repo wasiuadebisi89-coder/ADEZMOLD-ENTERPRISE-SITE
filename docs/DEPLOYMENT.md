@@ -32,6 +32,7 @@ Nothing below has been run against your accounts yet; each step needs you to sig
    - `RATE_LIMIT_SALT` = a long random string
    - `ALLOWED_ORIGINS` = your domain(s), once known
    - `DOWNLOAD_TOKEN_SECRET` = another long random string (signs checklist download links)
+   - `FIREBASE_WEB_API_KEY` = the *Web API key* from Firebase Project settings → General
 3. Settings → Node.js version **22.x** (also declared in `package.json`).
 4. Deploy, then on the deployed site submit one test request on each form and confirm a
    `leads` document appears in the Firestore console. Delete those test leads afterwards.
@@ -42,7 +43,28 @@ Vercel → Settings → **Domains** → add the domain and follow the DNS instru
 registrar. Vercel issues and renews the HTTPS certificate automatically. Then set
 `ALLOWED_ORIGINS` to `https://yourdomain,https://www.yourdomain` and redeploy.
 
-## 4. Email with Resend (when the domain is ready)
+## 4. Lead register access (staff accounts)
+
+The lead register is at `/admin`. There is no sign-up page; access is granted by you.
+
+1. Firebase console → **Authentication → Get started → Sign-in method** → enable **Email/Password**.
+2. Authentication → **Settings → User actions**: untick **Enable create (sign-up)**, so nobody
+   can create an account from outside, even with the public API key.
+3. Authentication → **Users → Add user**: enter the staff member's email and a strong temporary
+   password (12+ characters). Ask them to change it via "forgot password" later, or set it with them.
+4. From your computer, with the three `FIREBASE_*` service-account variables set:
+   ```bash
+   npm run staff -- grant owner@yourdomain.com admin   # export + delete allowed
+   npm run staff -- grant person@yourdomain.com staff  # view, update, notes
+   npm run staff -- list
+   npm run staff -- revoke person@yourdomain.com       # removes access, signs them out everywhere
+   ```
+5. Sign in at `https://yourdomain/admin`. Sessions last 8 hours.
+
+Recommended later: multi-factor sign-in for admin accounts. It needs Firebase Authentication to be
+upgraded to Identity Platform; check the current pricing and plan requirements before switching.
+
+## 5. Email with Resend (when the domain is ready)
 
 Until this is done the site still works: checklist visitors get an instant download
 link on screen, every lead is saved, and each lead records its emails as `not-configured`.
@@ -77,6 +99,7 @@ npx playwright install chromium        # once
 npm run build
 npm run test:server                    # API handler tests + full browser journey (no Firestore)
 npm run test:emulator                  # Firestore transactions + security rules (needs Java 11+)
+npm run test:auth-emulator             # staff sign-in, roles, session cookies (no Java needed)
 npm run preview & npm run test:e2e     # front-end browser tests
 ```
 

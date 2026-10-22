@@ -94,3 +94,31 @@ test('security rules: browsers (signed in or not) can neither read nor write', {
     await assertFails(setDoc(doc(fs, 'consents/x'), { marketing: true }));
   }
 });
+
+// ---------- lead register operations (Stage 6) ----------
+test('register: list, get, update with version check, notes, delete', { skip: !enabled }, async () => {
+  const { reference } = await store.createLead({ submissionId: uid(), dedupeKey: uid(), lead: lead(), consent });
+  const page = await store.listLeads({ limit: 50 });
+  assert.ok(page.leads.some((l) => l.reference === reference));
+  assert.equal(typeof page.leads[0].createdAt, 'string', 'timestamps come back as ISO strings');
+
+  const { lead: got, activity } = await store.getLead(reference);
+  assert.equal(activity.length, 1);
+  const updated = await store.updateLead(reference, { status: 'contacted', owner: 'Ade', proposalValue: 450000 }, { by: 'staff@x.co', expectedVersion: got.version });
+  assert.equal(updated.changed, 3);
+  assert.equal(updated.lead.status, 'contacted');
+  assert.equal(updated.lead.pipeline.owner, 'Ade');
+  assert.notEqual(updated.lead.version, got.version);
+  await assert.rejects(store.updateLead(reference, { status: 'lost' }, { by: 'b', expectedVersion: got.version }), { code: 'conflict' });
+
+  await store.addNote(reference, 'Called back', { by: 'staff@x.co' });
+  const after = await store.getLead(reference);
+  assert.ok(after.activity.some((a) => a.type === 'note' && a.text === 'Called back'));
+  assert.equal(after.lead.version, updated.lead.version, 'notes do not bump the version');
+
+  await store.audit({ action: 'test', by: 'staff@x.co', reference });
+  const removed = await store.deleteLead(reference);
+  assert.deepEqual(removed, { activity: 5, consents: 1 });
+  await assert.rejects(store.getLead(reference), { code: 'not-found' });
+  assert.equal((await db.collection(`leads/${reference}/activity`).get()).size, 0);
+});

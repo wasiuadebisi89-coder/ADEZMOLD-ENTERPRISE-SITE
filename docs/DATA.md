@@ -9,11 +9,12 @@ All lead data lives in Cloud Firestore and is written only by the server
 | Collection | Key | Purpose |
 | --- | --- | --- |
 | `leads` | lead reference, e.g. `ADZ-2610-7KQ3M` | One document per lead (consultation request or checklist request) |
-| `leads/{ref}/activity` | auto | Status history and, from Stage 6, internal notes |
+| `leads/{ref}/activity` | auto | Status and field-change history, and internal staff notes (never shown to the lead) |
 | `consents` | auto | Privacy acknowledgement and marketing consent, separate from the lead |
 | `submissions` | client submission id | Makes retries idempotent (same submission → same lead) |
 | `dedupe` | SHA-256 hash | Same contact + same form (+ same service) on the same day → same lead |
 | `rateLimits` | hashed IP + time window | Abuse protection counters. Raw IP addresses are never stored |
+| `adminAudit` | auto | Who signed in, exported, changed or deleted what (staff email + lead reference only) |
 
 ### `leads/{reference}`
 
@@ -54,14 +55,18 @@ marketing (boolean), method 'web-form', formPath, recordedAt
 
 ## Retention and deletion
 
-- **Housekeeping records** (`submissions`, `dedupe`, `rateLimits`) carry an `expiresAt` field.
-  In the Firebase console go to Firestore → **Time-to-live (TTL)**, and add a policy on
-  `expiresAt` for each of these three collections so they are removed automatically.
+- **Housekeeping records** (`submissions`, `dedupe`, `rateLimits`, `adminAudit`) carry an `expiresAt`
+  field. In the Firebase console go to Firestore → **Time-to-live (TTL)**, and add a policy on
+  `expiresAt` for each of these collections so they are removed automatically
+  (audit entries are kept 24 months).
 - **Leads** carry `retainUntil`. They are *not* deleted automatically: a lead that became a
-  client may need to be kept. Review leads past `retainUntil` (the lead register in Stage 6
-  will list them) and delete or anonymise those no longer needed.
-- **Deletion request from a person:** delete their `leads/{ref}` document with its `activity`
-  subcollection, and their `consents` records. Stage 6 adds a button for this.
+  client may need to be kept. In the lead register, tick **Retention review due** to list
+  leads past that date, then delete those no longer needed.
+- **Deletion request from a person:** an admin opens the lead in the register and uses
+  **Delete lead** (typing the reference to confirm). This removes the lead, its history and
+  its consent records, and records the deletion (reference only) in `adminAudit`.
+- **Exports:** CSV exports contain personal data. Only admins can export; each export is
+  audited. Store downloaded files securely and delete them when no longer needed.
 - Data minimisation: no ID numbers, bank details or financial records are collected; the
   consultation form asks visitors not to include them.
 

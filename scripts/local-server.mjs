@@ -10,21 +10,31 @@ import { createLeadHandler } from '../server/handler.js';
 import { createMemoryStore } from '../server/store.js';
 import { checklist, consultation } from '../server/leads.js';
 import { createDownloadHandler } from '../server/download.js';
+import { createAdminHandler } from '../server/admin.js';
+import { createFirebaseAuthService } from '../server/auth.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.txt': 'text/plain', '.xml': 'application/xml', '.pdf': 'application/pdf' };
 
-export function startLocalServer({ port = 4174, store = createMemoryStore(), env = { DOWNLOAD_TOKEN_SECRET: 'local-dev-only-secret' }, mailer } = {}) {
+export function startLocalServer({ port = 4174, store = createMemoryStore(), env = { DOWNLOAD_TOKEN_SECRET: 'local-dev-only-secret' }, mailer, authService, adminOptions = {} } = {}) {
   const getStore = () => store;
   const api = {
     '/api/consultation': createLeadHandler({ ...consultation, getStore, env, mailer }),
     '/api/checklist': createLeadHandler({ ...checklist, getStore, env, mailer }),
     '/api/checklist-download': createDownloadHandler({ getStore, env }),
   };
+  // Lead register: needs an auth service (tests inject one; or set FIREBASE_AUTH_EMULATOR_HOST).
+  const admin = createAdminHandler({
+    ...adminOptions,
+    getStore,
+    env,
+    getAuthService: () => authService ?? createFirebaseAuthService({ ...process.env, ...env }),
+  });
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     if (api[url.pathname]) return api[url.pathname](req, res);
+    if (url.pathname === '/api/admin' || url.pathname.startsWith('/api/admin/')) return admin(req, res);
     if (url.pathname.startsWith('/api/')) {
       res.statusCode = 404;
       return res.end('{"ok":false}');
