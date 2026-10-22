@@ -16,7 +16,6 @@ import {
 } from '../components/form.jsx';
 import { Link } from '../lib/router.jsx';
 import { site } from '../config/site.js';
-import usePageTitle from '../lib/usePageTitle.js';
 
 const labels = {
   fullName: 'Name',
@@ -73,7 +72,6 @@ function Success({ email, result }) {
 }
 
 export default function Checklist() {
-  usePageTitle('Free Produce Business Health Checklist');
   const form = useLeadForm({
     endpoint: '/api/checklist',
     validate: validateChecklistRequest,

@@ -2,7 +2,6 @@ import { Link } from '../lib/router.jsx';
 import { services } from '../content/services.js';
 import Icon from '../components/Icon.jsx';
 import { Card, CheckList, DarkCta, PageHeader, serviceTone, wrap } from '../components/ui.jsx';
-import usePageTitle from '../lib/usePageTitle.js';
 
 function Block({ title, children }) {
   return (
@@ -81,7 +80,6 @@ function ServiceDetail({ s }) {
 }
 
 export default function Services() {
-  usePageTitle('Services');
   return (
     <>
       <PageHeader

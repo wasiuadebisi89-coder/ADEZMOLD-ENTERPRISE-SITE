@@ -3,7 +3,6 @@ import { steps } from '../content/process.js';
 import Icon from '../components/Icon.jsx';
 import { Card, DarkCta, PageHeader, SectionIntro, wrap } from '../components/ui.jsx';
 import { Link } from '../lib/router.jsx';
-import usePageTitle from '../lib/usePageTitle.js';
 
 const principles = [
   { icon: 'fact_check', title: 'Records before opinions', text: 'We start from what your books, waybills and stock counts show, then explain it plainly.' },
@@ -51,7 +50,6 @@ function Founder() {
 }
 
 export default function About() {
-  usePageTitle('About');
   return (
     <>
       <PageHeader

@@ -1,0 +1,41 @@
+# Runs every test suite on each push and pull request.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SITE_URL: https://example.com # only for checking absolute URLs in the test build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4 # Firestore emulator
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run build
+      - name: Server, API, journey, SEO and accessibility tests
+        run: npm run test:server
+      - name: Firestore transactions and security rules (emulator)
+        run: npm run test:emulator
+      - name: Staff sign-in and sessions (Firebase Auth emulator)
+        run: npm run test:auth-emulator
+      - name: Front-end browser tests
+        run: |
+          npm run preview &
+          npx --yes wait-on@8 http://localhost:4173
+          npm run test:e2e

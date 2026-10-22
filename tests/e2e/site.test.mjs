@@ -22,6 +22,7 @@ after(async () => {
 async function open(path, viewport = MOBILE) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
+  await page.addInitScript(() => localStorage.setItem('adz_attribution_choice_v1', 'denied'));
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
@@ -61,7 +62,7 @@ test('calls to action navigate client-side to the right pages', async () => {
   await page.waitForURL(BASE_URL + '/');
   await page.getByRole('link', { name: /Book an Executive Consultation/ }).click();
   await page.waitForURL('**/consultation');
-  assert.match(await page.title(), /Book a Consultation/);
+  assert.match(await page.title(), /Book a Confidential Discovery Session/);
   await close();
 });
 

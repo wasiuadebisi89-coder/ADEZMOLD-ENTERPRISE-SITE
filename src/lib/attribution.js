@@ -1,24 +1,34 @@
-// Lead-source attribution without tracking scripts or cookies.
-// The first page a visitor lands on in this browser tab is recorded in
-// sessionStorage (UTM tags + referring site's hostname only), so the source
-// survives navigation from a LinkedIn landing page to a form.
+// Lead-source attribution, with the visitor's consent.
+// If the visitor allows it (consent banner), the first page they land on in this
+// browser tab is remembered in sessionStorage: UTM tags and the referring site's
+// hostname only. No cookies, no third-party trackers. If they decline, or have not
+// chosen yet, nothing is stored and forms are sent with no source information.
 
 const KEY = 'adz_attribution_v1';
+const CHOICE_KEY = 'adz_attribution_choice_v1'; // 'granted' | 'denied' (remembering the choice is strictly necessary)
 const UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
 const LINKEDIN_HOSTS = /(^|\.)linkedin\.com$|(^|\.)lnkd\.in$/i;
 
-const safeGet = () => {
+const store = (kind) => {
   try {
-    return JSON.parse(window.sessionStorage.getItem(KEY) || 'null');
+    return kind === 'local' ? window.localStorage : window.sessionStorage;
   } catch {
     return null;
   }
 };
-const safeSet = (v) => {
+const read = (kind, key) => {
   try {
-    window.sessionStorage.setItem(KEY, JSON.stringify(v));
+    return store(kind)?.getItem(key) ?? null;
   } catch {
-    /* storage blocked: attribution falls back to the current page */
+    return null;
+  }
+};
+const write = (kind, key, value) => {
+  try {
+    if (value === null) store(kind)?.removeItem(key);
+    else store(kind)?.setItem(key, value);
+  } catch {
+    /* storage blocked: behave as if nothing was stored */
   }
 };
 
@@ -33,6 +43,9 @@ export function classifySource({ utm_source, utm_medium, referrerHost }) {
   if (referrerHost) return /google\.|bing\.|duckduckgo\.|yahoo\./i.test(referrerHost) ? 'search' : 'referral';
   return 'direct';
 }
+
+// Captured in memory on first load. It only reaches storage if the visitor allows it.
+let landing = null;
 
 function fromCurrentPage() {
   const params = new URLSearchParams(window.location.search);
@@ -51,14 +64,38 @@ function fromCurrentPage() {
   return record;
 }
 
-/** Call once on app start. Keeps the first landing; a new UTM link replaces it. */
-export function captureAttribution() {
-  const current = fromCurrentPage();
-  const stored = safeGet();
-  if (!stored || current.utm_source) safeSet(current);
+export function getAttributionChoice() {
+  const v = read('local', CHOICE_KEY);
+  return v === 'granted' || v === 'denied' ? v : null;
 }
 
-/** Attribution to attach to a form submission. */
+export function setAttributionChoice(choice) {
+  write('local', CHOICE_KEY, choice);
+  if (choice === 'granted') {
+    if (landing && !read('session', KEY)) write('session', KEY, JSON.stringify(landing));
+  } else {
+    write('session', KEY, null);
+  }
+  window.dispatchEvent(new Event('adz-attribution-choice'));
+}
+
+/** Call once on app start. */
+export function captureAttribution() {
+  landing = fromCurrentPage();
+  if (getAttributionChoice() !== 'granted') return;
+  const stored = read('session', KEY);
+  if (!stored || landing.utm_source) write('session', KEY, JSON.stringify(landing)); // a new campaign link replaces the old one
+}
+
+/** Attribution attached to a form submission: empty unless the visitor allowed it. */
 export function getAttribution() {
-  return { ...(safeGet() ?? fromCurrentPage()), formPath: window.location.pathname.slice(0, 200) };
+  const formPath = window.location.pathname.slice(0, 200);
+  if (getAttributionChoice() !== 'granted') return { formPath };
+  let saved = null;
+  try {
+    saved = JSON.parse(read('session', KEY) || 'null');
+  } catch {
+    saved = null;
+  }
+  return { ...(saved ?? landing ?? fromCurrentPage()), formPath };
 }

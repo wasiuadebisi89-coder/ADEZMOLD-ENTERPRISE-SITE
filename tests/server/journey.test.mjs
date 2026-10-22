@@ -34,6 +34,7 @@ async function page() {
 test('LinkedIn visitor requests the checklist, then books a consultation', async () => {
   const { p, close } = await page();
   await p.goto(`${base}/checklist?utm_source=linkedin&utm_medium=social&utm_campaign=launch`);
+  await p.getByTestId('consent-banner').getByRole('button', { name: 'Allow' }).click();
   await p.getByLabel('Your name').fill('Ade Bello');
   await p.getByLabel('Email address').fill('ade@example.com');
   await p.getByLabel(/I have read the/).check();

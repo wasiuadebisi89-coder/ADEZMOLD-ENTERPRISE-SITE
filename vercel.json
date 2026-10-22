@@ -4,10 +4,6 @@
     {
       "source": "/api/admin/:path*",
       "destination": "/api/admin?route=:path*"
-    },
-    {
-      "source": "/((?!api/|assets/).*)",
-      "destination": "/index.html"
     }
   ],
   "headers": [
@@ -50,5 +46,7 @@
     "api/checklist-download.js": {
       "includeFiles": "server/assets/**"
     }
-  }
+  },
+  "trailingSlash": false,
+  "cleanUrls": true
 }

@@ -21,7 +21,7 @@ export const serviceTone = {
     bar: 'from-tertiary-fixed-dim via-tertiary-fixed/70',
     iconBox: 'bg-tertiary-fixed/30 border-tertiary-fixed-dim/40 text-on-tertiary-container',
     badge: 'bg-tertiary-container text-tertiary-fixed border-tertiary-fixed/40',
-    tag: 'text-on-tertiary-container',
+    tag: 'text-on-tertiary-fixed-variant',
   },
 };
 

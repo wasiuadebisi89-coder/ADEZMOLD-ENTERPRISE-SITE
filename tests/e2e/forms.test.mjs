@@ -13,9 +13,11 @@ after(async () => {
   await browser?.close();
 });
 
-async function open(path, { api } = {}) {
+// consent: 'denied' | 'granted' | null (null = no choice yet, banner shows)
+async function open(path, { api, consent = 'denied' } = {}) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
+  if (consent) await page.addInitScript((c) => localStorage.setItem('adz_attribution_choice_v1', c), consent);
   const requests = [];
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -69,7 +71,8 @@ test('consultation: service from the Services page is preselected', async () => 
 
 test('consultation: valid submit sends one request with attribution and shows the reference', async () => {
   // Arrive from a LinkedIn post link, browse, then submit.
-  const { page, requests, errors, close } = await open('/?utm_source=linkedin&utm_medium=social&utm_campaign=oct-post', { api: ok('ADZ-2026-ABCD') });
+  const { page, requests, errors, close } = await open('/?utm_source=linkedin&utm_medium=social&utm_campaign=oct-post', { api: ok('ADZ-2026-ABCD'), consent: null });
+  await page.getByTestId('consent-banner').getByRole('button', { name: 'Allow' }).click();
   await page.getByRole('link', { name: /Book an Executive Consultation/ }).click();
   await page.waitForURL('**/consultation');
   await page.getByLabel('Service you are interested in').selectOption('health-check');
@@ -143,7 +146,7 @@ test('checklist: request flow with optional marketing consent recorded separatel
   assert.match(requests[0].url, /\/api\/checklist$/);
   assert.equal(requests[0].body.marketingConsent, true);
   assert.equal(requests[0].body.privacyAck, true);
-  assert.equal(requests[0].body.attribution.source, 'direct');
+  assert.deepEqual(requests[0].body.attribution, { formPath: '/checklist' }, 'no source shared without consent');
   await close();
 });
 
@@ -194,5 +197,45 @@ test('checklist: without a download link or email, the page says so honestly', a
   await page.getByRole('button', { name: 'Send me the checklist' }).click();
   await page.getByTestId('checklist-no-link').waitFor();
   assert.equal(await page.getByTestId('checklist-emailed').count(), 0, 'must not claim an email was sent');
+  await close();
+});
+
+test('declining the banner: nothing stored, no campaign data sent', async () => {
+  const { page, requests, close } = await open('/checklist?utm_source=linkedin&utm_campaign=x', { api: checklistOk, consent: null });
+  const banner = page.getByTestId('consent-banner');
+  await banner.waitFor();
+  await banner.getByRole('button', { name: 'No thanks' }).click();
+  assert.equal(await banner.count(), 0);
+  assert.equal(await page.evaluate(() => sessionStorage.getItem('adz_attribution_v1')), null);
+  await page.getByLabel('Your name').fill('Ade');
+  await page.getByLabel('Email address').fill('ade@example.com');
+  await page.getByLabel(/I have read the/).check();
+  await page.getByRole('button', { name: 'Send me the checklist' }).click();
+  await page.getByTestId('checklist-success').waitFor();
+  assert.deepEqual(requests[0].body.attribution, { formPath: '/checklist' });
+  await page.reload();
+  await page.locator('h1').waitFor();
+  assert.equal(await page.getByTestId('consent-banner').count(), 0, 'choice remembered');
+  await close();
+});
+
+test('consent banner is visible without scrolling and offers equal choices', async () => {
+  const { page, close } = await open('/', { consent: null });
+  const banner = page.getByTestId('consent-banner');
+  const box = await banner.boundingBox();
+  assert.ok(box && box.y + box.height <= 844, 'fully inside the first screen');
+  assert.equal(await banner.getByRole('button').count(), 2);
+  await close();
+});
+
+test('privacy page lets visitors change their attribution choice', async () => {
+  const { page, close } = await open('/privacy', { consent: 'granted' });
+  const pref = page.getByTestId('attribution-preference');
+  assert.match(await pref.innerText(), /allowed/);
+  await pref.getByRole('button', { name: 'Turn off' }).click();
+  assert.match(await pref.innerText(), /not allowed/);
+  assert.equal(await page.evaluate(() => localStorage.getItem('adz_attribution_choice_v1')), 'denied');
+  const text = await page.getByTestId('privacy-notice').innerText();
+  for (const s of ['Nigeria Data Protection Act 2023', 'Nigeria Data Protection Commission', 'Vercel', 'Firebase', 'Resend', '24 months', 'withdraw']) assert.ok(text.includes(s), `missing ${s}`);
   await close();
 });

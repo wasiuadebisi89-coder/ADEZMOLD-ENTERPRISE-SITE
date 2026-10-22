@@ -18,19 +18,17 @@ async function sourceFiles(dir = path.join(root, 'src')) {
   return out;
 }
 
-test('every icon used in src is included in the icon-font subset in index.html', async () => {
-  const html = await readFile(path.join(root, 'index.html'), 'utf8');
-  const subset = new Set(html.match(/icon_names=([a-z0-9_,]+)/)[1].split(','));
-  const listed = [...subset];
-  assert.deepEqual(listed, [...listed].sort(), 'icon_names must be alphabetical (Google Fonts requirement)');
+test('every icon used in src has a generated inline SVG path (run npm run build:icons)', async () => {
+  const { usedIcons } = await import(path.join(root, 'scripts/build-icons.mjs'));
+  const { iconPaths } = await import(path.join(root, 'src/components/icon-paths.js'));
+  const missing = (await usedIcons()).filter((n) => !iconPaths[n]);
+  assert.deepEqual(missing, [], `icons missing: ${missing.join(', ')}`);
+});
 
-  const used = new Set();
-  for (const f of await sourceFiles()) {
-    const text = await readFile(f, 'utf8');
-    for (const m of text.matchAll(/(?:<Icon[^>]*\bname=|\bicon[:=]\s*)["']([a-z0-9_]+)["']/g)) used.add(m[1]);
-  }
-  const missing = [...used].filter((n) => !subset.has(n));
-  assert.deepEqual(missing, [], `icons missing from subset: ${missing.join(', ')}`);
+test('no requests to Google Fonts (visitor IPs would be sent to a third party)', async () => {
+  const html = await readFile(path.join(root, 'index.html'), 'utf8');
+  assert.ok(!html.includes('fonts.googleapis.com') && !html.includes('fonts.gstatic.com'));
+  for (const f of await sourceFiles()) assert.ok(!(await readFile(f, 'utf8')).includes('fonts.googleapis.com'), f);
 });
 
 test('no unverified claims from the Stitch draft remain in the source', async () => {
@@ -69,4 +67,11 @@ test('leakage estimate arithmetic', async () => {
   assert.match(src, /monthlyTurnoverMillions \* 1_000_000 \* 12 \* \(leakagePercent \/ 100\)/);
   assert.equal(estimate(15, 5), 9_000_000);
   assert.equal(estimate(50, 15), 90_000_000);
+});
+
+test('consent records use the same privacy-notice version the site publishes', async () => {
+  const privacy = await readFile(path.join(root, 'src/pages/Privacy.jsx'), 'utf8');
+  const published = privacy.match(/export const PRIVACY_VERSION = '([^']+)'/)[1];
+  const { readConfig } = await import(path.join(root, 'server/config.js'));
+  assert.equal(readConfig({}).privacyNoticeVersion, published, 'update server/config.js default (and Vercel PRIVACY_NOTICE_VERSION) when the notice changes');
 });

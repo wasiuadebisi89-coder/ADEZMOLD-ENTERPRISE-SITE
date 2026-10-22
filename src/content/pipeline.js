@@ -22,7 +22,8 @@ export const sources = [
   { value: 'campaign', label: 'Other campaign link' },
   { value: 'search', label: 'Search engine' },
   { value: 'referral', label: 'Other website' },
-  { value: 'direct', label: 'Direct / unknown' },
+  { value: 'direct', label: 'Direct (typed or bookmarked)' },
+  { value: 'unknown', label: 'Not shared by visitor' },
 ];
 export const sourceLabel = (v) => sources.find((s) => s.value === v)?.label ?? v ?? '—';
 

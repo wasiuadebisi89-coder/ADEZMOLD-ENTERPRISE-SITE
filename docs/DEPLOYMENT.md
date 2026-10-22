@@ -33,6 +33,7 @@ Nothing below has been run against your accounts yet; each step needs you to sig
    - `ALLOWED_ORIGINS` = your domain(s), once known
    - `DOWNLOAD_TOKEN_SECRET` = another long random string (signs checklist download links)
    - `FIREBASE_WEB_API_KEY` = the *Web API key* from Firebase Project settings → General
+   - `SITE_URL` = `https://yourdomain` (used at build time for link previews and the sitemap)
 3. Settings → Node.js version **22.x** (also declared in `package.json`).
 4. Deploy, then on the deployed site submit one test request on each form and confirm a
    `leads` document appears in the Firestore console. Delete those test leads afterwards.
@@ -41,7 +42,8 @@ Nothing below has been run against your accounts yet; each step needs you to sig
 
 Vercel → Settings → **Domains** → add the domain and follow the DNS instructions at your
 registrar. Vercel issues and renews the HTTPS certificate automatically. Then set
-`ALLOWED_ORIGINS` to `https://yourdomain,https://www.yourdomain` and redeploy.
+`SITE_URL` to `https://yourdomain` and `ALLOWED_ORIGINS` to `https://yourdomain,https://www.yourdomain`,
+and redeploy so the link previews and sitemap use the real address.
 
 ## 4. Lead register access (staff accounts)
 

@@ -201,13 +201,13 @@ test('checklist request is stored as a checklist lead and de-duplicated per emai
   const lead = store.data.leads.get(a.json().reference);
   assert.equal(lead.kind, 'checklist');
   assert.equal(lead.contact.email, 'ade@example.com');
-  assert.equal(lead.attribution.source, 'direct');
+  assert.equal(lead.attribution.source, 'unknown', 'no attribution shared');
   assert.equal(lead.email.checklistDelivery.state, 'failed', 'no download secret in this test, so no link to send');
 });
 
 test('attribution is reduced to known fields with safe lengths', () => {
   const a = sanitiseAttribution({ source: 'hacker', utm_source: 'x'.repeat(500), evil: '<script>', referrerHost: 'www.linkedin.com' });
-  assert.equal(a.source, 'direct');
+  assert.equal(a.source, 'unknown');
   assert.equal(a.utm_source.length, 100);
   assert.equal(a.evil, undefined);
   assert.equal(a.referrerHost, 'www.linkedin.com');

@@ -44,10 +44,15 @@ export function startLocalServer({ port = 4174, store = createMemoryStore(), env
       res.statusCode = 400;
       return res.end();
     }
-    try {
-      if (!(await stat(file)).isFile()) throw new Error();
-    } catch {
-      file = path.join(root, 'index.html'); // SPA fallback, as in vercel.json
+    // Same lookup as Vercel: exact file, then <path>/index.html, else 404.html with status 404.
+    const isFile = async (f) => (await stat(f).catch(() => null))?.isFile() ?? false;
+    if (!(await isFile(file))) {
+      const dirIndex = path.join(file, 'index.html');
+      if (await isFile(dirIndex)) file = dirIndex;
+      else {
+        file = path.join(root, '404.html');
+        res.statusCode = 404;
+      }
     }
     res.setHeader('Content-Type', types[path.extname(file)] ?? 'application/octet-stream');
     res.end(await readFile(file));

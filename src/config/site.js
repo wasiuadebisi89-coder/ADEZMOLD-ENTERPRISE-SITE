@@ -4,6 +4,9 @@
 
 export const site = {
   name: 'Adezmold Business Consulting',
+  // PLACEHOLDER: the registered legal entity responsible for the data (e.g. "Adezmold Nigeria Limited, RC 0000000").
+  // Until set, the privacy notice names the trading name above.
+  legalEntity: null,
   shortName: 'Adezmold',
   descriptor: 'Business Consulting',
   summary:

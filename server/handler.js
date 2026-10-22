@@ -13,6 +13,7 @@ const RATE_LIMITS = [
   { name: 'daily', limit: 20, windowMs: 24 * 60 * 60 * 1000 }, // 20 per day
 ];
 const SOURCES = new Set(['linkedin-organic', 'linkedin-paid', 'campaign', 'search', 'referral', 'direct']);
+// 'unknown' = the visitor did not allow attribution, so no source was shared.
 
 function send(res, status, body, extraHeaders = {}) {
   res.statusCode = status;
@@ -70,7 +71,7 @@ const str = (v, max = 100) => (typeof v === 'string' && v.trim() ? v.trim().slic
 export function sanitiseAttribution(a) {
   const src = a && typeof a === 'object' ? a : {};
   return {
-    source: SOURCES.has(src.source) ? src.source : 'direct',
+    source: SOURCES.has(src.source) ? src.source : 'unknown',
     utm_source: str(src.utm_source),
     utm_medium: str(src.utm_medium),
     utm_campaign: str(src.utm_campaign),

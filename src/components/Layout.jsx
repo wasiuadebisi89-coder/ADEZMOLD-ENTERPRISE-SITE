@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { Link, normalizePath, useLocation } from '../lib/router.jsx';
 import { images, site } from '../config/site.js';
 import Icon from './Icon.jsx';
+import ConsentBanner from './ConsentBanner.jsx';
+import usePageMeta from '../lib/usePageMeta.js';
 
 export const navItems = [
   { to: '/', label: 'Home', icon: 'grid_view' },
@@ -160,7 +162,7 @@ function Footer() {
           )}
         </nav>
 
-        <div className="md:col-span-3 pt-space-xs font-body-sm text-body-sm text-outline border-t border-surface-container-high/40 text-[11px] pt-3">
+        <div className="md:col-span-3 pt-space-xs font-body-sm text-body-sm text-on-surface-variant border-t border-surface-container-high/40 text-[11px] pt-3">
           © {new Date().getFullYear()} {site.name}. All rights reserved.
         </div>
       </div>
@@ -200,6 +202,7 @@ function BottomNav() {
 
 export default function Layout({ children }) {
   const { pathname } = useLocation();
+  usePageMeta(normalizePath(pathname));
   const mainRef = useRef(null);
   const firstRender = useRef(true);
 
@@ -227,6 +230,7 @@ export default function Layout({ children }) {
         <Footer />
       </main>
       <BottomNav />
+      <ConsentBanner />
     </div>
   );
 }

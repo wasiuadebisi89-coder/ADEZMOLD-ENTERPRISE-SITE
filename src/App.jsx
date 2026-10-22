@@ -6,19 +6,16 @@ import Services from './pages/Services.jsx';
 import About from './pages/About.jsx';
 import Checklist from './pages/Checklist.jsx';
 import Consultation from './pages/Consultation.jsx';
-import { makeInProgressPage, NotFound } from './pages/InProgress.jsx';
+import Privacy from './pages/Privacy.jsx';
+import { NotFound } from './pages/NotFound.jsx';
 
-// The privacy notice is written in Stage 7 (see README).
 const routes = {
   '/': Home,
   '/services': Services,
   '/checklist': Checklist,
   '/about': About,
   '/consultation': Consultation,
-  '/privacy': makeInProgressPage({
-    title: 'Privacy & Data Protection',
-    intro: 'Our privacy notice is being prepared.',
-  }),
+  '/privacy': Privacy,
 };
 
 // Staff lead register: separate bundle, no public header/footer.

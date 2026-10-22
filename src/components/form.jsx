@@ -64,7 +64,7 @@ export function useLeadForm({ endpoint, validate, initial }) {
 }
 
 const control =
-  'w-full min-h-[48px] rounded-xl border bg-surface-container-lowest px-3.5 py-2.5 font-body-md text-body-md text-[15px] text-on-surface placeholder:text-outline transition-colors focus:border-secondary';
+  'w-full min-h-[48px] rounded-xl border bg-surface-container-lowest px-3.5 py-2.5 font-body-md text-body-md text-[15px] text-on-surface placeholder:text-on-surface-variant transition-colors focus:border-secondary';
 const okBorder = 'border-surface-container-high hover:border-outline-variant';
 const badBorder = 'border-error bg-error-container/20';
 
@@ -134,7 +134,7 @@ export function TextArea({ form, name, label, hint, optional, maxLength = 1000 }
         aria-describedby={describedBy(id, hint, error)}
         className={`${control} ${error ? badBorder : okBorder} resize-y`}
       />
-      <p className="font-body-sm text-body-sm text-outline text-right -mt-1" aria-hidden="true">
+      <p className="font-body-sm text-body-sm text-on-surface-variant text-right -mt-1" aria-hidden="true">
         {length}/{maxLength}
       </p>
     </FieldShell>
@@ -154,7 +154,7 @@ export function SelectField({ form, name, label, hint, options, placeholder = 'C
           onChange={(e) => form.setField(name, e.target.value)}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={describedBy(id, hint, error)}
-          className={`${control} ${error ? badBorder : okBorder} appearance-none pr-10 ${form.values[name] ? '' : 'text-outline'}`}
+          className={`${control} ${error ? badBorder : okBorder} appearance-none pr-10 ${form.values[name] ? '' : 'text-on-surface-variant'}`}
         >
           <option value="">{placeholder}</option>
           {options.map((o) => (
@@ -163,7 +163,7 @@ export function SelectField({ form, name, label, hint, options, placeholder = 'C
             </option>
           ))}
         </select>
-        <Icon name="expand_more" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[22px]" />
+        <Icon name="keyboard_arrow_down" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[22px]" />
       </div>
     </FieldShell>
   );

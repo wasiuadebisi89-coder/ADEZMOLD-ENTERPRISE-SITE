@@ -4,7 +4,6 @@ import { services } from '../content/services.js';
 import { checklistItemCount, checklistSections, checklistTeaser, checklistTitle } from '../content/checklist.js';
 import Icon from '../components/Icon.jsx';
 import LeakageEstimator from '../components/LeakageEstimator.jsx';
-import usePageTitle from '../lib/usePageTitle.js';
 import { SectionIntro, serviceTone as tone, wrap, inner } from '../components/ui.jsx';
 import { steps } from '../content/process.js';
 
@@ -236,7 +235,7 @@ function Challenges() {
                   </span>
                   <span>The Vulnerability</span>
                 </div>
-                <span className="text-[11px] text-on-surface-variant/70 font-mono">{c.code}</span>
+                <span className="text-[11px] text-on-surface-variant font-mono">{c.code}</span>
               </div>
               <p className="font-body-md text-body-md text-on-surface font-medium pt-1">{c.problem}</p>
               <div className="h-px bg-surface-container-high/60 my-1" />
@@ -403,7 +402,6 @@ function FinalCta() {
 }
 
 export default function Home() {
-  usePageTitle(null);
   return (
     <>
       <Hero />

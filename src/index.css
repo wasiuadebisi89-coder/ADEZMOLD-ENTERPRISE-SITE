@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
 
 /*
  * Design tokens ported 1:1 from the approved Stitch export (its tailwind.config).
@@ -6,7 +7,7 @@
  * their v3 values below so shadows, blurs and radii render as approved.
  */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   --color-outline-variant: #c5c6cd;
   --color-primary-fixed-dim: #b9c7e4;
@@ -71,19 +72,19 @@
   --spacing-margin-tablet: 2rem;
   --spacing-margin-mobile: 1rem;
 
-  --font-label-sm: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-label-md: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-label-lg: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-body-sm: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-body-md: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-body-lg: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-headline-sm: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-headline-md: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-headline-lg: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-headline-xl: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-headline-xl-mobile: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display-lg: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display-lg-mobile: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-label-sm: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-label-md: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-label-lg: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body-sm: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body-md: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body-lg: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-sm: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-md: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-lg: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-xl: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline-xl-mobile: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display-lg: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display-lg-mobile: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   --text-label-sm: 11px;
   --text-label-sm--line-height: 14px;
@@ -168,21 +169,14 @@
   }
 }
 
-/* Icon font (Material Symbols, subset loaded in index.html). */
-.material-symbols-outlined {
-  font-family: "Material Symbols Outlined";
-  font-weight: normal;
-  font-style: normal;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
+/* Inline SVG icons (src/components/Icon.jsx). 1em box so text-[Npx] sets the size. */
+.icon {
   display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-smoothing: antialiased;
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-  user-select: none;
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 
 .pb-safe {

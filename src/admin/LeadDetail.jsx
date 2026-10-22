@@ -27,7 +27,7 @@ function ActivityItem({ a }) {
       <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${a.type === 'note' ? 'bg-tertiary-fixed-dim' : 'bg-secondary'}`} aria-hidden="true" />
       <div className="min-w-0">
         <p className={`font-body-md text-body-md ${a.type === 'note' ? 'text-on-surface whitespace-pre-wrap' : 'text-on-surface-variant'}`}>{text}</p>
-        <p className="font-body-sm text-body-sm text-outline">
+        <p className="font-body-sm text-body-sm text-on-surface-variant">
           {dateTime(a.at)} · {a.by === 'system' ? 'Website' : a.by}
         </p>
       </div>

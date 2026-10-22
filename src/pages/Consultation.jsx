@@ -25,7 +25,6 @@ import {
   TextField,
   useLeadForm,
 } from '../components/form.jsx';
-import usePageTitle from '../lib/usePageTitle.js';
 
 const labels = {
   fullName: 'Full name',
@@ -81,7 +80,6 @@ function Success({ reference, method, emailed, email }) {
 }
 
 export default function Consultation() {
-  usePageTitle('Book a Consultation');
   const params = useSearchParams();
   const requested = params.get('service');
   const preselected = serviceOptions.some((o) => o.value === requested) ? requested : '';
