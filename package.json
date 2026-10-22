@@ -1,24 +1,34 @@
 {
   "name": "adezmold-business-consulting-site",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 4173 --strictPort",
-    "test:e2e": "node --test \"tests/e2e/*.test.mjs\""
+    "serve:local": "node scripts/local-server.mjs",
+    "test:server": "node --test \"tests/server/*.test.mjs\"",
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-adezmold \"node --test tests/server/firestore.emulator.test.mjs\"",
+    "test:e2e": "node --test \"tests/e2e/*.test.mjs\"",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {
-    "firebase": "^11.0.0",
+    "firebase-admin": "^14.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@tailwindcss/vite": "^4.1.0",
     "@vitejs/plugin-react": "^4.3.0",
-    "playwright": "^1.56.0",
+    "firebase": "^13.1.0",
+    "firebase-tools": "^15.34.1",
+    "playwright": "~1.56.0",
     "tailwindcss": "^4.1.0",
     "vite": "^6.0.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

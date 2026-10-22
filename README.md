@@ -2,17 +2,21 @@
 
 Lead-acquisition website for Adezmold Business Consulting, implemented from the
 approved Stitch design. React + Vite + Tailwind CSS 4, hosted on Vercel, with
-Firebase (Firestore + Auth, free Spark plan) for leads in later stages.
+Vercel serverless functions (`/api`) saving leads to Firebase Firestore (free Spark plan).
+
+Setup and deployment: `docs/DEPLOYMENT.md`. Data model, retention and backups: `docs/DATA.md`.
 
 ## Run locally
 
 ```bash
 npm install
-npm run dev            # http://localhost:5173
+npm run dev            # http://localhost:5173 (front end only)
 npm run build          # production build in dist/
-npm run preview        # serve the build on http://localhost:4173
+npm run serve:local    # built site + real API with an in-memory store, http://localhost:4174
 npx playwright install chromium   # once
-npm run test:e2e       # run while `npm run preview` is serving
+npm run test:server    # API + end-to-end journey (after a build)
+npm run test:emulator  # Firestore + security rules (needs Java)
+npm run test:e2e       # front-end tests (while `npm run preview` is serving)
 ```
 
 ## Where things live
@@ -26,6 +30,9 @@ npm run test:e2e       # run while `npm run preview` is serving
 | `src/index.css` | Stitch design tokens (`@theme`) and the design's custom effects |
 | `src/lib/router.jsx` | Small History-API router (clean URLs for LinkedIn sharing) |
 | `src/pages/`, `src/components/` | Pages and shared layout |
+| `api/` | Vercel functions: `POST /api/consultation`, `POST /api/checklist` |
+| `server/` | Server-only code: request guards, lead store, Firestore access |
+| `firestore.rules` | Denies all browser access to the database |
 | `vercel.json` | SPA rewrites and security headers |
 | `tests/e2e/` | Source checks + Playwright browser tests |
 
@@ -34,7 +41,7 @@ npm run test:e2e       # run while `npm run preview` is serving
 1. Inspection & plan — done
 2. Foundation + homepage — done
 3. Services, About, Checklist landing, Consultation form — done (forms await the Stage 4 API)
-4. Backend: Vercel functions, Firestore schema & rules
+4. Backend: Vercel functions, Firestore schema & rules — done (not yet connected to a live Firebase project)
 5. Checklist PDF + email delivery
 6. Admin lead register
 7. SEO, privacy notice (NDPA 2023), accessibility, deployment docs
