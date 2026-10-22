@@ -28,7 +28,10 @@ inquiry         consultation: { service, challenge, recordsState, timeframe, add
 attribution     { source, utm_source, utm_medium, utm_campaign, utm_content, utm_term,
                   referrerHost, landingPath, formPath }
 marketingConsent  boolean summary; the full record is in `consents`
-email           delivery state per message: 'not-sent' until Stage 5 records real outcomes
+email           one entry per message (checklistDelivery | acknowledgement, internalAlert):
+                { state: 'pending' | 'sent' | 'failed' | 'not-configured' | 'skipped-no-email',
+                  providerId?, error?, at }   'sent' = accepted by Resend, not proof of inbox delivery
+downloads, lastDownloadAt   checklist PDF downloads via signed links
 pipeline        { owner, followUpAt, proposalValue, wonValue, outcome } (managed in Stage 6)
 createdAt, updatedAt   server timestamps
 retainUntil     createdAt + LEAD_RETENTION_MONTHS (default 24)

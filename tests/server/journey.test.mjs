@@ -39,6 +39,12 @@ test('LinkedIn visitor requests the checklist, then books a consultation', async
   await p.getByLabel(/I have read the/).check();
   await p.getByRole('button', { name: 'Send me the checklist' }).click();
   await p.getByTestId('checklist-success').waitFor();
+  const href = await p.getByTestId('checklist-download').getAttribute('href');
+  const pdf = await p.request.get(base + href);
+  assert.equal(pdf.status(), 200);
+  assert.equal(pdf.headers()['content-type'], 'application/pdf');
+  assert.equal((await pdf.body()).subarray(0, 5).toString(), '%PDF-');
+  assert.equal((await p.request.get(`${base}/api/checklist-download?t=forged`)).status(), 403);
 
   await p.getByRole('link', { name: 'Book a consultation' }).click();
   await p.waitForURL('**/consultation?service=health-check');
@@ -71,6 +77,7 @@ test('LinkedIn visitor requests the checklist, then books a consultation', async
   assert.equal(con.contact.phone, '+2348031234567');
   assert.equal(con.contact.email, null);
   assert.equal(store.data.consents.length, 2);
+  assert.equal(chk.downloads, 1, 'download recorded on the lead');
   assert.ok(store.data.consents.every((c) => c.privacyAck === true && c.marketing === false));
 });
 

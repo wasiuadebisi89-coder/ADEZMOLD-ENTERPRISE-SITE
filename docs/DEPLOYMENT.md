@@ -31,6 +31,7 @@ Nothing below has been run against your accounts yet; each step needs you to sig
    - `FIREBASE_PRIVATE_KEY` = `private_key` (paste as-is, including `-----BEGIN…` and the `\n`s)
    - `RATE_LIMIT_SALT` = a long random string
    - `ALLOWED_ORIGINS` = your domain(s), once known
+   - `DOWNLOAD_TOKEN_SECRET` = another long random string (signs checklist download links)
 3. Settings → Node.js version **22.x** (also declared in `package.json`).
 4. Deploy, then on the deployed site submit one test request on each form and confirm a
    `leads` document appears in the Firestore console. Delete those test leads afterwards.
@@ -40,6 +41,25 @@ Nothing below has been run against your accounts yet; each step needs you to sig
 Vercel → Settings → **Domains** → add the domain and follow the DNS instructions at your
 registrar. Vercel issues and renews the HTTPS certificate automatically. Then set
 `ALLOWED_ORIGINS` to `https://yourdomain,https://www.yourdomain` and redeploy.
+
+## 4. Email with Resend (when the domain is ready)
+
+Until this is done the site still works: checklist visitors get an instant download
+link on screen, every lead is saved, and each lead records its emails as `not-configured`.
+
+1. Create an account at <https://resend.com> and **add your domain** (Domains → Add).
+2. Add the DNS records Resend shows you (SPF/DKIM, usually TXT and MX/CNAME) at your
+   domain registrar, then click **Verify**. This is what keeps emails out of spam.
+3. API Keys → **Create API key** with *Sending access* only.
+4. In Vercel, set `RESEND_API_KEY`, `EMAIL_FROM` (an address on the verified domain),
+   `EMAIL_REPLY_TO`, `LEAD_ALERT_TO` and `SITE_URL`, then redeploy.
+5. Test: request the checklist with your own email and send a consultation request.
+   You should receive the checklist email, the acknowledgement, and two lead alerts.
+   In Firestore, the lead's `email.*.state` fields should read `sent`.
+
+"Sent" means Resend accepted the email. Check Resend's **Emails** log for actual delivery
+or bounces. The free tier allows a limited number of emails per day; check Resend's
+current limits when you sign up.
 
 ## Local development
 

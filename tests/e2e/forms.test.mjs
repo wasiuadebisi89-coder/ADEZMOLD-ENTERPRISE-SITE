@@ -122,8 +122,11 @@ test('consultation: server-side field errors are shown on the form', async () =>
   await close();
 });
 
+const checklistOk = (route) =>
+  route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, reference: 'ADZ-2610-TEST1', downloadUrl: '/api/checklist-download?t=abc', emailed: true }) });
+
 test('checklist: request flow with optional marketing consent recorded separately', async () => {
-  const { page, requests, close } = await open('/checklist', { api: ok() });
+  const { page, requests, close } = await open('/checklist', { api: checklistOk });
   await page.getByRole('button', { name: 'Send me the checklist' }).click();
   await page.getByTestId('error-summary').getByRole('alert').waitFor();
   assert.equal(requests.length, 0);
@@ -134,7 +137,8 @@ test('checklist: request flow with optional marketing consent recorded separatel
   await page.getByLabel(/Optional: send me occasional/).check();
   await page.getByRole('button', { name: 'Send me the checklist' }).click();
   await page.getByTestId('checklist-success').waitFor();
-  assert.match(await page.getByTestId('checklist-success').innerText(), /ade@example\.com/);
+  assert.equal(await page.getByTestId('checklist-download').getAttribute('href'), '/api/checklist-download?t=abc');
+  assert.match(await page.getByTestId('checklist-emailed').innerText(), /ade@example\.com/);
   assert.equal(requests.length, 1);
   assert.match(requests[0].url, /\/api\/checklist$/);
   assert.equal(requests[0].body.marketingConsent, true);
@@ -179,5 +183,16 @@ test('about page shows founder and contact details', async () => {
   const text = await page.locator('main').innerText();
   assert.match(text, /Adebisi Wasiu Shina/);
   assert.match(text, /Iwo, Osun State/);
+  await close();
+});
+
+test('checklist: without a download link or email, the page says so honestly', async () => {
+  const { page, close } = await open('/checklist', { api: ok() });
+  await page.getByLabel('Your name').fill('Ade');
+  await page.getByLabel('Email address').fill('ade@example.com');
+  await page.getByLabel(/I have read the/).check();
+  await page.getByRole('button', { name: 'Send me the checklist' }).click();
+  await page.getByTestId('checklist-no-link').waitFor();
+  assert.equal(await page.getByTestId('checklist-emailed').count(), 0, 'must not claim an email was sent');
   await close();
 });

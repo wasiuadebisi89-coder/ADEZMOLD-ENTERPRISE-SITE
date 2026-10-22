@@ -76,7 +76,8 @@ test('valid consultation is stored and gets a reference', async () => {
   assert.equal(lead.inquiry.service, 'health-check');
   assert.equal(lead.attribution.source, 'linkedin-organic');
   assert.equal(lead.attribution.utm_campaign, 'oct-post');
-  assert.deepEqual(lead.email, { acknowledgement: 'not-sent', internalAlert: 'not-sent' });
+  assert.equal(lead.email.acknowledgement.state, 'not-configured');
+  assert.equal(lead.email.internalAlert.state, 'not-configured');
   assert.ok(lead.retainUntil > lead.createdAt);
   assert.equal(store.data.activity.filter((a) => a.leadId === reference).length, 1);
 });
@@ -201,7 +202,7 @@ test('checklist request is stored as a checklist lead and de-duplicated per emai
   assert.equal(lead.kind, 'checklist');
   assert.equal(lead.contact.email, 'ade@example.com');
   assert.equal(lead.attribution.source, 'direct');
-  assert.deepEqual(lead.email, { checklistDelivery: 'not-sent', internalAlert: 'not-sent' });
+  assert.equal(lead.email.checklistDelivery.state, 'failed', 'no download secret in this test, so no link to send');
 });
 
 test('attribution is reduced to known fields with safe lengths', () => {

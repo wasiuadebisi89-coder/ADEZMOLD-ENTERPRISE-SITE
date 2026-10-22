@@ -5,6 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import { ConfigError, readConfig } from './config.js';
 import { isSubmissionId, sha256 } from './ids.js';
+import { afterLeadSaved } from './delivery.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
 const RATE_LIMITS = [
@@ -87,8 +88,9 @@ export function sanitiseAttribution(a) {
  * @param {(input:object)=>{values:object,errors:object,valid:boolean}} opts.validate
  * @param {(values:object, attribution:object, config:object)=>{lead:object, consent:object, dedupeKey:string}} opts.toRecord
  * @param {()=>object} opts.getStore  returns a store (see store.js)
+ * @param {object} [opts.mailer]       optional mailer override (tests)
  */
-export function createLeadHandler({ kind, validate, toRecord, getStore, env = process.env }) {
+export function createLeadHandler({ kind, validate, toRecord, getStore, env = process.env, mailer }) {
   return async function handler(req, res) {
     const requestId = randomUUID();
     const config = readConfig(env);
@@ -142,7 +144,17 @@ export function createLeadHandler({ kind, validate, toRecord, getStore, env = pr
       const { reference, duplicate } = await store.createLead({ submissionId: body.submissionId, dedupeKey, lead, consent });
 
       log('info', duplicate ? 'lead_duplicate' : 'lead_created', { kind, requestId, reference, source: attribution.source });
-      return send(res, 200, { ok: true, reference });
+
+      // The lead is safely stored at this point. Delivery problems are logged and
+      // recorded on the lead, but never turn a saved lead into an error for the visitor.
+      let extra = {};
+      try {
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
+        extra = await afterLeadSaved({ kind, lead, reference, duplicate, store, env, mailer, log, requestOrigin: host ? `https://${host}` : '' });
+      } catch (e) {
+        log('error', 'delivery_failed', { kind, requestId, reference, error: e?.code ?? e?.name ?? 'unknown' });
+      }
+      return send(res, 200, { ok: true, reference, ...extra });
     } catch (e) {
       log('error', 'lead_save_failed', { kind, requestId, error: e?.code ?? e?.name ?? 'unknown' });
       return send(res, 500, { ok: false, error: 'server' });

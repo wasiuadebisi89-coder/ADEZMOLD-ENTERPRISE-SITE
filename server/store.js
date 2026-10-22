@@ -80,6 +80,16 @@ export function createFirestoreStore(db, { retentionMonths = 24 } = {}) {
         return { reference, duplicate: false };
       });
     },
+
+    async updateEmailStatus(reference, patch) {
+      const fields = { updatedAt: FieldValue.serverTimestamp() };
+      for (const [name, value] of Object.entries(patch)) fields[`email.${name}`] = value;
+      await db.doc(`leads/${reference}`).update(fields);
+    },
+
+    async recordDownload(reference) {
+      await db.doc(`leads/${reference}`).update({ downloads: FieldValue.increment(1), lastDownloadAt: FieldValue.serverTimestamp() });
+    },
   };
 }
 
@@ -115,6 +125,20 @@ export function createMemoryStore({ retentionMonths = 24 } = {}) {
         data.submissions.set(submissionId, reference);
         if (dedupeKey) data.dedupe.set(dedupeKey, { leadId: reference, expiresAt: now.getTime() + DAY });
         return { reference, duplicate: false };
+      }),
+    updateEmailStatus: (reference, patch) =>
+      serial(() => {
+        const lead = data.leads.get(reference);
+        if (!lead) throw Object.assign(new Error('not found'), { code: 'not-found' });
+        lead.email = { ...lead.email, ...patch };
+        lead.updatedAt = new Date().toISOString();
+      }),
+    recordDownload: (reference) =>
+      serial(() => {
+        const lead = data.leads.get(reference);
+        if (!lead) throw Object.assign(new Error('not found'), { code: 'not-found' });
+        lead.downloads = (lead.downloads ?? 0) + 1;
+        lead.lastDownloadAt = new Date().toISOString();
       }),
   };
 }

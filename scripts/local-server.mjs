@@ -9,15 +9,17 @@ import { fileURLToPath } from 'node:url';
 import { createLeadHandler } from '../server/handler.js';
 import { createMemoryStore } from '../server/store.js';
 import { checklist, consultation } from '../server/leads.js';
+import { createDownloadHandler } from '../server/download.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.txt': 'text/plain', '.xml': 'application/xml', '.pdf': 'application/pdf' };
 
-export function startLocalServer({ port = 4174, store = createMemoryStore(), env = {} } = {}) {
+export function startLocalServer({ port = 4174, store = createMemoryStore(), env = { DOWNLOAD_TOKEN_SECRET: 'local-dev-only-secret' }, mailer } = {}) {
   const getStore = () => store;
   const api = {
-    '/api/consultation': createLeadHandler({ ...consultation, getStore, env }),
-    '/api/checklist': createLeadHandler({ ...checklist, getStore, env }),
+    '/api/consultation': createLeadHandler({ ...consultation, getStore, env, mailer }),
+    '/api/checklist': createLeadHandler({ ...checklist, getStore, env, mailer }),
+    '/api/checklist-download': createDownloadHandler({ getStore, env }),
   };
 
   const server = createServer(async (req, res) => {

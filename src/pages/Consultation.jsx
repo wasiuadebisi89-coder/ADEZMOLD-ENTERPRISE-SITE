@@ -49,7 +49,7 @@ const nextSteps = [
   'In the session we look at your situation and recommend where to start. There is no obligation to proceed.',
 ];
 
-function Success({ reference, method }) {
+function Success({ reference, method, emailed, email }) {
   const how = contactMethods.find((m) => m.value === method)?.label.toLowerCase() ?? 'your preferred method';
   return (
     <Card className="p-space-md md:p-space-lg flex flex-col gap-space-sm" data-testid="consultation-success">
@@ -71,6 +71,11 @@ function Success({ reference, method }) {
         </a>
         .
       </p>
+      {emailed && (
+        <p className="font-body-md text-body-md text-on-surface-variant" data-testid="consultation-emailed">
+          A confirmation email is on its way to <strong className="text-on-surface">{email}</strong>.
+        </p>
+      )}
     </Card>
   );
 }
@@ -113,7 +118,7 @@ export default function Consultation() {
       <section className={`${wrap} pb-space-lg`}>
         <div className="mx-auto w-full max-w-5xl grid gap-space-lg md:grid-cols-[1.4fr_1fr] md:items-start">
           {form.status === 'success' ? (
-            <Success reference={form.result?.reference} method={form.values.preferredContact} />
+            <Success reference={form.result?.reference} method={form.values.preferredContact} emailed={form.result?.emailed} email={form.values.email.trim()} />
           ) : (
             <Card className="p-space-md md:p-space-lg">
               <form noValidate onSubmit={form.handleSubmit} className="relative flex flex-col gap-space-lg" aria-label="Consultation request">

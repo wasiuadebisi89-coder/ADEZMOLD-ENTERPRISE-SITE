@@ -15,6 +15,7 @@ import {
   useLeadForm,
 } from '../components/form.jsx';
 import { Link } from '../lib/router.jsx';
+import { site } from '../config/site.js';
 import usePageTitle from '../lib/usePageTitle.js';
 
 const labels = {
@@ -25,19 +26,41 @@ const labels = {
   privacyAck: 'Privacy notice',
 };
 
-function Success({ email }) {
+function Success({ email, result }) {
+  const { downloadUrl, emailed } = result ?? {};
   return (
     <Card className="p-space-md md:p-space-lg flex flex-col gap-space-sm" data-testid="checklist-success">
       <div className="w-12 h-12 rounded-xl bg-secondary-container text-on-secondary-container flex items-center justify-center">
         <Icon name="check_circle" className="text-[28px]" />
       </div>
       <h2 tabIndex={-1} className="font-headline-md text-headline-md text-on-surface font-bold" ref={(el) => el?.focus()}>
-        Request received
+        {downloadUrl ? 'Your checklist is ready' : 'Request received'}
       </h2>
-      <p className="font-body-md text-body-md text-on-surface-variant">
-        We’ll send the checklist to <strong className="text-on-surface">{email}</strong>. If it hasn’t arrived within a few minutes, check
-        your spam or promotions folder.
-      </p>
+      {downloadUrl ? (
+        <>
+          <a
+            href={downloadUrl}
+            download
+            data-testid="checklist-download"
+            className="btn-sheen min-h-[52px] w-full bg-secondary text-on-secondary font-label-lg text-label-lg rounded-xl flex items-center justify-center gap-2 shadow-md hover:bg-secondary/90 active:scale-[0.98] transition-all font-semibold"
+          >
+            <Icon name="download" className="text-[20px]" />
+            <span>Download the checklist (PDF)</span>
+          </a>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">This download link works for 7 days.</p>
+        </>
+      ) : (
+        <p className="font-body-md text-body-md text-on-surface-variant" data-testid="checklist-no-link">
+          We have your request, but the download isn’t available right now. We’ll get the checklist to you; if you need it urgently,
+          call {site.contact.phoneDisplay}.
+        </p>
+      )}
+      {emailed && (
+        <p className="font-body-md text-body-md text-on-surface-variant" data-testid="checklist-emailed">
+          A copy of the link is on its way to <strong className="text-on-surface">{email}</strong>. If you don’t see it, check your spam or
+          promotions folder.
+        </p>
+      )}
       <p className="font-body-md text-body-md text-on-surface-variant">
         Want a second pair of eyes on your answers?{' '}
         <Link to="/consultation?service=health-check" className="text-secondary font-semibold underline">
@@ -107,7 +130,7 @@ export default function Checklist() {
           </div>
 
           {form.status === 'success' ? (
-            <Success email={form.values.email.trim()} />
+            <Success email={form.values.email.trim()} result={form.result} />
           ) : (
             <Card className="p-space-md md:p-space-lg">
               <form noValidate onSubmit={form.handleSubmit} className="relative flex flex-col gap-space-md" aria-labelledby="checklist-form-title">
