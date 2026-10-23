@@ -243,3 +243,39 @@ other frameworks.
 - Profit and loss reports leave closing journals out, so a closed year still shows its
   result. The balance sheet shows closed profit in retained earnings and only unclosed profit
   on its own line.
+
+## 15. Services and projects (Phase 9)
+
+- A product is a stock item or a service item. Service items are sold, quoted and credited
+  like goods but never held in stock: no receipts, adjustments, stock movements or cost of
+  sales. Their revenue goes to the Service revenue account (4200), goods to Sales revenue
+  (4100), on the invoice date (DECISION 19). Unbilled work at a month end is accrued by a
+  journal.
+- A quotation posts nothing. It moves from draft to sent or accepted, and one sales invoice
+  can be made from a sent or accepted quotation for the same customer. Prices and discounts
+  agreed on the quotation can be invoiced by staff who could not otherwise change prices;
+  quoting a price other than the list price needs `sales.priceOverride`.
+- A project tags sales invoices, purchase invoices and journals, and their ledger entries.
+  Costs are expensed as incurred (DECISION 20); the project page shows the revenue and costs
+  tagged to it. A project for a customer can only be billed to that customer. A completed or
+  cancelled project takes no new postings, but a tagged journal can still be reversed, and the
+  reversal keeps the tag so the project nets to zero.
+
+## 16. Production (Phase 9)
+
+- A bill of materials lists the stock components that make a quantity of a finished stock
+  product. Bills are never edited; a new one replaces an old one, which is then stopped.
+- A production order holds its cost in the Work in progress account (1320), a control
+  account that only production posts to. Issuing materials credits Inventory and debits WIP at
+  the costing method (DECISION 21). Unused materials returned to the store go back at what
+  they cost the order (the order's average for that component), so the order keeps the cost of
+  what it used. Direct costs debit WIP and credit the account chosen: cash or bank when paid,
+  an accrual when owed, or the expense account the cost is moved out of. Control accounts,
+  income and equity cannot be credited.
+- Completing an order receives the good output into the store at the order's whole cost,
+  less any abnormal loss (DECISION 22). Normal loss is recorded but carries no cost of its own.
+  Abnormal loss takes cost × abnormal ÷ (good + abnormal), rounded to the minor unit, and is
+  debited to the expense account chosen. WIP for the order is then zero.
+- Cancelling an order with cost still in it writes that cost off to a chosen expense account.
+- Postings are dated the day they are made in the company's time zone, like stock
+  adjustments.

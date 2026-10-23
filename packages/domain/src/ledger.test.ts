@@ -256,6 +256,6 @@ describe('trading chart template', () => {
 
   it('marks the subledger accounts as control accounts', () => {
     const control = TRADING_TEMPLATE.accounts.filter((x) => isControlSubtype(x.subtype));
-    expect(control.map((x) => x.code).sort()).toEqual(['1200', '1300', '2100', '2150']);
+    expect(control.map((x) => x.code).sort()).toEqual(['1200', '1300', '1320', '2100', '2150']);
   });
 });

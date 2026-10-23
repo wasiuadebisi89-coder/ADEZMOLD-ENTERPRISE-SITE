@@ -185,6 +185,8 @@ export interface JournalDoc {
   backdateApprovalId: string | null;
   /** The module document that produced a system journal. */
   source: { type: string; id: string; number: string } | null;
+  /** Phase 9: the project the journal is for (missing on older journals). */
+  projectId?: string | null;
   postedAt: Timestamp;
   postedBy: string;
 }
@@ -197,6 +199,8 @@ export interface LedgerEntryDoc {
   postingDate: string;
   periodId: string;
   branchId: string;
+  /** Phase 9: set when the posting is for a project, so its profit can be reported. */
+  projectId?: string | null;
   origin: JournalOrigin;
   debit: number;
   credit: number;
@@ -216,6 +220,8 @@ export interface CategoryDoc {
 export interface ProductDoc {
   sku: string;
   name: string;
+  /** Missing on products created before Phase 9, which are all stock items. */
+  type?: 'stock' | 'service';
   unit: UnitCode;
   categoryId: string | null;
   description: string;
@@ -230,6 +236,8 @@ export interface ProductDoc {
   updatedAt: Timestamp;
   updatedBy: string;
 }
+
+export const productType = (p: Pick<ProductDoc, 'type'>) => p.type ?? 'stock';
 
 export interface LocationDoc {
   branchId: string;
@@ -273,14 +281,18 @@ export type StockMovementType =
   | 'purchase_return'
   | 'cost_adjustment'
   | 'sale'
-  | 'sales_return';
+  | 'sales_return'
+  | 'production_issue'
+  | 'production_return'
+  | 'production_output';
 export type StockSourceType =
   | 'stockAdjustment'
   | 'goodsReceipt'
   | 'purchaseInvoice'
   | 'supplierReturn'
   | 'salesInvoice'
-  | 'creditNote';
+  | 'creditNote'
+  | 'productionOrder';
 
 /** Quantity only, so sales staff can see what is available without seeing cost. */
 export interface StockAvailabilityDoc {
@@ -446,6 +458,8 @@ export interface PurchaseInvoiceDoc {
   /** Everything credited for returns, including credit paid back or kept as an advance. */
   returnedMinor?: number;
   status: 'open' | 'paid';
+  /** Phase 9: the project these costs are for. */
+  projectId?: string | null;
   journalId: string;
   postedAt: Timestamp;
   postedBy: string;
@@ -550,6 +564,8 @@ export interface CustomerDoc {
 
 export interface SalesInvoiceLineDoc {
   lineNo: number;
+  /** Missing on lines from before Phase 9, which are all stock. Service lines have no cost. */
+  itemType?: 'stock' | 'service';
   productId: string;
   sku: string;
   productName: string;
@@ -609,6 +625,9 @@ export interface SalesInvoiceDoc {
   status: 'open' | 'paid';
   /** How a sale over the customer's credit limit was allowed, if it was. */
   creditOverride: { by: 'permission' | 'approval'; approvalId: string | null } | null;
+  /** Phase 9: the project the sale is for, and the quotation it came from. */
+  projectId?: string | null;
+  quotationId?: string | null;
   journalId: string;
   postedAt: Timestamp;
   postedBy: string;
@@ -639,6 +658,8 @@ export interface CustomerReceiptDoc {
 export interface CreditNoteLineDoc {
   /** The sale line returned. */
   lineNo: number;
+  /** Missing before Phase 9 (stock). A service line credits revenue and moves no stock. */
+  itemType?: 'stock' | 'service';
   productId: string;
   sku: string;
   productName: string;
@@ -805,6 +826,163 @@ export interface DepreciationRunDoc {
  * a credit from a return. Lets ageing be worked out as at any date (DATA_MODEL.md §11).
  * Payments taken at a sale are on the invoice itself.
  */
+// --- Services (DATA_MODEL.md §13) -----------------------------------------------------------
+
+/** A piece of work for a customer, or an internal one. Postings carry its id (DECISION 20). */
+export interface ProjectDoc {
+  code: string;
+  name: string;
+  customerId: string | null;
+  customerName: string | null;
+  description: string;
+  status: 'active' | 'completed' | 'cancelled';
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface QuotationLineDoc {
+  lineNo: number;
+  itemType: 'stock' | 'service';
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  qtyMilli: number;
+  listPriceMinor: number | null;
+  unitPriceMinor: number;
+  discountMinor: number;
+  netMinor: number;
+  taxCodeId: string | null;
+  taxCode: string | null;
+  taxRateBp: number;
+  taxMinor: number;
+  grossMinor: number;
+}
+
+export const QUOTATION_STATUSES = [
+  'draft',
+  'sent',
+  'accepted',
+  'declined',
+  'cancelled',
+  'invoiced',
+] as const;
+export type QuotationStatus = (typeof QUOTATION_STATUSES)[number];
+
+/** An offer to a customer. It posts nothing; an invoice made from it does. */
+export interface QuotationDoc {
+  number: string;
+  customerId: string;
+  customerName: string;
+  branchId: string;
+  projectId: string | null;
+  quoteDate: string;
+  validUntil: string;
+  reference: string | null;
+  memo: string | null;
+  pricesIncludeTax: boolean;
+  lines: QuotationLineDoc[];
+  netMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+  status: QuotationStatus;
+  invoiceId: string | null;
+  invoiceNumber: string | null;
+  createdAt: Timestamp;
+  createdBy: string;
+  statusChangedAt: Timestamp;
+  statusChangedBy: string;
+}
+
+/** A recipe: the components that make `outputQtyMilli` of a finished product. Never edited. */
+export interface BomDoc {
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  name: string;
+  outputQtyMilli: number;
+  components: {
+    productId: string;
+    sku: string;
+    productName: string;
+    unit: UnitCode;
+    qtyMilli: number;
+  }[];
+  status: 'active' | 'inactive';
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface ProductionComponentDoc {
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  /** What the bill calls for at the planned quantity; a guide, not a limit. */
+  requiredQtyMilli: number;
+  /** Net of returns. */
+  issuedQtyMilli: number;
+  issuedValueMinor: number;
+}
+
+export interface ProductionCostDoc {
+  description: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  amountMinor: number;
+  journalId: string;
+  postingDate: string;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
+export const PRODUCTION_STATUSES = ['open', 'completed', 'cancelled'] as const;
+export type ProductionStatus = (typeof PRODUCTION_STATUSES)[number];
+
+/**
+ * A production order (ACCOUNTING_POLICIES.md §16). Its cost sits in the WIP account until it is
+ * completed (finished goods at actual cost, DECISION 21) or cancelled.
+ */
+export interface ProductionOrderDoc {
+  number: string;
+  bomId: string;
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  locationId: string;
+  branchId: string;
+  plannedQtyMilli: number;
+  memo: string | null;
+  components: ProductionComponentDoc[];
+  costs: ProductionCostDoc[];
+  materialsMinor: number;
+  directCostMinor: number;
+  /** What the order holds in WIP: materials plus direct costs, until completed or cancelled. */
+  wipMinor: number;
+  status: ProductionStatus;
+  goodQtyMilli: number | null;
+  normalLossQtyMilli: number | null;
+  abnormalLossQtyMilli: number | null;
+  finishedCostMinor: number | null;
+  writtenOffMinor: number | null;
+  writeOffAccountId: string | null;
+  closingJournalId: string | null;
+  closedDate: string | null;
+  closeReason: string | null;
+  journalIds: string[];
+  createdAt: Timestamp;
+  createdBy: string;
+  closedAt: Timestamp | null;
+  closedBy: string | null;
+}
+
 export interface SettlementDoc {
   ledger: 'receivable' | 'payable';
   invoiceId: string;
@@ -904,6 +1082,14 @@ export function companyRefs(companyId: string) {
     fixedAssets: company.collection('fixedAssets'),
     depreciationRuns: company.collection('depreciationRuns'),
     settlements: company.collection('settlements'),
+    project: (id: string) => company.collection('projects').doc(id),
+    projects: company.collection('projects'),
+    quotation: (id: string) => company.collection('quotations').doc(id),
+    quotations: company.collection('quotations'),
+    bom: (id: string) => company.collection('boms').doc(id),
+    boms: company.collection('boms'),
+    productionOrder: (id: string) => company.collection('productionOrders').doc(id),
+    productionOrders: company.collection('productionOrders'),
     auditLogs: company.collection('auditLogs'),
   };
 }

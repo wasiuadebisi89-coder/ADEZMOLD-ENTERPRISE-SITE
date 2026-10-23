@@ -261,7 +261,32 @@ allocated (on the receipt's date, or the day a later allocation is posted), or a
 return. Payments taken at a sale are on the invoice. Ageing at a past date is each invoice dated
 by then, less those payments and every settlement dated by then.
 
-## 12. Indexes (initial)
+## 12. Services and production (Phase 9, as built)
+
+```
+  products/{id}            + type (stock | service; missing = stock)
+  projects/{id}            code, name, customerId?, customerName?, description,
+                           status (active | completed | cancelled)
+  quotations/{id}          number QT-…, customerId, branchId, projectId?, quoteDate, validUntil,
+                           lines (as sales lines, with itemType), net/tax/totalMinor,
+                           status (draft | sent | accepted | declined | cancelled | invoiced),
+                           invoiceId?, invoiceNumber?, createdBy
+  boms/{id}                productId, sku, name, outputQtyMilli, components[{productId,
+                           qtyMilli}], status (active | inactive)
+  productionOrders/{id}    number MO-…, bomId, productId, locationId, branchId, plannedQtyMilli,
+                           components[{productId, requiredQtyMilli, issuedQtyMilli,
+                           issuedValueMinor}], costs[{accountId, amountMinor, journalId}],
+                           materials/directCost/wipMinor, status (open | completed | cancelled),
+                           good/normalLoss/abnormalLossQtyMilli, finishedCostMinor,
+                           writtenOffMinor, journalIds
+```
+
+Journals and ledger entries carry `projectId` (null when untagged). Sales invoices carry
+`projectId` and `quotationId`; purchase invoices `projectId`; sales and credit note lines
+`itemType`. Stock movements from production have source type `productionOrder` and movement
+types `production_issue`, `production_return` and `production_output`.
+
+## 13. Indexes (initial)
 
 `ledgerEntries`: (accountId, postingDate), (accountId, postingDate desc), (journalId, lineNo); later (partyId, postingDate).
 `stockMovements`: (productId, postedAt desc), (productId, postingDate). `settlements`: (ledger, date). `costLayers`: (productId, locationId, open, seq).
@@ -275,7 +300,7 @@ postedAt desc), (postedBy, postedAt desc), (customerId, postedBy, postedAt desc)
 (customerId, createdBy, createdAt desc), (status, createdAt desc); `creditNotes`: (invoiceId,
 createdAt desc), (invoiceId, createdBy, createdAt desc); `customerRefunds`: (source.id,
 createdAt desc), (source.id, createdBy, createdAt desc). `bankReconciliations`: (accountId,
-completedAt desc).
-`journals`: (postingDate),
+completedAt desc). `quotations`: (customerId, quoteDate desc), (createdBy, number desc).
+`journals`: (postingDate), (projectId, postingDate desc),
 (sourceType, sourceId). `auditLogs`: (entityType, entityId, at), (actorUid, at).
 Defined in `firestore.indexes.json` and reviewed each phase.

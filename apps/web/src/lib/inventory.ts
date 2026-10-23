@@ -8,6 +8,8 @@ export interface ProductRow {
   id: string;
   sku: string;
   name: string;
+  /** Missing on products from before Phase 9, which are stock items. */
+  type?: 'stock' | 'service';
   unit: UnitCode;
   categoryId: string | null;
   description: string;
@@ -16,6 +18,8 @@ export interface ProductRow {
   status: 'active' | 'inactive';
   hasMovements: boolean;
 }
+
+export const isService = (p: Pick<ProductRow, 'type'>) => p.type === 'service';
 
 export interface CategoryRow {
   id: string;
@@ -54,7 +58,8 @@ export interface MovementRow {
     | 'purchaseInvoice'
     | 'supplierReturn'
     | 'salesInvoice'
-    | 'creditNote';
+    | 'creditNote'
+    | 'productionOrder';
   sourceId: string;
   sourceNumber: string;
   balanceQtyMilli: number;
@@ -106,6 +111,9 @@ export const MOVEMENT_LABEL = {
   cost_adjustment: 'Cost adjusted',
   sale: 'Sold',
   sales_return: 'Returned by customer',
+  production_issue: 'Issued to production',
+  production_return: 'Returned from production',
+  production_output: 'Produced',
 } as const;
 
 /** Where a stock movement's source document lives in the app. */
@@ -125,6 +133,8 @@ export function movementSourcePath(
       return `${base}/sales/invoices/${m.sourceId}`;
     case 'creditNote':
       return `${base}/sales/returns/${m.sourceId}`;
+    case 'productionOrder':
+      return `${base}/production/${m.sourceId}`;
     default:
       return `${base}/stock-adjustments/${m.sourceId}`;
   }

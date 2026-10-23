@@ -9,6 +9,7 @@ import { Field, Input, Select } from '../../components/ui/form';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
 import {
+  isService,
   qty,
   useCategories,
   useProducts,
@@ -33,6 +34,7 @@ function ProductDialog({
   const action = useAction();
   const [sku, setSku] = useState(product?.sku ?? '');
   const [name, setName] = useState(product?.name ?? '');
+  const [type, setType] = useState<'stock' | 'service'>(product?.type ?? 'stock');
   const [unit, setUnit] = useState<UnitCode>(product?.unit ?? 'pcs');
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? '');
   const [salePrice, setSalePrice] = useState(
@@ -61,11 +63,12 @@ function ProductDialog({
           companyId,
           sku,
           name,
+          type,
           unit,
           categoryId: categoryId || null,
           description: '',
           ...(salePrice.trim() ? { salePrice } : {}),
-          ...(reorderLevel.trim() ? { reorderLevel } : {}),
+          ...(reorderLevel.trim() && type === 'stock' ? { reorderLevel } : {}),
         });
       }
       onClose();
@@ -79,7 +82,7 @@ function ProductDialog({
       open
       onOpenChange={(o) => !o && onClose()}
       title={product ? `Edit ${product.sku}` : 'New product'}
-      description={product ? 'The SKU and unit are fixed once a product exists.' : undefined}
+      description={product ? 'The SKU, kind and unit are fixed once a product exists.' : undefined}
     >
       <form onSubmit={submit} className="space-y-4" noValidate>
         {action.error && <Alert tone="error">{action.error.message}</Alert>}
@@ -97,6 +100,20 @@ function ProductDialog({
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Kind" error={f.type}>
+            <Select
+              value={type}
+              onChange={(e) => {
+                const next = e.target.value as 'stock' | 'service';
+                setType(next);
+                if (next === 'service' && !product) setUnit('hr');
+              }}
+              disabled={!!product}
+            >
+              <option value="stock">Stock item (held and counted)</option>
+              <option value="service">Service (sold, never stocked)</option>
+            </Select>
+          </Field>
           <Field label="Unit" error={f.unit}>
             <Select
               value={unit}
@@ -129,13 +146,15 @@ function ProductDialog({
               onChange={(e) => setSalePrice(e.target.value)}
             />
           </Field>
-          <Field label="Reorder level (optional)" error={f.reorderLevel}>
-            <Input
-              inputMode="decimal"
-              value={reorderLevel}
-              onChange={(e) => setReorderLevel(e.target.value)}
-            />
-          </Field>
+          {type === 'stock' && (
+            <Field label="Reorder level (optional)" error={f.reorderLevel}>
+              <Input
+                inputMode="decimal"
+                value={reorderLevel}
+                onChange={(e) => setReorderLevel(e.target.value)}
+              />
+            </Field>
+          )}
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" type="button" onClick={onClose}>
@@ -214,7 +233,7 @@ export default function Products() {
     <>
       <PageHeader
         title="Products"
-        description="Items you buy, hold and sell. Stock changes go through adjustments, purchases and sales."
+        description="Items you buy, hold and sell, and the services you charge for. Stock changes go through adjustments, purchases and sales."
         actions={
           canManage && (
             <>
@@ -274,19 +293,28 @@ export default function Products() {
                         {p.sku}
                       </Link>
                     </Td>
-                    <Td>{p.name}</Td>
+                    <Td>
+                      {p.name} {isService(p) && <Badge tone="blue">Service</Badge>}
+                    </Td>
                     <Td>{p.categoryId ? (categoryName.get(p.categoryId) ?? '—') : '—'}</Td>
                     <Td className="text-right tabular-nums">
                       {p.salePrice != null ? money(p.salePrice, currency) : '—'}
                     </Td>
                     {canSeeStock && (
                       <Td className="text-right tabular-nums">
-                        {qty(stock?.qty ?? 0, p.unit)} {low && <Badge tone="amber">Reorder</Badge>}
+                        {isService(p) ? (
+                          '—'
+                        ) : (
+                          <>
+                            {qty(stock?.qty ?? 0, p.unit)}{' '}
+                            {low && <Badge tone="amber">Reorder</Badge>}
+                          </>
+                        )}
                       </Td>
                     )}
                     {canSeeStock && (
                       <Td className="text-right tabular-nums">
-                        {money(stock?.value ?? 0, currency)}
+                        {isService(p) ? '—' : money(stock?.value ?? 0, currency)}
                       </Td>
                     )}
                     <Td>

@@ -159,3 +159,22 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
 - **Backups cover Firestore only**, for 14 weeks; Auth users and Storage files are not backed
   up by the schedule (OPERATIONS.md §4).
 - No independent penetration test yet.
+
+## Phase 9
+
+- **Companies created before Phase 9 lack the new accounts.** Selling a service needs a
+  Service revenue account (subtype Service revenue), and production needs a Work in progress
+  account (subtype Work in progress). An admin adds them under Chart of accounts; until then
+  those commands are refused with a message naming the missing account.
+- **Quotations have no expiry job.** "Valid until" is shown, but an out-of-date quotation is
+  not closed automatically and can still be invoiced while sent or accepted.
+- **One invoice per quotation**, for the whole quotation; partial invoicing is not supported.
+- **Projects have no budget, timesheets or percentage-of-completion revenue.** Unbilled work
+  is accrued by journal (DECISION 19).
+- **A production order is completed once**, for its whole output; partial completions, by-
+  products and multi-level bills (a bill using another bill's output in the same order) are
+  not supported. Sub-assemblies are made on their own orders first.
+- **No standard costs or overhead absorption** (DECISION 21); indirect production overheads
+  stay in expenses unless charged to an order as a direct cost.
+- **Production orders are not tagged to projects**, and production postings are dated today
+  only (no backdating).

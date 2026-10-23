@@ -17,6 +17,7 @@ export const ACCOUNT_SUBTYPES = [
   'receivable',
   'payable',
   'inventory',
+  'wip',
   'grni',
   'inputTax',
   'outputTax',
@@ -27,7 +28,9 @@ export const ACCOUNT_SUBTYPES = [
   'retainedEarnings',
   'openingBalanceEquity',
   'revenue',
+  'serviceRevenue',
   'cogs',
+  'directServiceCost',
   'inventoryAdjustment',
   'purchasePriceVariance',
   'depreciation',
@@ -42,6 +45,7 @@ export const SUBTYPES_BY_TYPE: Readonly<Record<AccountType, readonly AccountSubt
     'bank',
     'receivable',
     'inventory',
+    'wip',
     'inputTax',
     'supplierAdvance',
     'fixedAsset',
@@ -49,8 +53,15 @@ export const SUBTYPES_BY_TYPE: Readonly<Record<AccountType, readonly AccountSubt
   ],
   liability: ['general', 'payable', 'grni', 'outputTax', 'customerAdvance'],
   equity: ['general', 'retainedEarnings', 'openingBalanceEquity'],
-  income: ['general', 'revenue'],
-  expense: ['general', 'cogs', 'inventoryAdjustment', 'purchasePriceVariance', 'depreciation'],
+  income: ['general', 'revenue', 'serviceRevenue'],
+  expense: [
+    'general',
+    'cogs',
+    'directServiceCost',
+    'inventoryAdjustment',
+    'purchasePriceVariance',
+    'depreciation',
+  ],
 };
 
 /**
@@ -61,6 +72,7 @@ export const CONTROL_SUBTYPES: readonly AccountSubtype[] = [
   'receivable',
   'payable',
   'inventory',
+  'wip',
   'grni',
 ];
 

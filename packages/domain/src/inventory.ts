@@ -41,6 +41,10 @@ export const UNITS = {
   bag: { code: 'bag', name: 'Bags', decimals: 0 },
   carton: { code: 'carton', name: 'Cartons', decimals: 0 },
   roll: { code: 'roll', name: 'Rolls', decimals: 0 },
+  // For service items (Phase 9)
+  hr: { code: 'hr', name: 'Hours', decimals: 2 },
+  day: { code: 'day', name: 'Days', decimals: 1 },
+  job: { code: 'job', name: 'Jobs', decimals: 0 },
 } as const;
 export type UnitCode = keyof typeof UNITS;
 export const UNIT_CODES = Object.keys(UNITS) as [UnitCode, ...UnitCode[]];

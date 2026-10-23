@@ -42,6 +42,7 @@ export async function readSeries(
 
 const ROLE_NAMES: Partial<Record<AccountSubtype, string>> = {
   inventory: 'Inventory',
+  wip: 'Work in progress',
   payable: 'Trade payables',
   grni: 'Goods received not invoiced',
   cogs: 'Cost of goods sold',
@@ -52,6 +53,7 @@ const ROLE_NAMES: Partial<Record<AccountSubtype, string>> = {
   openingBalanceEquity: 'Opening balance equity',
   receivable: 'Trade receivables',
   revenue: 'Sales revenue',
+  serviceRevenue: 'Service revenue',
   outputTax: 'Output tax payable',
   customerAdvance: 'Customer advances',
 };

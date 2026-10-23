@@ -23,7 +23,7 @@ import { Field, Input, Select, Textarea } from '../../components/ui/form';
 import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
-import { qty, useLocations, useProducts } from '../../lib/inventory';
+import { isService, qty, useLocations, useProducts } from '../../lib/inventory';
 import { money, tryParseMoney, useAccounts } from '../../lib/ledger';
 import {
   useAvailability,
@@ -32,10 +32,11 @@ import {
   useTaxCodes,
   type CustomerRow,
 } from '../../lib/sales';
+import { projectsFor, useProjects, type QuotationRow } from '../../lib/services';
 import { useAction } from '../../lib/useAction';
 import { cn } from '../../lib/utils';
 
-interface LineDraft {
+export interface LineDraft {
   key: string;
   productId: string;
   quantity: string;
@@ -44,7 +45,7 @@ interface LineDraft {
   taxCodeId: string;
 }
 
-const newLine = (taxCodeId = ''): LineDraft => ({
+export const newLine = (taxCodeId = ''): LineDraft => ({
   key: crypto.randomUUID(),
   productId: '',
   quantity: '1',
@@ -54,7 +55,7 @@ const newLine = (taxCodeId = ''): LineDraft => ({
 });
 
 /** The amounts of a line as typed, or null while it is incomplete or invalid. */
-function lineAmounts(
+export function lineAmounts(
   l: LineDraft,
   unit: UnitCode | undefined,
   rateBp: number,
@@ -186,8 +187,17 @@ export default function NewSale() {
   );
   const settings = useDoc<{ pricesIncludeTax: boolean }>(settingsRef);
   const approvals = useMyCreditApprovals(companyId, member?.uid);
+  const canSeeProjects = can('projects.read');
+  const projects = useProjects(companyId, canSeeProjects);
+  const quotationId = params.get('quotation') ?? '';
+  const quoteRef = useMemo(
+    () => (quotationId ? doc(db, `companies/${companyId}/quotations/${quotationId}`) : null),
+    [companyId, quotationId],
+  );
+  const quote = useDoc<Omit<QuotationRow, 'id'>>(quoteRef);
   const action = useAction();
   const [customerId, setCustomerId] = useState(params.get('customer') ?? '');
+  const [projectId, setProjectId] = useState(params.get('project') ?? '');
   const [locationId, setLocationId] = useState('');
   const [postingDate, setPostingDate] = useState(today);
   const [reference, setReference] = useState('');
@@ -196,6 +206,29 @@ export default function NewSale() {
   const [accountId, setAccountId] = useState('');
   const backdate = useBackdate(postingDate);
   const canOverridePrice = can('sales.priceOverride');
+
+  // An invoice from a quotation starts with the quotation's customer, project and lines.
+  const fromQuote = quote.data;
+  const [filledFrom, setFilledFrom] = useState('');
+  // Set while rendering, once per quotation, so the form shows the quotation straight away.
+  if (fromQuote && filledFrom !== fromQuote.id) {
+    setFilledFrom(fromQuote.id);
+    setCustomerId(fromQuote.customerId);
+    setProjectId(fromQuote.projectId ?? '');
+    setReference(fromQuote.number);
+    setLines(
+      fromQuote.lines.map((q) => ({
+        key: crypto.randomUUID(),
+        productId: q.productId,
+        quantity: (q.qtyMilli / 1000).toString(),
+        unitPrice: toDecimalString(BigInt(q.unitPriceMinor), currency),
+        discount: q.discountMinor ? toDecimalString(BigInt(q.discountMinor), currency) : '',
+        taxCodeId: q.taxCodeId ?? '',
+      })),
+    );
+  }
+  const quotedPrices = !!fromQuote;
+  const showDiscount = canOverridePrice || lines.some((l) => l.discount.trim() !== '');
 
   const usable = locations.data.filter(
     (l) =>
@@ -290,10 +323,14 @@ export default function NewSale() {
         lines: lines.map((l) => ({
           productId: l.productId,
           quantity: l.quantity,
-          ...(canOverridePrice ? { unitPrice: l.unitPrice } : {}),
-          ...(canOverridePrice && l.discount.trim() ? { discount: l.discount } : {}),
+          ...(canOverridePrice || quotedPrices ? { unitPrice: l.unitPrice } : {}),
+          ...((canOverridePrice || quotedPrices) && l.discount.trim()
+            ? { discount: l.discount }
+            : {}),
           ...(l.taxCodeId ? { taxCodeId: l.taxCodeId } : {}),
         })),
+        ...(projectId ? { projectId } : {}),
+        ...(fromQuote ? { quotationId: fromQuote.id } : {}),
         payments:
           paid > 0n ? [{ accountId: account, amount: toDecimalString(paid, currency) }] : [],
         ...(approvalState === 'approved' && approval ? { creditApprovalId: approval.id } : {}),
@@ -311,15 +348,17 @@ export default function NewSale() {
     locations.loading ||
     accounts.loading ||
     taxCodes.loading ||
-    settings.loading
+    settings.loading ||
+    quote.loading
   ) {
     return <Spinner />;
   }
+  const projectChoices = projectsFor(projects.data, customerId || null);
 
   return (
     <>
       <PageHeader
-        title="New sale"
+        title={fromQuote ? `Invoice ${fromQuote.number}` : 'New sale'}
         description={`Prices ${inclusive ? 'include' : 'are before'} tax. Anything not paid now is owed by the customer.`}
         actions={
           <Button variant="secondary" asChild>
@@ -332,7 +371,14 @@ export default function NewSale() {
         <Card className="space-y-4 p-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Customer">
-              <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+              <Select
+                value={customerId}
+                disabled={!!fromQuote}
+                onChange={(e) => {
+                  setCustomerId(e.target.value);
+                  setProjectId('');
+                }}
+              >
                 <option value="">Walk-in customer (pays now)</option>
                 {activeCustomers.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -366,6 +412,20 @@ export default function NewSale() {
               />
             </Field>
           </div>
+          {canSeeProjects && (projectChoices.length > 0 || projectId) && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Field label="Project (optional)">
+                <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+                  <option value="">No project</option>
+                  {projectChoices.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.code} · {p.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          )}
           {customer && (
             <p className="text-sm text-slate-600">
               Owes {money(customer.balanceMinor, currency)}
@@ -388,7 +448,7 @@ export default function NewSale() {
                   <th className="min-w-56 px-2 py-2">Product</th>
                   <th className="w-28 px-2 py-2">Quantity</th>
                   <th className="w-32 px-2 py-2">Price</th>
-                  {canOverridePrice && <th className="w-28 px-2 py-2">Discount</th>}
+                  {showDiscount && <th className="w-28 px-2 py-2">Discount</th>}
                   {activeTax.length > 0 && <th className="w-36 px-2 py-2">Tax</th>}
                   <th className="px-2 py-2 text-right">Amount</th>
                   <th className="w-10 px-2 py-2">
@@ -421,7 +481,9 @@ export default function NewSale() {
                         </Select>
                         {product && (
                           <p className="mt-1 text-xs text-slate-500">
-                            {qty(onHand ?? 0, product.unit)} available
+                            {isService(product)
+                              ? `Service, by the ${product.unit}`
+                              : `${qty(onHand ?? 0, product.unit)} available`}
                           </p>
                         )}
                       </td>
@@ -445,12 +507,13 @@ export default function NewSale() {
                           <p className="mt-1 text-xs text-red-700">No price set for this product</p>
                         )}
                       </td>
-                      {canOverridePrice && (
+                      {showDiscount && (
                         <td className="px-2 py-1.5">
                           <Input
                             aria-label={`Line ${i + 1} discount`}
                             inputMode="decimal"
                             value={l.discount}
+                            readOnly={!canOverridePrice}
                             onChange={(e) => update(i, { discount: e.target.value })}
                           />
                         </td>

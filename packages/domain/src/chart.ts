@@ -44,6 +44,7 @@ export const TRADING_TEMPLATE: ChartTemplate = {
     a('1200', 'Trade receivables', 'asset', '1000', 'receivable'),
     a('1250', 'Other receivables and prepayments', 'asset', '1000'),
     a('1300', 'Inventory', 'asset', '1000', 'inventory'),
+    a('1320', 'Work in progress', 'asset', '1000', 'wip'),
     a('1350', 'Advances to suppliers', 'asset', '1000', 'supplierAdvance'),
     a('1400', 'Input tax recoverable', 'asset', '1000', 'inputTax'),
     h('1500', 'Property, plant and equipment', 'asset', '1000'),
@@ -67,12 +68,14 @@ export const TRADING_TEMPLATE: ChartTemplate = {
 
     h('4000', 'Income', 'income'),
     a('4100', 'Sales revenue', 'income', '4000', 'revenue'),
+    a('4200', 'Service revenue', 'income', '4000', 'serviceRevenue'),
     a('4900', 'Other income', 'income', '4000'),
 
     h('5000', 'Cost of sales', 'expense'),
     a('5100', 'Cost of goods sold', 'expense', '5000', 'cogs'),
     a('5200', 'Inventory adjustments', 'expense', '5000', 'inventoryAdjustment'),
     a('5300', 'Purchase price variance', 'expense', '5000', 'purchasePriceVariance'),
+    a('5400', 'Direct service costs', 'expense', '5000', 'directServiceCost'),
 
     h('6000', 'Operating expenses', 'expense'),
     a('6100', 'Salaries and wages', 'expense', '6000'),

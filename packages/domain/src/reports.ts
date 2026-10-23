@@ -58,7 +58,11 @@ const COST_OF_SALES: readonly AccountSubtype[] = [
   'cogs',
   'inventoryAdjustment',
   'purchasePriceVariance',
+  'directServiceCost',
 ];
+
+/** Income from the business's own goods and services; anything else is other income. */
+const REVENUE: readonly AccountSubtype[] = ['revenue', 'serviceRevenue'];
 
 export interface ProfitAndLoss {
   revenue: StatementSection;
@@ -76,13 +80,13 @@ export function profitAndLoss(movements: readonly AccountMovement[]): ProfitAndL
   const revenue = section(
     'revenue',
     'Revenue',
-    income.filter((m) => m.account.subtype === 'revenue'),
+    income.filter((m) => REVENUE.includes(m.account.subtype)),
     -1n,
   );
   const otherIncome = section(
     'otherIncome',
     'Other income',
-    income.filter((m) => m.account.subtype !== 'revenue'),
+    income.filter((m) => !REVENUE.includes(m.account.subtype)),
     -1n,
   );
   const costOfSales = section(

@@ -23,6 +23,10 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
 | 16  | Supplier payment approval           | **Confirmed:** none; anyone with `purchasing.payment.post` pays directly (Accountant, Manager, Admin)        | Phase 4                |
 | 17  | Return and refund approvals         | **Confirmed:** sales officers' returns and refunds wait for a manager; others post directly                  | Phase 6                |
 | 18  | Time limit on returns               | **Confirmed:** none; the approver applies any shop policy                                                    | Phase 6                |
+| 19  | Service revenue recognition         | **Confirmed:** 4200 Service revenue, on the invoice date; unbilled work accrued by journal                   | Phase 9                |
+| 20  | Project costs                       | **Confirmed:** expensed as incurred and tagged to the project; not held as work in progress                  | Phase 9                |
+| 21  | Production costing                  | **Confirmed:** actual cost; materials at the costing method when issued, plus direct costs charged           | Phase 9                |
+| 22  | Production losses                   | **Confirmed:** normal loss spread over good output; abnormal loss written off                                | Phase 9                |
 
 ## Confirmed decisions
 
@@ -61,3 +65,17 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
     managed backups. The owner chose staging on Blaze with a budget alert, and production
     created and upgraded at go-live. Project ids proposed: `adezmold-bms-staging`,
     `adezmold-bms-prod` (`.firebaserc`); change them there if those ids are taken.
+- 2026-10-23: the owner accepted the recommended policies for Phase 9 (services and
+  production):
+  - #19: services are sold as service items and earn 4200 Service revenue on the invoice
+    date. Work done but not yet invoiced at a month end is accrued by the accountant with a
+    journal; nothing accrues automatically.
+  - #20: a project is a tag. Its costs are expensed when incurred (to 5400 Direct service
+    costs or any other account) and tagged, so the project shows its margin; nothing is
+    carried as work in progress for services.
+  - #21: production orders use actual cost. Materials leave stock at the company's costing
+    method (weighted average by default) and direct costs such as labour are charged to the
+    order. There are no standard costs and no overhead absorption rates.
+  - #22: expected (normal) loss is recorded and its cost carried by the good output.
+    Loss beyond that (abnormal) takes its share of the order's cost per unit and is written
+    off to an expense account chosen when the order is completed.

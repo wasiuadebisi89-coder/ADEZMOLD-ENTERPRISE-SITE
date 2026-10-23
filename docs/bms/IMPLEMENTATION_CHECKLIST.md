@@ -110,6 +110,12 @@ Green in CI on PR #7 and merged.
 - [ ] Owner: first deploy smoke checks, recovery drill, staging load test
 - [ ] Production project at go-live
 
-## Phase 9
+## Phase 9 — Services and production
 
-- [ ] Services and production modules
+- [~] Decisions 19–22 confirmed (service revenue, project costs, actual costing, losses)
+- [~] Service items: sold, quoted and credited, never stocked; 4200 Service revenue
+- [~] Projects: tag sales, purchase invoices and journals; project result page
+- [~] Quotations: draft, sent, accepted, declined, cancelled; one invoice at quoted prices
+- [~] Bills of materials and production orders: issue and return materials, direct costs,
+  complete with normal and abnormal loss, cancel with write-off; 1320 Work in progress
+- [~] Rules, integration and end-to-end tests (PHASE9_ACCEPTANCE.md)

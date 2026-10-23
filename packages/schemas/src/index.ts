@@ -256,6 +256,8 @@ export const postJournalInput = scoped.extend({
   reference: optionalText(60),
   lines: journalLines,
   backdateApprovalId: docId.optional(),
+  /** Tags the journal with a project (Phase 9). */
+  projectId: docId.optional(),
 });
 export const reverseJournalInput = scoped.extend({
   journalId: docId,
@@ -309,8 +311,12 @@ export const updateCategoryInput = scoped.extend({
   status: z.enum(['active', 'inactive']).optional(),
 });
 
+/** `stock` items are held and costed; `service` items are sold without stock (Phase 9). */
+export const PRODUCT_TYPES = ['stock', 'service'] as const;
+
 export const createProductInput = scoped.extend({
   sku,
+  type: z.enum(PRODUCT_TYPES).default('stock'),
   name: trimmed(2, 160),
   unit: z.enum(UNIT_CODES),
   categoryId: docId.nullable().default(null),
@@ -463,6 +469,8 @@ export const postPurchaseInvoiceInput = scoped.extend({
   /** Recoverable input tax shown on the supplier's invoice, if any. Not computed. */
   inputTax: amount.optional(),
   backdateApprovalId: docId.optional(),
+  /** Phase 9: the project these costs are for. */
+  projectId: docId.optional(),
 });
 
 export const postSupplierOpeningBalanceInput = scoped.extend({
@@ -578,6 +586,9 @@ export const postSalesInvoiceInput = scoped.extend({
     .default([]),
   creditApprovalId: docId.optional(),
   backdateApprovalId: docId.optional(),
+  /** Phase 9: the project the sale is for, and the quotation it fulfils. */
+  projectId: docId.optional(),
+  quotationId: docId.optional(),
 });
 
 export const postCustomerOpeningBalanceInput = scoped.extend({
@@ -726,6 +737,101 @@ export const disposeFixedAssetInput = scoped.extend({
   backdateApprovalId: docId.optional(),
 });
 
+// --- Services: projects and quotations (Phase 9) ---------------------------------------------
+
+export const projectCode = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(
+    /^[A-Z0-9][A-Z0-9._-]{0,19}$/,
+    'Use up to 20 letters, digits, dots, dashes or underscores',
+  );
+
+export const createProjectInput = scoped.extend({
+  code: projectCode,
+  name: trimmed(2, 120),
+  /** Leave out for an internal project. */
+  customerId: docId.optional(),
+  description: optionalText(500),
+});
+export const updateProjectInput = scoped.extend({
+  projectId: docId,
+  name: trimmed(2, 120).optional(),
+  description: z.string().trim().max(500).optional(),
+  status: z.enum(['active', 'completed', 'cancelled']).optional(),
+});
+
+export const createQuotationInput = scoped.extend({
+  customerId: docId,
+  branchId: docId,
+  quoteDate: isoDate,
+  validUntil: isoDate,
+  projectId: docId.optional(),
+  reference: optionalText(60),
+  memo: optionalText(300),
+  lines: documentLines(salesLineInput),
+});
+export const setQuotationStatusInput = scoped.extend({
+  quotationId: docId,
+  status: z.enum(['sent', 'accepted', 'declined', 'cancelled']),
+});
+
+// --- Production (Phase 9) --------------------------------------------------------------------
+
+const bomComponent = z.object({ productId: docId, quantity });
+export const createBomInput = scoped.extend({
+  /** The finished product the bill makes. */
+  productId: docId,
+  name: trimmed(2, 120),
+  /** How much the components below make, e.g. "10" bags. */
+  outputQuantity: quantity,
+  components: z
+    .array(bomComponent)
+    .min(1, 'Add at least one component')
+    .max(50, 'Use at most 50 components'),
+});
+export const setBomStatusInput = scoped.extend({
+  bomId: docId,
+  status: z.enum(['active', 'inactive']),
+});
+
+export const createProductionOrderInput = scoped.extend({
+  bomId: docId,
+  /** Store the materials come from and the finished goods go to. */
+  locationId: docId,
+  quantity,
+  memo: optionalText(300),
+});
+export const moveProductionMaterialsInput = scoped.extend({
+  orderId: docId,
+  /** issue: store to the order; return: unused materials back to the store. */
+  direction: z.enum(['issue', 'return']),
+  lines: z.array(bomComponent).min(1, 'Add at least one line').max(50, 'Use at most 50 lines'),
+});
+export const addProductionCostInput = scoped.extend({
+  orderId: docId,
+  /** The account credited: cash, bank, an accrual, or the expense being moved into the order. */
+  accountId: docId,
+  description: trimmed(3, 200),
+  amount,
+});
+export const completeProductionOrderInput = scoped.extend({
+  orderId: docId,
+  goodQuantity: quantity,
+  /** Expected loss: recorded, and its cost spread over the good output (DECISION 22). */
+  normalLossQuantity: quantity.optional(),
+  /** Loss beyond what is expected: its share of cost is written off to writeOffAccountId. */
+  abnormalLossQuantity: quantity.optional(),
+  writeOffAccountId: docId.optional(),
+});
+export const cancelProductionOrderInput = scoped.extend({
+  orderId: docId,
+  reason: trimmed(3, 300),
+  /** Needed when the order still holds cost; that cost is written off to this account. */
+  writeOffAccountId: docId.optional(),
+});
+
 // --- Platform and session ------------------------------------------------------------------
 
 export const platformSupportReadInput = base.extend({
@@ -792,6 +898,17 @@ export const COMMAND_SCHEMAS = {
   'fixedAsset.create': createFixedAssetInput,
   'fixedAsset.dispose': disposeFixedAssetInput,
   'depreciation.run': runDepreciationInput,
+  'project.create': createProjectInput,
+  'project.update': updateProjectInput,
+  'quotation.create': createQuotationInput,
+  'quotation.setStatus': setQuotationStatusInput,
+  'bom.create': createBomInput,
+  'bom.setStatus': setBomStatusInput,
+  'productionOrder.create': createProductionOrderInput,
+  'productionOrder.moveMaterials': moveProductionMaterialsInput,
+  'productionOrder.addCost': addProductionCostInput,
+  'productionOrder.complete': completeProductionOrderInput,
+  'productionOrder.cancel': cancelProductionOrderInput,
   'platform.supportRead': platformSupportReadInput,
   'session.revokeAll': revokeSessionsInput,
 } as const;

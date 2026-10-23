@@ -262,6 +262,29 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Services (Phase 9): projects and quotations, written only by server commands.
+      match /projects/{projectId} {
+        allow read: if can(companyId, 'projects.read');
+        allow write: if false;
+      }
+
+      match /quotations/{quotationId} {
+        allow read: if can(companyId, 'sales.read')
+          || (can(companyId, 'sales.readOwn') && resource.data.createdBy == request.auth.uid);
+        allow write: if false;
+      }
+
+      // Production (Phase 9): bills of materials and production orders, server-written only.
+      match /boms/{bomId} {
+        allow read: if can(companyId, 'production.read');
+        allow write: if false;
+      }
+
+      match /productionOrders/{orderId} {
+        allow read: if can(companyId, 'production.read');
+        allow write: if false;
+      }
+
       // Fixed assets: the register and depreciation runs, posted only by server commands.
       match /fixedAssets/{assetId} {
         allow read: if can(companyId, 'assets.read');
