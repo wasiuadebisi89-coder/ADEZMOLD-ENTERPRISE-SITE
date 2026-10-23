@@ -231,14 +231,23 @@ Sales officers read only returns and refunds with their own `createdBy`.
                                entry cleared, so an entry can be cleared only once
 ```
 
-## 10. Fixed assets (Phase 7)
+## 10. Fixed assets (Phase 7, as built)
 
 ```
-  assetCategories/{id}   default life, method, accounts
-  assets/{id}            cost, residual, usefulLifeMonths, availableForUseDate,
-                         depreciationStartDate, method, status, accumulatedDepreciation ★
-  depreciationRuns/{id}  ★ periodId, status, journalId
+  fixedAssets/{id}       ★ number (FA-…), name, branchId, assetAccountId, accumulatedAccountId,
+                         expenseAccountId, costMinor, residualMinor, usefulLifeMonths,
+                         availableForUseDate, firstMonth, baseMonths, baseAccumulatedMinor,
+                         chargedMonths, accumulatedMinor, depreciatedThrough,
+                         status (active | disposed), acquisition {kind, date, creditAccountId,
+                         journalId}, disposal {date, proceedsMinor, gainMinor, journalId, …}
+  depreciationRuns/{id}  ★ branchId, month, postingDate, totalMinor,
+                         assets[] {assetId, number, months, amountMinor}, journalId
 ```
+
+Running totals (`chargedMonths`, `accumulatedMinor`) include what was charged before cut-over
+(`baseMonths`, `baseAccumulatedMinor`). Each month's charge is the running total for that many
+months less what was charged, so the charges add up exactly to cost less residual value.
+Asset categories with default lives are not built; each asset carries its own accounts.
 
 ## 11. Indexes (initial)
 
