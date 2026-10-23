@@ -181,7 +181,10 @@ export function assertPeriodTransition(
   const target = sorted[index];
   if (!target) throw new PeriodError('no_period', `Unknown period ${targetId}`);
   if (!ALLOWED_TRANSITIONS[target.status].includes(to)) {
-    throw new PeriodError('invalid_transition', `Cannot move ${targetId} from ${target.status} to ${to}`);
+    throw new PeriodError(
+      'invalid_transition',
+      `Cannot move ${targetId} from ${target.status} to ${to}`,
+    );
   }
   const rank: Record<PeriodStatus, number> = { open: 0, soft_closed: 1, closed: 2 };
   if (rank[to] > rank[target.status]) {

@@ -38,9 +38,13 @@ describe('parseMoney / toDecimalString (H1)', () => {
 
   it('round-trips through the decimal string for any amount', () => {
     fc.assert(
-      fc.property(fc.bigInt({ min: -(10n ** 15n), max: 10n ** 15n }), fc.constantFrom('NGN', 'JPY', 'KWD'), (minor, ccy) => {
-        expect(parseMoney(toDecimalString(minor, ccy), ccy)).toBe(minor);
-      }),
+      fc.property(
+        fc.bigInt({ min: -(10n ** 15n), max: 10n ** 15n }),
+        fc.constantFrom('NGN', 'JPY', 'KWD'),
+        (minor, ccy) => {
+          expect(parseMoney(toDecimalString(minor, ccy), ccy)).toBe(minor);
+        },
+      ),
     );
   });
 
@@ -76,11 +80,15 @@ describe('rounding (H2)', () => {
 
   it('never deviates by more than half a unit from the exact quotient', () => {
     fc.assert(
-      fc.property(fc.bigInt({ min: -(10n ** 12n), max: 10n ** 12n }), fc.bigInt({ min: 1n, max: 10n ** 6n }), (n, d) => {
-        const q = divRoundHalfAwayFromZero(n, d);
-        const diff = q * d - n;
-        expect((diff < 0n ? -diff : diff) * 2n <= d).toBe(true);
-      }),
+      fc.property(
+        fc.bigInt({ min: -(10n ** 12n), max: 10n ** 12n }),
+        fc.bigInt({ min: 1n, max: 10n ** 6n }),
+        (n, d) => {
+          const q = divRoundHalfAwayFromZero(n, d);
+          const diff = q * d - n;
+          expect((diff < 0n ? -diff : diff) * 2n <= d).toBe(true);
+        },
+      ),
     );
   });
 });
@@ -96,7 +104,9 @@ describe('allocate (H2)', () => {
     fc.assert(
       fc.property(
         fc.bigInt({ min: -(10n ** 12n), max: 10n ** 12n }),
-        fc.array(fc.bigInt({ min: 0n, max: 10n ** 9n }), { minLength: 1, maxLength: 50 }).filter((w) => sum(w) > 0n),
+        fc
+          .array(fc.bigInt({ min: 0n, max: 10n ** 9n }), { minLength: 1, maxLength: 50 })
+          .filter((w) => sum(w) > 0n),
         (total, weights) => {
           expect(sum(allocate(total, weights))).toBe(total);
         },

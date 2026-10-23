@@ -67,12 +67,7 @@ export function isPermission(value: string): value is Permission {
 }
 
 export type SystemRoleId =
-  | 'company_admin'
-  | 'manager'
-  | 'sales_officer'
-  | 'store_officer'
-  | 'accountant'
-  | 'auditor';
+  'company_admin' | 'manager' | 'sales_officer' | 'store_officer' | 'accountant' | 'auditor';
 
 export interface RoleTemplate {
   id: SystemRoleId;

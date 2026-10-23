@@ -44,7 +44,11 @@ describe('fiscal years (F6)', () => {
     const fy = planFiscalYear(2026, 1);
     expect(fy.id).toBe('FY2026-01');
     expect(fy.periods).toHaveLength(12);
-    expect(fy.periods[1]).toEqual({ id: '2026-02', startDate: '2026-02-01', endDate: '2026-02-28' });
+    expect(fy.periods[1]).toEqual({
+      id: '2026-02',
+      startDate: '2026-02-01',
+      endDate: '2026-02-28',
+    });
     expect(fy.endDate).toBe('2026-12-31');
   });
   it('plans a July–June year across two calendar years', () => {
@@ -73,23 +77,34 @@ describe('assertPostingAllowed (F5)', () => {
     expect(code(() => assertPostingAllowed(base))).toBeUndefined();
   });
   it('rejects future dates', () => {
-    expect(code(() => assertPostingAllowed({ ...base, postingDate: '2026-10-24' }))).toBe('future_date');
+    expect(code(() => assertPostingAllowed({ ...base, postingDate: '2026-10-24' }))).toBe(
+      'future_date',
+    );
   });
   it('rejects a missing or mismatched period', () => {
     expect(code(() => assertPostingAllowed({ ...base, period: undefined }))).toBe('no_period');
-    expect(code(() => assertPostingAllowed({ ...base, period: { id: '2026-09', status: 'open' } }))).toBe('no_period');
+    expect(
+      code(() => assertPostingAllowed({ ...base, period: { id: '2026-09', status: 'open' } })),
+    ).toBe('no_period');
   });
   it('rejects closed periods even with approvals and permissions', () => {
     expect(
       code(() =>
-        assertPostingAllowed({ ...base, period: { id: '2026-10', status: 'closed' }, canPostToSoftClosed: true, hasBackdateApproval: true }),
+        assertPostingAllowed({
+          ...base,
+          period: { id: '2026-10', status: 'closed' },
+          canPostToSoftClosed: true,
+          hasBackdateApproval: true,
+        }),
       ),
     ).toBe('period_closed');
   });
   it('allows soft-closed periods only with permission', () => {
     const soft = { ...base, period: { id: '2026-10', status: 'soft_closed' as const } };
     expect(code(() => assertPostingAllowed(soft))).toBe('period_soft_closed');
-    expect(code(() => assertPostingAllowed({ ...soft, canPostToSoftClosed: true }))).toBeUndefined();
+    expect(
+      code(() => assertPostingAllowed({ ...soft, canPostToSoftClosed: true })),
+    ).toBeUndefined();
   });
   it('requires approval beyond the backdate window', () => {
     const old = { ...base, postingDate: '2026-10-19' };
@@ -106,7 +121,9 @@ describe('assertPeriodTransition (F4)', () => {
     const p = periods(['open', 'open', 'open']);
     expect(code(() => assertPeriodTransition(p, '2026-01', 'closed'))).toBeUndefined();
     expect(code(() => assertPeriodTransition(p, '2026-02', 'closed'))).toBe('close_out_of_order');
-    expect(code(() => assertPeriodTransition(p, '2026-02', 'soft_closed'))).toBe('close_out_of_order');
+    expect(code(() => assertPeriodTransition(p, '2026-02', 'soft_closed'))).toBe(
+      'close_out_of_order',
+    );
   });
   it('allows soft-closing after an earlier soft close', () => {
     const p = periods(['soft_closed', 'open']);

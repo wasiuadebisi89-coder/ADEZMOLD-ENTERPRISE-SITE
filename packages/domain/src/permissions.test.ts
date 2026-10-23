@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { PERMISSIONS, SYSTEM_ROLES, branchAllowed, effectivePermissions, roleTemplate } from './permissions.js';
+import {
+  PERMISSIONS,
+  SYSTEM_ROLES,
+  branchAllowed,
+  effectivePermissions,
+  roleTemplate,
+} from './permissions.js';
 
 describe('permission catalogue', () => {
   it('has unique, well-formed permission names', () => {
@@ -30,7 +36,12 @@ describe('system role templates (E2)', () => {
   });
 
   it('keeps administration with the Company Admin', () => {
-    const adminOnly = ['company.members.manage', 'company.roles.manage', 'company.members.invite', 'settings.periods.reopen.approve'];
+    const adminOnly = [
+      'company.members.manage',
+      'company.roles.manage',
+      'company.members.invite',
+      'settings.periods.reopen.approve',
+    ];
     for (const role of SYSTEM_ROLES) {
       for (const p of adminOnly) {
         expect(role.permissions.includes(p as never)).toBe(role.id === 'company_admin');
@@ -39,7 +50,8 @@ describe('system role templates (E2)', () => {
   });
 
   it('matches the matrix for sensitive actions', () => {
-    const has = (id: Parameters<typeof roleTemplate>[0], p: string) => roleTemplate(id).permissions.includes(p as never);
+    const has = (id: Parameters<typeof roleTemplate>[0], p: string) =>
+      roleTemplate(id).permissions.includes(p as never);
     expect(has('accountant', 'settings.periods.close')).toBe(true);
     expect(has('accountant', 'settings.periods.reopen.request')).toBe(true);
     expect(has('accountant', 'settings.periods.reopen.approve')).toBe(false);
@@ -52,7 +64,10 @@ describe('system role templates (E2)', () => {
 
 describe('effective permissions and branch scope', () => {
   it('unions roles and drops unknown strings', () => {
-    const set = effectivePermissions([{ permissions: ['sales.read', 'bogus.perm'] }, { permissions: ['company.settings.read'] }]);
+    const set = effectivePermissions([
+      { permissions: ['sales.read', 'bogus.perm'] },
+      { permissions: ['company.settings.read'] },
+    ]);
     expect([...set].sort()).toEqual(['company.settings.read', 'sales.read']);
   });
   it('checks branch scope', () => {

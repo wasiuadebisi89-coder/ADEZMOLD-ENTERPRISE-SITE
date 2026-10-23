@@ -116,7 +116,11 @@ export const createCompany = defineCommand({
       roleIds: member.roleIds,
       updatedAt: now,
     });
-    tx.set(db.doc(`users/${caller.uid}`), { email: caller.email ?? null, defaultCompanyId: companyId }, { merge: true });
+    tx.set(
+      db.doc(`users/${caller.uid}`),
+      { email: caller.email ?? null, defaultCompanyId: companyId },
+      { merge: true },
+    );
 
     return {
       result: { companyId, branchId, fiscalYearId: fy.id },
@@ -124,7 +128,11 @@ export const createCompany = defineCommand({
         target: { scope: 'company', companyId },
         entityType: 'company',
         entityId: companyId,
-        after: { legalName: company.legalName, baseCurrency: company.baseCurrency, timeZone: company.timeZone },
+        after: {
+          legalName: company.legalName,
+          baseCurrency: company.baseCurrency,
+          timeZone: company.timeZone,
+        },
       },
     };
   },
@@ -138,24 +146,36 @@ export const updateCompanySettings = defineCommand({
     const company = (await tx.get(refs.company)).data() as CompanyDoc;
     const settings = (await tx.get(refs.settings)).data() as SettingsDoc;
 
-    if (input.baseCurrency && input.baseCurrency !== company.baseCurrency && company.locks.baseCurrency) {
-      throw failedPrecondition('base_currency_locked', 'The base currency cannot change after transactions are posted');
+    if (
+      input.baseCurrency &&
+      input.baseCurrency !== company.baseCurrency &&
+      company.locks.baseCurrency
+    ) {
+      throw failedPrecondition(
+        'base_currency_locked',
+        'The base currency cannot change after transactions are posted',
+      );
     }
     if (
       input.fiscalYearStartMonth &&
       input.fiscalYearStartMonth !== company.fiscalYearStartMonth &&
       company.locks.fiscalYearStartMonth
     ) {
-      throw failedPrecondition('fiscal_year_locked', 'The fiscal year start cannot change after transactions are posted');
+      throw failedPrecondition(
+        'fiscal_year_locked',
+        'The fiscal year start cannot change after transactions are posted',
+      );
     }
 
     const companyPatch: Partial<CompanyDoc> = {};
     if (input.tradingName !== undefined) companyPatch.tradingName = input.tradingName;
     if (input.timeZone !== undefined) companyPatch.timeZone = input.timeZone;
     if (input.baseCurrency !== undefined) companyPatch.baseCurrency = input.baseCurrency;
-    if (input.fiscalYearStartMonth !== undefined) companyPatch.fiscalYearStartMonth = input.fiscalYearStartMonth;
+    if (input.fiscalYearStartMonth !== undefined)
+      companyPatch.fiscalYearStartMonth = input.fiscalYearStartMonth;
     const settingsPatch: Partial<SettingsDoc> = {};
-    if (input.backdateWindowDays !== undefined) settingsPatch.backdateWindowDays = input.backdateWindowDays;
+    if (input.backdateWindowDays !== undefined)
+      settingsPatch.backdateWindowDays = input.backdateWindowDays;
 
     let mirrorsToUpdate: string[] = [];
     if (companyPatch.tradingName && companyPatch.tradingName !== company.tradingName) {
@@ -170,7 +190,11 @@ export const updateCompanySettings = defineCommand({
       tx.update(refs.settings, { ...settingsPatch, updatedAt: now, updatedBy: caller.uid });
     }
     for (const uid of mirrorsToUpdate) {
-      tx.set(membershipMirror(uid, input.companyId), { companyName: companyPatch.tradingName, updatedAt: now }, { merge: true });
+      tx.set(
+        membershipMirror(uid, input.companyId),
+        { companyName: companyPatch.tradingName, updatedAt: now },
+        { merge: true },
+      );
     }
 
     const pick = <T extends object>(src: T, keys: string[]) =>

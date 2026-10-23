@@ -1,7 +1,20 @@
-import { assertNoOverlap, assertPeriodTransition, isReopen, planFiscalYear, PeriodError, type PeriodStatus } from '@bms/domain';
+import {
+  assertNoOverlap,
+  assertPeriodTransition,
+  isReopen,
+  planFiscalYear,
+  PeriodError,
+  type PeriodStatus,
+} from '@bms/domain';
 import { defineCommand } from '../lib/command.js';
 import { CommandError, conflict, denied, failedPrecondition, notFound } from '../lib/errors.js';
-import { companyRefs, type ApprovalRequestDoc, type CompanyDoc, type FiscalYearDoc, type PeriodDoc } from '../lib/model.js';
+import {
+  companyRefs,
+  type ApprovalRequestDoc,
+  type CompanyDoc,
+  type FiscalYearDoc,
+  type PeriodDoc,
+} from '../lib/model.js';
 
 function toCommandError(e: unknown): never {
   if (e instanceof PeriodError) throw new CommandError('failed-precondition', e.code, e.message);
@@ -32,9 +45,16 @@ export const setPeriodStatus = defineCommand({
     // Reopening a closed period needs an approved, unused request for this period (F3).
     let approvalId: string | undefined;
     if (isReopen(from, to)) {
-      if (!input.reason) throw failedPrecondition('reason_required', 'A reason is required to reopen a closed period');
+      if (!input.reason)
+        throw failedPrecondition(
+          'reason_required',
+          'A reason is required to reopen a closed period',
+        );
       if (!input.approvalRequestId) {
-        throw failedPrecondition('approval_required', 'Reopening a closed period needs an approved request');
+        throw failedPrecondition(
+          'approval_required',
+          'Reopening a closed period needs an approved request',
+        );
       }
       const approvalRef = refs.approval(input.approvalRequestId);
       const approval = (await tx.get(approvalRef)).data() as ApprovalRequestDoc | undefined;
@@ -44,7 +64,10 @@ export const setPeriodStatus = defineCommand({
         approval.target.periodId !== input.periodId ||
         approval.status !== 'approved'
       ) {
-        throw failedPrecondition('approval_invalid', 'The approval request is missing, not approved, or already used');
+        throw failedPrecondition(
+          'approval_invalid',
+          'The approval request is missing, not approved, or already used',
+        );
       }
       approvalId = input.approvalRequestId;
       tx.update(approvalRef, { status: 'used', usedAt: now });
@@ -84,12 +107,18 @@ export const createFiscalYear = defineCommand({
     } catch (e) {
       toCommandError(e);
     }
-    const latestEnd = years.map((y) => y.endDate).sort().at(-1);
+    const latestEnd = years
+      .map((y) => y.endDate)
+      .sort()
+      .at(-1);
     if (latestEnd) {
       const next = new Date(`${latestEnd}T00:00:00Z`);
       next.setUTCDate(next.getUTCDate() + 1);
       if (plan.startDate !== next.toISOString().slice(0, 10)) {
-        throw failedPrecondition('fiscal_year_gap', 'The new fiscal year must start the day after the latest one ends');
+        throw failedPrecondition(
+          'fiscal_year_gap',
+          'The new fiscal year must start the day after the latest one ends',
+        );
       }
     }
     tx.set(refs.fiscalYear(plan.id), {
@@ -127,16 +156,19 @@ export const requestApproval = defineCommand({
   access: { kind: 'company', permission: 'settings.periods.reopen.request' },
   async handler({ tx, caller, input, now }) {
     const refs = companyRefs(input.companyId);
-    const period = (await tx.get(refs.period(input.target.periodId))).data() as PeriodDoc | undefined;
+    const period = (await tx.get(refs.period(input.target.periodId))).data() as
+      PeriodDoc | undefined;
     if (!period) throw notFound('period_not_found', 'Period not found');
-    if (period.status !== 'closed') throw failedPrecondition('period_not_closed', 'Only closed periods need a reopen approval');
+    if (period.status !== 'closed')
+      throw failedPrecondition('period_not_closed', 'Only closed periods need a reopen approval');
     const pending = await tx.get(
       refs.approvals
         .where('action', '==', input.action)
         .where('target.periodId', '==', input.target.periodId)
         .where('status', 'in', ['pending', 'approved']),
     );
-    if (!pending.empty) throw conflict('approval_exists', 'A request for this period is already open');
+    if (!pending.empty)
+      throw conflict('approval_exists', 'A request for this period is already open');
     const ref = refs.approvals.doc();
     const doc: ApprovalRequestDoc = {
       action: input.action,
@@ -171,11 +203,17 @@ export const decideApproval = defineCommand({
     const ref = companyRefs(input.companyId).approval(input.approvalRequestId);
     const approval = (await tx.get(ref)).data() as ApprovalRequestDoc | undefined;
     if (!approval) throw notFound('approval_not_found', 'Approval request not found');
-    if (approval.status !== 'pending') throw failedPrecondition('approval_not_pending', 'This request has already been decided');
+    if (approval.status !== 'pending')
+      throw failedPrecondition('approval_not_pending', 'This request has already been decided');
     if (approval.requestedBy === caller.uid) {
       throw denied('self_approval', 'You cannot approve or reject your own request');
     }
-    tx.update(ref, { status: input.decision, decidedBy: caller.uid, decidedAt: now, decisionReason: input.reason });
+    tx.update(ref, {
+      status: input.decision,
+      decidedBy: caller.uid,
+      decidedAt: now,
+      decisionReason: input.reason,
+    });
     return {
       result: { approvalRequestId: input.approvalRequestId, status: input.decision },
       audit: {

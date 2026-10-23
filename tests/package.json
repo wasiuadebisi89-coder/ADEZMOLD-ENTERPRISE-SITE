@@ -10,5 +10,8 @@
     "@firebase/rules-unit-testing": "5.0.2",
     "firebase": "12.19.0",
     "firebase-admin": "14.5.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
   }
 }

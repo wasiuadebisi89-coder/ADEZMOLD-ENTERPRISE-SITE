@@ -3,7 +3,12 @@
  * authenticate → validate → idempotency → tenant + authorization → handler → audit, with
  * everything after authentication inside one Firestore transaction.
  */
-import { FieldValue, Timestamp, type DocumentReference, type Transaction } from 'firebase-admin/firestore';
+import {
+  FieldValue,
+  Timestamp,
+  type DocumentReference,
+  type Transaction,
+} from 'firebase-admin/firestore';
 import type { z } from 'zod';
 import { effectivePermissions, type Permission } from '@bms/domain';
 import { COMMAND_SCHEMAS, type CommandInput, type CommandName } from '@bms/schemas';
@@ -77,7 +82,9 @@ export interface CommandDefinition<N extends CommandName, R> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyCommand = CommandDefinition<any, unknown>;
 
-export function defineCommand<N extends CommandName, R>(def: CommandDefinition<N, R>): CommandDefinition<N, R> {
+export function defineCommand<N extends CommandName, R>(
+  def: CommandDefinition<N, R>,
+): CommandDefinition<N, R> {
   return def;
 }
 
@@ -101,7 +108,11 @@ export async function resolveCaller(token: {
   if (user.tokensValidAfterTime) {
     const validAfter = Math.floor(new Date(user.tokensValidAfterTime).getTime() / 1000);
     if (token.auth_time < validAfter) {
-      throw new CommandError('unauthenticated', 'session_revoked', 'Your session has ended. Please sign in again');
+      throw new CommandError(
+        'unauthenticated',
+        'session_revoked',
+        'Your session has ended. Please sign in again',
+      );
     }
   }
   return {
@@ -174,15 +185,23 @@ export async function runCommand<N extends CommandName, R>(
   const access = def.access;
 
   if (access.kind === 'authenticated' && access.requireVerifiedEmail && !caller.emailVerified) {
-    throw new CommandError('failed-precondition', 'email_not_verified', 'Please verify your email address first');
+    throw new CommandError(
+      'failed-precondition',
+      'email_not_verified',
+      'Please verify your email address first',
+    );
   }
   if (access.kind === 'platformAdmin' && !caller.platformAdmin) {
     throw denied('not_platform_admin');
   }
 
-  const { idempotencyKey, ...payload } = input as { idempotencyKey: string } & Record<string, unknown>;
+  const { idempotencyKey, ...payload } = input as { idempotencyKey: string } & Record<
+    string,
+    unknown
+  >;
   const payloadHash = sha256(canonicalJson({ name: def.name, payload }));
-  const companyId = access.kind === 'company' ? (input as { companyId: string }).companyId : undefined;
+  const companyId =
+    access.kind === 'company' ? (input as { companyId: string }).companyId : undefined;
   const commandRef: DocumentReference = companyId
     ? companyRefs(companyId).command(idempotencyKey)
     : db.doc(`users/${caller.uid}/commands/${idempotencyKey}`);
@@ -195,7 +214,8 @@ export async function runCommand<N extends CommandName, R>(
     let company: CompanyContext | undefined;
     if (access.kind === 'company' && companyId) {
       company = await loadCompanyContext(tx, companyId, caller.uid);
-      const required = typeof access.permission === 'function' ? access.permission(input) : access.permission;
+      const required =
+        typeof access.permission === 'function' ? access.permission(input) : access.permission;
       if (!company.permissions.has(required)) throw denied('missing_permission');
     }
     if (access.kind === 'platformAdmin') {
@@ -206,8 +226,15 @@ export async function runCommand<N extends CommandName, R>(
     const existing = await tx.get(commandRef);
     if (existing.exists) {
       const record = existing.data() as CommandRecord;
-      if (record.uid !== caller.uid || record.payloadHash !== payloadHash || record.name !== def.name) {
-        throw conflict('idempotency_key_reused', 'This request id was already used for a different request');
+      if (
+        record.uid !== caller.uid ||
+        record.payloadHash !== payloadHash ||
+        record.name !== def.name
+      ) {
+        throw conflict(
+          'idempotency_key_reused',
+          'This request id was already used for a different request',
+        );
       }
       return { replayed: true as const, result: record.result as R };
     }

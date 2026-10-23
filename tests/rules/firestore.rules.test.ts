@@ -44,26 +44,47 @@ beforeEach(async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
     for (const [companyId, members] of [
-      ['A', [member(ADMIN_A, 'company_admin'), member(AUDITOR_A, 'auditor'), member(SALES_A, 'sales_officer'), member(SUSPENDED_A, 'company_admin', 'suspended')]],
+      [
+        'A',
+        [
+          member(ADMIN_A, 'company_admin'),
+          member(AUDITOR_A, 'auditor'),
+          member(SALES_A, 'sales_officer'),
+          member(SUSPENDED_A, 'company_admin', 'suspended'),
+        ],
+      ],
       ['B', [member(ADMIN_B, 'company_admin')]],
     ] as const) {
-      await setDoc(doc(db, `companies/${companyId}`), { legalName: `Company ${companyId}`, status: 'active' });
+      await setDoc(doc(db, `companies/${companyId}`), {
+        legalName: `Company ${companyId}`,
+        status: 'active',
+      });
       await setDoc(doc(db, `companies/${companyId}/settings/general`), { backdateWindowDays: 3 });
-      await setDoc(doc(db, `companies/${companyId}/roles/company_admin`), { name: 'Company Admin' });
+      await setDoc(doc(db, `companies/${companyId}/roles/company_admin`), {
+        name: 'Company Admin',
+      });
       await setDoc(doc(db, `companies/${companyId}/branches/HQ`), { name: 'Head office' });
       await setDoc(doc(db, `companies/${companyId}/periods/2026-10`), { status: 'open' });
       await setDoc(doc(db, `companies/${companyId}/auditLogs/log1`), { action: 'company.create' });
       await setDoc(doc(db, `companies/${companyId}/commands/key1`), { name: 'company.create' });
       for (const m of members) await setDoc(doc(db, `companies/${companyId}/members/${m.uid}`), m);
     }
-    await setDoc(doc(db, `users/${ADMIN_A}`), { email: 'admin-a@example.test', defaultCompanyId: 'A' });
+    await setDoc(doc(db, `users/${ADMIN_A}`), {
+      email: 'admin-a@example.test',
+      defaultCompanyId: 'A',
+    });
     await setDoc(doc(db, `users/${ADMIN_A}/memberships/A`), { status: 'active' });
-    await setDoc(doc(db, 'invitations/inv1'), { companyId: 'A', email: 'new@example.test', tokenHash: 'x' });
+    await setDoc(doc(db, 'invitations/inv1'), {
+      companyId: 'A',
+      email: 'new@example.test',
+      tokenHash: 'x',
+    });
     await setDoc(doc(db, 'platformAdmins/root'), { grantedAt: 1 });
   });
 });
 
-const db = (uid?: string) => (uid ? env.authenticatedContext(uid) : env.unauthenticatedContext()).firestore();
+const db = (uid?: string) =>
+  (uid ? env.authenticatedContext(uid) : env.unauthenticatedContext()).firestore();
 
 const COMPANY_PATHS = [
   'companies/A',
@@ -154,19 +175,30 @@ describe('C7 user profile', () => {
     await assertFails(getDoc(doc(db(ADMIN_B), `users/${ADMIN_A}`)));
   });
   it('user can change displayName and preferences only', async () => {
-    await assertSucceeds(updateDoc(doc(db(ADMIN_A), `users/${ADMIN_A}`), { displayName: 'Ada', preferences: { theme: 'dark' } }));
+    await assertSucceeds(
+      updateDoc(doc(db(ADMIN_A), `users/${ADMIN_A}`), {
+        displayName: 'Ada',
+        preferences: { theme: 'dark' },
+      }),
+    );
     await assertFails(updateDoc(doc(db(ADMIN_A), `users/${ADMIN_A}`), { defaultCompanyId: 'B' }));
-    await assertFails(updateDoc(doc(db(ADMIN_A), `users/${ADMIN_A}`), { displayName: 'x'.repeat(121) }));
+    await assertFails(
+      updateDoc(doc(db(ADMIN_A), `users/${ADMIN_A}`), { displayName: 'x'.repeat(121) }),
+    );
   });
   it('user cannot write the memberships mirror', async () => {
-    await assertFails(setDoc(doc(db(ADMIN_B), `users/${ADMIN_B}/memberships/A`), { status: 'active' }));
+    await assertFails(
+      setDoc(doc(db(ADMIN_B), `users/${ADMIN_B}/memberships/A`), { status: 'active' }),
+    );
   });
 });
 
 describe('G2 audit log immutability and platform collections', () => {
   it('nobody can write or delete audit entries from a client', async () => {
     await assertFails(setDoc(doc(db(ADMIN_A), 'companies/A/auditLogs/log2'), { action: 'fake' }));
-    await assertFails(updateDoc(doc(db(ADMIN_A), 'companies/A/auditLogs/log1'), { action: 'edited' }));
+    await assertFails(
+      updateDoc(doc(db(ADMIN_A), 'companies/A/auditLogs/log1'), { action: 'edited' }),
+    );
     await assertFails(deleteDoc(doc(db(ADMIN_A), 'companies/A/auditLogs/log1')));
   });
   it('platform collections are closed to clients, including platform admins', async () => {

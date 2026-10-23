@@ -5,7 +5,21 @@
 import { z } from 'zod';
 import { PERMISSIONS, SUPPORTED_CURRENCY_CODES, isIsoDate } from '@bms/domain';
 
-const trimmed = (min: number, max: number) => z.string().trim().min(min).max(max);
+const trimmed = (min: number, max: number) =>
+  z
+    .string()
+    .trim()
+    .min(min, min <= 1 ? 'This field is required' : `Use at least ${min} characters`)
+    .max(max, `Use at most ${max} characters`);
+
+/** Optional free text where an empty input means "not provided". */
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max, `Use at most ${max} characters`)
+    .optional()
+    .transform((v) => (v ? v : undefined));
 
 export const idempotencyKey = z.uuid({ message: 'idempotencyKey must be a UUID' });
 export const docId = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, 'Invalid id');
@@ -41,7 +55,7 @@ const scoped = base.extend({ companyId });
 
 export const createCompanyInput = base.extend({
   legalName: trimmed(2, 160),
-  tradingName: trimmed(1, 160).optional(),
+  tradingName: optionalText(160),
   country: z.string().length(2).toUpperCase(),
   baseCurrency: z.enum(SUPPORTED_CURRENCY_CODES),
   timeZone,

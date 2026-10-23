@@ -30,7 +30,12 @@ describe('A. authentication', () => {
     const user = await makeUser('gone@example.test');
     await auth.updateUser(user.uid, { disabled: true });
     await expect(
-      resolveCaller({ uid: user.uid, email: user.email, email_verified: true, auth_time: user.authTime }),
+      resolveCaller({
+        uid: user.uid,
+        email: user.email,
+        email_verified: true,
+        auth_time: user.authTime,
+      }),
     ).rejects.toMatchObject({ reason: 'user_disabled' });
   });
 
@@ -40,7 +45,12 @@ describe('A. authentication', () => {
     await new Promise((r) => setTimeout(r, 1100));
     await call('session.revokeAll', {}, user);
     await expect(
-      resolveCaller({ uid: user.uid, email: user.email, email_verified: true, auth_time: user.authTime }),
+      resolveCaller({
+        uid: user.uid,
+        email: user.email,
+        email_verified: true,
+        auth_time: user.authTime,
+      }),
     ).rejects.toMatchObject({ reason: 'session_revoked' });
   });
 });
@@ -52,16 +62,29 @@ describe('B. company registration', () => {
     const base = `companies/${companyId}`;
 
     const company = (await db.doc(base).get()).data()!;
-    expect(company).toMatchObject({ legalName: 'Adezmold Trading Ltd', baseCurrency: 'NGN', status: 'active', costingMethod: 'weighted_average' });
+    expect(company).toMatchObject({
+      legalName: 'Adezmold Trading Ltd',
+      baseCurrency: 'NGN',
+      status: 'active',
+      costingMethod: 'weighted_average',
+    });
     expect((await db.doc(`${base}/branches/${branchId}`).get()).get('isHeadOffice')).toBe(true);
     const roles = await db.collection(`${base}/roles`).get();
     expect(roles.docs.map((d) => d.id).sort()).toEqual(SYSTEM_ROLES.map((r) => r.id).sort());
     expect((await db.doc(`${base}/settings/general`).get()).get('backdateWindowDays')).toBe(3);
-    expect((await db.collection(`${base}/periods`).where('fiscalYearId', '==', fiscalYearId).get()).size).toBe(12);
+    expect(
+      (await db.collection(`${base}/periods`).where('fiscalYearId', '==', fiscalYearId).get()).size,
+    ).toBe(12);
     const member = (await db.doc(`${base}/members/${admin.uid}`).get()).data()!;
-    expect(member).toMatchObject({ status: 'active', roleIds: ['company_admin'], branchScope: 'all' });
+    expect(member).toMatchObject({
+      status: 'active',
+      roleIds: ['company_admin'],
+      branchScope: 'all',
+    });
     expect(member.permissions).toContain('company.members.manage');
-    expect((await db.doc(`users/${admin.uid}/memberships/${companyId}`).get()).get('status')).toBe('active');
+    expect((await db.doc(`users/${admin.uid}/memberships/${companyId}`).get()).get('status')).toBe(
+      'active',
+    );
     expect(await auditCount(companyId)).toBe(1);
   });
 
@@ -77,7 +100,9 @@ describe('B. company registration', () => {
   it('B2 concurrent retries create only one company', async () => {
     const admin = await makeUser('owner@example.test');
     const key = randomUUID();
-    const results = await Promise.allSettled([1, 2, 3].map(() => call('company.create', companyInput, admin, key)));
+    const results = await Promise.allSettled(
+      [1, 2, 3].map(() => call('company.create', companyInput, admin, key)),
+    );
     const ok = results.filter((r) => r.status === 'fulfilled') as PromiseFulfilledResult<unknown>[];
     expect(ok.length).toBeGreaterThan(0);
     expect(new Set(ok.map((r) => JSON.stringify(r.value))).size).toBe(1);
@@ -88,19 +113,30 @@ describe('B. company registration', () => {
     const admin = await makeUser('owner@example.test');
     const key = randomUUID();
     await call('company.create', companyInput, admin, key);
-    await expectReason(call('company.create', { ...companyInput, legalName: 'Other Ltd' }, admin, key), 'idempotency_key_reused');
+    await expectReason(
+      call('company.create', { ...companyInput, legalName: 'Other Ltd' }, admin, key),
+      'idempotency_key_reused',
+    );
   });
 
   it('B4 server-side validation rejects bad input even when the UI is bypassed', async () => {
     const admin = await makeUser('owner@example.test');
     const err = await expectReason(
-      createCompany(admin, { legalName: '', baseCurrency: 'XXX', fiscalYearStartMonth: 13, timeZone: 'Mars/Base' }),
+      createCompany(admin, {
+        legalName: '',
+        baseCurrency: 'XXX',
+        fiscalYearStartMonth: 13,
+        timeZone: 'Mars/Base',
+      }),
       'validation_failed',
     );
     expect(Object.keys((err.details as { fields: object }).fields)).toEqual(
       expect.arrayContaining(['legalName', 'baseCurrency', 'fiscalYearStartMonth', 'timeZone']),
     );
-    await expectReason(call('company.create', { ...companyInput, idempotencyKey: 'not-a-uuid' }, admin), 'validation_failed');
+    await expectReason(
+      call('company.create', { ...companyInput, idempotencyKey: 'not-a-uuid' }, admin),
+      'validation_failed',
+    );
   });
 
   it('B5 base currency cannot change once locked', async () => {
@@ -108,9 +144,14 @@ describe('B. company registration', () => {
     const { companyId } = await createCompany(admin);
     await call('company.updateSettings', { companyId, baseCurrency: 'USD' }, admin);
     await db.doc(`companies/${companyId}`).update({ 'locks.baseCurrency': true });
-    await expectReason(call('company.updateSettings', { companyId, baseCurrency: 'NGN' }, admin), 'base_currency_locked');
+    await expectReason(
+      call('company.updateSettings', { companyId, baseCurrency: 'NGN' }, admin),
+      'base_currency_locked',
+    );
     await call('company.updateSettings', { companyId, tradingName: 'Renamed' }, admin);
-    expect((await db.doc(`users/${admin.uid}/memberships/${companyId}`).get()).get('companyName')).toBe('Renamed');
+    expect(
+      (await db.doc(`users/${admin.uid}/memberships/${companyId}`).get()).get('companyName'),
+    ).toBe('Renamed');
   });
 });
 
@@ -120,9 +161,18 @@ describe('C5. tenant isolation in commands', () => {
     const b = await makeUser('b@example.test');
     const { companyId: companyA } = await createCompany(a);
     await createCompany(b);
-    await expectReason(call('branch.create', { companyId: companyA, code: 'X1', name: 'Intruder' }, b), 'not_a_member');
-    await expectReason(call('company.updateSettings', { companyId: companyA, tradingName: 'Hijack' }, b), 'not_a_member');
-    await expectReason(call('company.updateSettings', { companyId: 'does-not-exist', tradingName: 'x' }, b), 'not_a_member');
+    await expectReason(
+      call('branch.create', { companyId: companyA, code: 'X1', name: 'Intruder' }, b),
+      'not_a_member',
+    );
+    await expectReason(
+      call('company.updateSettings', { companyId: companyA, tradingName: 'Hijack' }, b),
+      'not_a_member',
+    );
+    await expectReason(
+      call('company.updateSettings', { companyId: 'does-not-exist', tradingName: 'x' }, b),
+      'not_a_member',
+    );
   });
 
   it('does not leak a prior result to another user who reuses the key', async () => {
@@ -132,7 +182,10 @@ describe('C5. tenant isolation in commands', () => {
     await addMember(companyId, a, b, ['manager']);
     const key = randomUUID();
     await call('branch.create', { companyId, code: 'B1', name: 'Branch' }, a, key);
-    await expectReason(call('branch.create', { companyId, code: 'B1', name: 'Branch' }, b, key), 'missing_permission');
+    await expectReason(
+      call('branch.create', { companyId, code: 'B1', name: 'Branch' }, b, key),
+      'missing_permission',
+    );
   });
 });
 
@@ -142,7 +195,10 @@ describe('D. memberships and invitations', () => {
     const invitee = await makeUser('staff@example.test');
     const { companyId } = await createCompany(admin);
     const inv = await addMember(companyId, admin, invitee, ['sales_officer']);
-    await expectReason(call('invitation.accept', { invitationId: inv.invitationId, token: inv.token }, invitee), 'invitation_not_pending');
+    await expectReason(
+      call('invitation.accept', { invitationId: inv.invitationId, token: inv.token }, invitee),
+      'invitation_not_pending',
+    );
     const member = (await db.doc(`companies/${companyId}/members/${invitee.uid}`).get()).data()!;
     expect(member.permissions).toContain('sales.invoice.post');
     expect(member.permissions).not.toContain('company.members.manage');
@@ -157,9 +213,17 @@ describe('D. memberships and invitations', () => {
       { companyId, email: invitee.email, roleIds: ['sales_officer'], branchScope: 'all' },
       admin,
     );
-    await expectReason(call('invitation.accept', { invitationId: inv.invitationId, token: 'x'.repeat(43) }, invitee), 'invitation_not_found');
-    await db.doc(`invitations/${inv.invitationId}`).update({ expiresAt: Timestamp.fromMillis(Date.now() - 1000) });
-    await expectReason(call('invitation.accept', { invitationId: inv.invitationId, token: inv.token }, invitee), 'invitation_expired');
+    await expectReason(
+      call('invitation.accept', { invitationId: inv.invitationId, token: 'x'.repeat(43) }, invitee),
+      'invitation_not_found',
+    );
+    await db
+      .doc(`invitations/${inv.invitationId}`)
+      .update({ expiresAt: Timestamp.fromMillis(Date.now() - 1000) });
+    await expectReason(
+      call('invitation.accept', { invitationId: inv.invitationId, token: inv.token }, invitee),
+      'invitation_expired',
+    );
   });
 
   it('D2 an invitation cannot be accepted from a different email', async () => {
@@ -171,7 +235,10 @@ describe('D. memberships and invitations', () => {
       { companyId, email: 'staff@example.test', roleIds: ['sales_officer'], branchScope: 'all' },
       admin,
     );
-    await expectReason(call('invitation.accept', { invitationId: inv.invitationId, token: inv.token }, other), 'invitation_email_mismatch');
+    await expectReason(
+      call('invitation.accept', { invitationId: inv.invitationId, token: inv.token }, other),
+      'invitation_email_mismatch',
+    );
   });
 
   it('D3 one user, two companies, different permissions', async () => {
@@ -183,7 +250,10 @@ describe('D. memberships and invitations', () => {
     const memberships = await db.collection(`users/${a.uid}/memberships`).get();
     expect(memberships.docs.map((d) => d.id).sort()).toEqual([companyA, companyB].sort());
     await call('branch.create', { companyId: companyA, code: 'LAG', name: 'Lagos' }, a);
-    await expectReason(call('branch.create', { companyId: companyB, code: 'LAG', name: 'Lagos' }, a), 'missing_permission');
+    await expectReason(
+      call('branch.create', { companyId: companyB, code: 'LAG', name: 'Lagos' }, a),
+      'missing_permission',
+    );
   });
 
   it('D4 suspended members cannot run commands and the change is audited', async () => {
@@ -191,22 +261,54 @@ describe('D. memberships and invitations', () => {
     const manager = await makeUser('manager@example.test');
     const { companyId } = await createCompany(admin);
     await addMember(companyId, admin, manager, ['company_admin']);
-    await call('member.setStatus', { companyId, uid: manager.uid, status: 'suspended', reason: 'Left the company' }, admin);
-    await expectReason(call('branch.create', { companyId, code: 'B2', name: 'B' }, manager), 'not_a_member');
-    const audit = await db.collection(`companies/${companyId}/auditLogs`).where('action', '==', 'member.setStatus').get();
+    await call(
+      'member.setStatus',
+      { companyId, uid: manager.uid, status: 'suspended', reason: 'Left the company' },
+      admin,
+    );
+    await expectReason(
+      call('branch.create', { companyId, code: 'B2', name: 'B' }, manager),
+      'not_a_member',
+    );
+    const audit = await db
+      .collection(`companies/${companyId}/auditLogs`)
+      .where('action', '==', 'member.setStatus')
+      .get();
     expect(audit.size).toBe(1);
-    expect(audit.docs[0]!.data()).toMatchObject({ actorUid: admin.uid, entityId: manager.uid, reason: 'Left the company', after: { status: 'suspended' } });
+    expect(audit.docs[0]!.data()).toMatchObject({
+      actorUid: admin.uid,
+      entityId: manager.uid,
+      reason: 'Left the company',
+      after: { status: 'suspended' },
+    });
   });
 
   it('D5 the last active admin cannot be removed, suspended or demoted', async () => {
     const admin = await makeUser('admin@example.test');
     const admin2 = await makeUser('admin2@example.test');
     const { companyId } = await createCompany(admin);
-    await expectReason(call('member.update', { companyId, uid: admin.uid, roleIds: ['manager'] }, admin), 'last_admin');
-    await expectReason(call('member.setStatus', { companyId, uid: admin.uid, status: 'removed', reason: 'test' }, admin), 'cannot_change_own_status');
+    await expectReason(
+      call('member.update', { companyId, uid: admin.uid, roleIds: ['manager'] }, admin),
+      'last_admin',
+    );
+    await expectReason(
+      call(
+        'member.setStatus',
+        { companyId, uid: admin.uid, status: 'removed', reason: 'test' },
+        admin,
+      ),
+      'cannot_change_own_status',
+    );
     await addMember(companyId, admin, admin2, ['company_admin']);
-    await call('member.setStatus', { companyId, uid: admin.uid, status: 'suspended', reason: 'Handover' }, admin2);
-    await expectReason(call('member.update', { companyId, uid: admin2.uid, roleIds: ['manager'] }, admin2), 'last_admin');
+    await call(
+      'member.setStatus',
+      { companyId, uid: admin.uid, status: 'suspended', reason: 'Handover' },
+      admin2,
+    );
+    await expectReason(
+      call('member.update', { companyId, uid: admin2.uid, roleIds: ['manager'] }, admin2),
+      'last_admin',
+    );
   });
 
   it('D6 non-admins cannot invite, change roles or suspend', async () => {
@@ -214,9 +316,26 @@ describe('D. memberships and invitations', () => {
     const manager = await makeUser('manager@example.test');
     const { companyId } = await createCompany(admin);
     await addMember(companyId, admin, manager, ['manager']);
-    await expectReason(call('invitation.create', { companyId, email: 'x@example.test', roleIds: ['company_admin'], branchScope: 'all' }, manager), 'missing_permission');
-    await expectReason(call('member.update', { companyId, uid: manager.uid, roleIds: ['company_admin'] }, manager), 'missing_permission');
-    await expectReason(call('member.setStatus', { companyId, uid: admin.uid, status: 'suspended', reason: 'coup' }, manager), 'missing_permission');
+    await expectReason(
+      call(
+        'invitation.create',
+        { companyId, email: 'x@example.test', roleIds: ['company_admin'], branchScope: 'all' },
+        manager,
+      ),
+      'missing_permission',
+    );
+    await expectReason(
+      call('member.update', { companyId, uid: manager.uid, roleIds: ['company_admin'] }, manager),
+      'missing_permission',
+    );
+    await expectReason(
+      call(
+        'member.setStatus',
+        { companyId, uid: admin.uid, status: 'suspended', reason: 'coup' },
+        manager,
+      ),
+      'missing_permission',
+    );
   });
 });
 
@@ -225,24 +344,51 @@ describe('E. roles and permissions', () => {
     const admin = await makeUser('admin@example.test');
     const staff = await makeUser('staff@example.test');
     const { companyId } = await createCompany(admin);
-    const { roleId } = await call<{ roleId: string }>('role.create', { companyId, name: 'Cashier', permissions: ['sales.invoice.post'] }, admin);
+    const { roleId } = await call<{ roleId: string }>(
+      'role.create',
+      { companyId, name: 'Cashier', permissions: ['sales.invoice.post'] },
+      admin,
+    );
     await addMember(companyId, admin, staff, [roleId]);
-    await call('role.update', { companyId, roleId, permissions: ['sales.invoice.post', 'sales.receipt.post'] }, admin);
-    expect((await db.doc(`companies/${companyId}/members/${staff.uid}`).get()).get('permissions')).toEqual(['sales.invoice.post', 'sales.receipt.post']);
+    await call(
+      'role.update',
+      { companyId, roleId, permissions: ['sales.invoice.post', 'sales.receipt.post'] },
+      admin,
+    );
+    expect(
+      (await db.doc(`companies/${companyId}/members/${staff.uid}`).get()).get('permissions'),
+    ).toEqual(['sales.invoice.post', 'sales.receipt.post']);
     await expectReason(call('role.delete', { companyId, roleId }, admin), 'role_in_use');
-    await expectReason(call('role.update', { companyId, roleId: 'company_admin', permissions: [] }, admin), 'system_role_immutable');
-    await expectReason(call('role.delete', { companyId, roleId: 'auditor' }, admin), 'system_role_immutable');
-    await expectReason(call('role.create', { companyId, name: 'Bad', permissions: ['root.everything'] }, admin), 'validation_failed');
+    await expectReason(
+      call('role.update', { companyId, roleId: 'company_admin', permissions: [] }, admin),
+      'system_role_immutable',
+    );
+    await expectReason(
+      call('role.delete', { companyId, roleId: 'auditor' }, admin),
+      'system_role_immutable',
+    );
+    await expectReason(
+      call('role.create', { companyId, name: 'Bad', permissions: ['root.everything'] }, admin),
+      'validation_failed',
+    );
   });
 
   it('E4 branch scope must reference active branches', async () => {
     const admin = await makeUser('admin@example.test');
     const { companyId } = await createCompany(admin);
     await expectReason(
-      call('invitation.create', { companyId, email: 'x@example.test', roleIds: ['sales_officer'], branchScope: ['NOPE'] }, admin),
+      call(
+        'invitation.create',
+        { companyId, email: 'x@example.test', roleIds: ['sales_officer'], branchScope: ['NOPE'] },
+        admin,
+      ),
       'unknown_branch',
     );
-    await call('invitation.create', { companyId, email: 'x@example.test', roleIds: ['sales_officer'], branchScope: ['HQ'] }, admin);
+    await call(
+      'invitation.create',
+      { companyId, email: 'x@example.test', roleIds: ['sales_officer'], branchScope: ['HQ'] },
+      admin,
+    );
   });
 
   it('E6 auditors cannot change anything', async () => {
@@ -255,9 +401,18 @@ describe('E. roles and permissions', () => {
       ['branch.create', { companyId, code: 'A1', name: 'x' }],
       ['role.create', { companyId, name: 'x1', permissions: [] }],
       ['period.setStatus', { companyId, periodId: '2026-01', status: 'closed' }],
-      ['approval.request', { companyId, action: 'period.reopen', target: { periodId: '2026-01' }, reason: 'need to fix' }],
+      [
+        'approval.request',
+        {
+          companyId,
+          action: 'period.reopen',
+          target: { periodId: '2026-01' },
+          reason: 'need to fix',
+        },
+      ],
     ];
-    for (const [name, input] of attempts) await expectReason(call(name, input, auditor), 'missing_permission');
+    for (const [name, input] of attempts)
+      await expectReason(call(name, input, auditor), 'missing_permission');
   });
 });
 
@@ -266,23 +421,39 @@ describe('F. branches and financial periods', () => {
     const admin = await makeUser('admin@example.test');
     const { companyId } = await createCompany(admin);
     await call('branch.create', { companyId, code: 'abj', name: 'Abuja' }, admin);
-    await expectReason(call('branch.create', { companyId, code: 'ABJ', name: 'Abuja 2' }, admin), 'branch_code_taken');
+    await expectReason(
+      call('branch.create', { companyId, code: 'ABJ', name: 'Abuja 2' }, admin),
+      'branch_code_taken',
+    );
     await call('branch.update', { companyId, branchId: 'ABJ', status: 'inactive' }, admin);
-    await expectReason(call('branch.update', { companyId, branchId: 'HQ', status: 'inactive' }, admin), 'head_office_required');
+    await expectReason(
+      call('branch.update', { companyId, branchId: 'HQ', status: 'inactive' }, admin),
+      'head_office_required',
+    );
   });
 
   it('F2/F4 periods close in order', async () => {
     const admin = await makeUser('admin@example.test');
     const { companyId, fiscalYearId } = await createCompany(admin);
-    const periods = (await db.collection(`companies/${companyId}/periods`).where('fiscalYearId', '==', fiscalYearId).get()).docs
+    const periods = (
+      await db
+        .collection(`companies/${companyId}/periods`)
+        .where('fiscalYearId', '==', fiscalYearId)
+        .get()
+    ).docs
       .map((d) => d.id)
       .sort();
     const [p1, p2] = periods as [string, string];
-    await expectReason(call('period.setStatus', { companyId, periodId: p2, status: 'closed' }, admin), 'close_out_of_order');
+    await expectReason(
+      call('period.setStatus', { companyId, periodId: p2, status: 'closed' }, admin),
+      'close_out_of_order',
+    );
     await call('period.setStatus', { companyId, periodId: p1, status: 'soft_closed' }, admin);
     await call('period.setStatus', { companyId, periodId: p1, status: 'closed' }, admin);
     await call('period.setStatus', { companyId, periodId: p2, status: 'closed' }, admin);
-    expect((await db.doc(`companies/${companyId}/periods/${p1}`).get()).get('status')).toBe('closed');
+    expect((await db.doc(`companies/${companyId}/periods/${p1}`).get()).get('status')).toBe(
+      'closed',
+    );
   });
 
   it('F3 reopening needs an approved request from someone else, used once', async () => {
@@ -290,34 +461,75 @@ describe('F. branches and financial periods', () => {
     const accountant = await makeUser('acct@example.test');
     const { companyId, fiscalYearId } = await createCompany(admin);
     await addMember(companyId, admin, accountant, ['accountant']);
-    const periodId = (await db.collection(`companies/${companyId}/periods`).where('fiscalYearId', '==', fiscalYearId).get()).docs
+    const periodId = (
+      await db
+        .collection(`companies/${companyId}/periods`)
+        .where('fiscalYearId', '==', fiscalYearId)
+        .get()
+    ).docs
       .map((d) => d.id)
       .sort()[0]!;
     await call('period.setStatus', { companyId, periodId, status: 'closed' }, accountant);
 
-    await expectReason(call('period.setStatus', { companyId, periodId, status: 'open', reason: 'Fix error' }, accountant), 'approval_required');
+    await expectReason(
+      call(
+        'period.setStatus',
+        { companyId, periodId, status: 'open', reason: 'Fix error' },
+        accountant,
+      ),
+      'approval_required',
+    );
     const { approvalRequestId } = await call<{ approvalRequestId: string }>(
       'approval.request',
-      { companyId, action: 'period.reopen', target: { periodId }, reason: 'Missing supplier invoice' },
+      {
+        companyId,
+        action: 'period.reopen',
+        target: { periodId },
+        reason: 'Missing supplier invoice',
+      },
       accountant,
     );
     await expectReason(
-      call('approval.request', { companyId, action: 'period.reopen', target: { periodId }, reason: 'again' }, accountant),
+      call(
+        'approval.request',
+        { companyId, action: 'period.reopen', target: { periodId }, reason: 'again' },
+        accountant,
+      ),
       'approval_exists',
     );
     await expectReason(
-      call('approval.decide', { companyId, approvalRequestId, decision: 'approved', reason: 'Looks fine' }, accountant),
+      call(
+        'approval.decide',
+        { companyId, approvalRequestId, decision: 'approved', reason: 'Looks fine' },
+        accountant,
+      ),
       'missing_permission',
     );
     await expectReason(
-      call('period.setStatus', { companyId, periodId, status: 'open', reason: 'Fix error', approvalRequestId }, accountant),
+      call(
+        'period.setStatus',
+        { companyId, periodId, status: 'open', reason: 'Fix error', approvalRequestId },
+        accountant,
+      ),
       'approval_invalid',
     );
-    await call('approval.decide', { companyId, approvalRequestId, decision: 'approved', reason: 'Agreed' }, admin);
-    await call('period.setStatus', { companyId, periodId, status: 'open', reason: 'Fix error', approvalRequestId }, accountant);
+    await call(
+      'approval.decide',
+      { companyId, approvalRequestId, decision: 'approved', reason: 'Agreed' },
+      admin,
+    );
+    await call(
+      'period.setStatus',
+      { companyId, periodId, status: 'open', reason: 'Fix error', approvalRequestId },
+      accountant,
+    );
     await call('period.setStatus', { companyId, periodId, status: 'closed' }, accountant);
     await expectReason(
-      call('period.setStatus', { companyId, periodId, status: 'open', reason: 'Again', approvalRequestId }, accountant),
+      call(
+        'period.setStatus',
+        { companyId, periodId, status: 'open', reason: 'Again', approvalRequestId },
+        accountant,
+      ),
       'approval_invalid',
     );
   });
@@ -332,15 +544,28 @@ describe('F. branches and financial periods', () => {
       { companyId, action: 'period.reopen', target: { periodId }, reason: 'Correction' },
       admin,
     );
-    await expectReason(call('approval.decide', { companyId, approvalRequestId, decision: 'approved', reason: 'self' }, admin), 'self_approval');
+    await expectReason(
+      call(
+        'approval.decide',
+        { companyId, approvalRequestId, decision: 'approved', reason: 'self' },
+        admin,
+      ),
+      'self_approval',
+    );
   });
 
   it('F6 the next fiscal year is contiguous and non-overlapping', async () => {
     const admin = await makeUser('admin@example.test');
     const { companyId, fiscalYearId } = await createCompany(admin);
     const year = Number(fiscalYearId.slice(2, 6));
-    await expectReason(call('fiscalYear.create', { companyId, startYear: year }, admin), 'overlapping_year');
-    await expectReason(call('fiscalYear.create', { companyId, startYear: year + 2 }, admin), 'fiscal_year_gap');
+    await expectReason(
+      call('fiscalYear.create', { companyId, startYear: year }, admin),
+      'overlapping_year',
+    );
+    await expectReason(
+      call('fiscalYear.create', { companyId, startYear: year + 2 }, admin),
+      'fiscal_year_gap',
+    );
     await call('fiscalYear.create', { companyId, startYear: year + 1 }, admin);
     expect((await db.collection(`companies/${companyId}/periods`).get()).size).toBe(24);
   });
@@ -353,7 +578,10 @@ describe('G. audit', () => {
     expect(await auditCount(companyId)).toBe(1);
     await call('branch.create', { companyId, code: 'B9', name: 'B9' }, admin);
     expect(await auditCount(companyId)).toBe(2);
-    await expectReason(call('branch.create', { companyId, code: 'B9', name: 'dup' }, admin), 'branch_code_taken');
+    await expectReason(
+      call('branch.create', { companyId, code: 'B9', name: 'dup' }, admin),
+      'branch_code_taken',
+    );
     expect(await auditCount(companyId)).toBe(2);
     const key = randomUUID();
     await call('branch.create', { companyId, code: 'B10', name: 'B10' }, admin, key);
@@ -365,13 +593,27 @@ describe('G. audit', () => {
     const owner = await makeUser('owner@example.test');
     const { companyId } = await createCompany(owner);
     const support = await makeUser('support@example.test', { platformAdmin: true });
-    await expectReason(call('platform.supportRead', { companyId, reason: 'Customer ticket 42' }, support), 'not_platform_admin');
+    await expectReason(
+      call('platform.supportRead', { companyId, reason: 'Customer ticket 42' }, support),
+      'not_platform_admin',
+    );
     await db.doc(`platformAdmins/${support.uid}`).set({ grantedAt: Timestamp.now() });
-    await expectReason(call('platform.supportRead', { companyId, reason: 'Customer ticket 42' }, owner), 'not_platform_admin');
-    const summary = await call('platform.supportRead', { companyId, reason: 'Customer ticket 42' }, support);
+    await expectReason(
+      call('platform.supportRead', { companyId, reason: 'Customer ticket 42' }, owner),
+      'not_platform_admin',
+    );
+    const summary = await call(
+      'platform.supportRead',
+      { companyId, reason: 'Customer ticket 42' },
+      support,
+    );
     expect(summary).toMatchObject({ companyId, memberCount: 1, branchCount: 1 });
     const logs = await db.collection('platformAuditLogs').get();
     expect(logs.size).toBe(1);
-    expect(logs.docs[0]!.data()).toMatchObject({ actorUid: support.uid, companyId, reason: 'Customer ticket 42' });
+    expect(logs.docs[0]!.data()).toMatchObject({
+      actorUid: support.uid,
+      companyId,
+      reason: 'Customer ticket 42',
+    });
   });
 });

@@ -2,8 +2,19 @@ import type { CommandName } from '@bms/schemas';
 import type { AnyCommand } from './lib/command.js';
 import { createBranch, updateBranch } from './commands/branch.js';
 import { createCompany, updateCompanySettings } from './commands/company.js';
-import { acceptInvitation, createInvitation, revokeInvitation, setMemberStatus, updateMember } from './commands/member.js';
-import { createFiscalYear, decideApproval, requestApproval, setPeriodStatus } from './commands/period.js';
+import {
+  acceptInvitation,
+  createInvitation,
+  revokeInvitation,
+  setMemberStatus,
+  updateMember,
+} from './commands/member.js';
+import {
+  createFiscalYear,
+  decideApproval,
+  requestApproval,
+  setPeriodStatus,
+} from './commands/period.js';
 import { platformSupportRead, revokeAllSessions } from './commands/platform.js';
 import { createRole, deleteRole, updateRole } from './commands/role.js';
 

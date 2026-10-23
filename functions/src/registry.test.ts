@@ -4,7 +4,12 @@ import { COMMAND_SCHEMAS } from '@bms/schemas';
 import { COMMANDS } from './registry.js';
 
 /** Commands that are deliberately not company-scoped. Adding one here needs review. */
-const NON_COMPANY_COMMANDS = ['company.create', 'invitation.accept', 'platform.supportRead', 'session.revokeAll'];
+const NON_COMPANY_COMMANDS = [
+  'company.create',
+  'invitation.accept',
+  'platform.supportRead',
+  'session.revokeAll',
+];
 
 describe('command registry (E1)', () => {
   it('registers exactly the commands that have schemas, under their own names', () => {

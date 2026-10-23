@@ -10,7 +10,7 @@ export default defineConfig({
           environment: 'node',
         },
       },
-      'apps/web',
+      'apps/web/vite.config.ts',
       {
         test: {
           name: 'rules',

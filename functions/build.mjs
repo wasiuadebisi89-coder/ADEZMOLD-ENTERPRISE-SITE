@@ -1,7 +1,7 @@
 // Bundles the functions with the workspace packages inlined, and writes a deployable
 // package.json into dist/ that lists only the external runtime dependencies.
 import { build } from 'esbuild';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 
 const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
 const external = ['firebase-admin', 'firebase-functions'];
@@ -16,7 +16,9 @@ await build({
   format: 'esm',
   sourcemap: true,
   external: [...external, 'firebase-admin/*', 'firebase-functions/*'],
-  banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
+  banner: {
+    js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
+  },
 });
 
 await writeFile(
@@ -34,4 +36,8 @@ await writeFile(
     2,
   ) + '\n',
 );
+// Lets the Functions emulator resolve the SDKs locally. `firebase deploy` skips node_modules
+// and installs the dependencies listed above in the cloud.
+await rm('dist/node_modules', { force: true, recursive: true });
+await symlink('../node_modules', 'dist/node_modules', 'dir');
 console.log('functions built to dist/');

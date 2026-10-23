@@ -21,8 +21,11 @@ export const api = onCall(
     if (!request.auth) throw new HttpsError('unauthenticated', 'Please sign in');
     const body = (request.data ?? {}) as { name?: unknown; input?: unknown };
     const name = typeof body.name === 'string' ? body.name : '';
-    const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name as keyof typeof COMMANDS] : undefined;
-    if (!command) throw new HttpsError('not-found', 'Unknown command', { reason: 'unknown_command' });
+    const command = Object.hasOwn(COMMANDS, name)
+      ? COMMANDS[name as keyof typeof COMMANDS]
+      : undefined;
+    if (!command)
+      throw new HttpsError('not-found', 'Unknown command', { reason: 'unknown_command' });
 
     try {
       const caller = await resolveCaller({

@@ -37,7 +37,9 @@ export const createRole = defineCommand({
  * Must be called after all other reads in the transaction.
  */
 export async function membersWithRole(tx: Transaction, companyId: string, roleId: string) {
-  const snap = await tx.get(companyRefs(companyId).members.where('roleIds', 'array-contains', roleId));
+  const snap = await tx.get(
+    companyRefs(companyId).members.where('roleIds', 'array-contains', roleId),
+  );
   return snap.docs.map((d) => ({ ref: d.ref, member: d.data() as MemberDoc }));
 }
 
@@ -50,7 +52,10 @@ export const updateRole = defineCommand({
     if (!snap.exists) throw notFound('role_not_found', 'Role not found');
     const role = snap.data() as RoleDoc;
     if (role.system) {
-      throw failedPrecondition('system_role_immutable', 'System roles cannot be changed. Create a custom role instead');
+      throw failedPrecondition(
+        'system_role_immutable',
+        'System roles cannot be changed. Create a custom role instead',
+      );
     }
     const patch: Partial<RoleDoc> = {};
     if (input.name !== undefined) patch.name = input.name;
@@ -59,7 +64,9 @@ export const updateRole = defineCommand({
 
     if (patch.permissions) {
       const holders = await membersWithRole(tx, input.companyId, input.roleId);
-      const otherRoleIds = [...new Set(holders.flatMap((h) => h.member.roleIds))].filter((id) => id !== input.roleId);
+      const otherRoleIds = [...new Set(holders.flatMap((h) => h.member.roleIds))].filter(
+        (id) => id !== input.roleId,
+      );
       const otherRoles = new Map<string, RoleDoc>();
       if (otherRoleIds.length) {
         const snaps = await tx.getAll(...otherRoleIds.map((id) => refs.role(id)));
@@ -67,8 +74,14 @@ export const updateRole = defineCommand({
       }
       const updatedRole = { ...role, ...patch };
       for (const { ref, member } of holders) {
-        const roles = member.roleIds.map((id) => (id === input.roleId ? updatedRole : otherRoles.get(id))).filter(Boolean) as RoleDoc[];
-        tx.update(ref, { permissions: [...effectivePermissions(roles)].sort(), updatedAt: now, updatedBy: caller.uid });
+        const roles = member.roleIds
+          .map((id) => (id === input.roleId ? updatedRole : otherRoles.get(id)))
+          .filter(Boolean) as RoleDoc[];
+        tx.update(ref, {
+          permissions: [...effectivePermissions(roles)].sort(),
+          updatedAt: now,
+          updatedBy: caller.uid,
+        });
       }
     }
     tx.update(refs.role(input.roleId), { ...patch, updatedAt: now, updatedBy: caller.uid });
@@ -93,7 +106,8 @@ export const deleteRole = defineCommand({
     const snap = await tx.get(refs.role(input.roleId));
     if (!snap.exists) throw notFound('role_not_found', 'Role not found');
     const role = snap.data() as RoleDoc;
-    if (role.system) throw failedPrecondition('system_role_immutable', 'System roles cannot be deleted');
+    if (role.system)
+      throw failedPrecondition('system_role_immutable', 'System roles cannot be deleted');
     const holders = await membersWithRole(tx, input.companyId, input.roleId);
     if (holders.some((h) => h.member.status !== 'removed')) {
       throw conflict('role_in_use', 'Remove this role from all members before deleting it');
