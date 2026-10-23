@@ -55,6 +55,18 @@ export async function signUp(
   await page.getByRole('button', { name: "I've verified my email" }).click();
 }
 
+/**
+ * Signs out from the companies screen and waits until the session is gone.
+ * Navigating away before Firebase finishes clearing its stored session
+ * cancels the sign-out, and the next page then treats the user as signed in.
+ */
+export async function signOut(page: Page) {
+  await expect(page.getByRole('heading', { name: 'Your companies' })).toBeVisible();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/sign-in/);
+  await expect(page.getByLabel('Email')).toBeVisible();
+}
+
 export async function createCompany(page: Page, legalName = 'Adezmold Trading Ltd') {
   await page.goto('/companies/new');
   await page.getByLabel('Legal name').fill(legalName);
