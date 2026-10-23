@@ -7,13 +7,13 @@ Status: **Draft for review** · Date: 2026-10-23
 Repository: `wasiuadebisi89-coder/adezmold-enterprise-site` (public), inspected 2026-10-23
 at commit `8f08dce` ("Initial Adezmold enterprise platform release").
 
-| File | Content | Reuse |
-|---|---|---|
-| `package.json` | Vite 5 + React 18 + Firebase 11, caret ranges, no lockfile | Superseded by pinned workspace manifests |
-| `src/App.jsx` | 5-line placeholder heading for the Commodity Control System site | Kept as the marketing site |
-| `firebase/firebase.config.example.js` | Firebase web config read from `VITE_*` env vars | Pattern reused in `apps/web` |
-| `.env.example`, `.gitignore` | Firebase + GA variables; ignores `.env` | Kept and extended |
-| `docs/DEPLOYMENT.md`, `README.md` | Short site notes | Kept; BMS docs added alongside |
+| File                                  | Content                                                          | Reuse                                    |
+| ------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------- |
+| `package.json`                        | Vite 5 + React 18 + Firebase 11, caret ranges, no lockfile       | Superseded by pinned workspace manifests |
+| `src/App.jsx`                         | 5-line placeholder heading for the Commodity Control System site | Kept as the marketing site               |
+| `firebase/firebase.config.example.js` | Firebase web config read from `VITE_*` env vars                  | Pattern reused in `apps/web`             |
+| `.env.example`, `.gitignore`          | Firebase + GA variables; ignores `.env`                          | Kept and extended                        |
+| `docs/DEPLOYMENT.md`, `README.md`     | Short site notes                                                 | Kept; BMS docs added alongside           |
 
 There is no `index.html`, Vite config, lockfile, test or CI setup, so there is no working
 build to preserve. Proposed change (needs owner approval before Phase 1): move the existing
@@ -84,23 +84,23 @@ Boundary rule: `apps/web` may import `schemas` and the read-only parts of `domai
 
 ## 4. Module boundaries
 
-| Module | Owns | Phase |
-|---|---|---|
-| identity | users, sessions, invitations, password recovery | 1 |
-| tenancy | companies, branches, memberships | 1 |
-| access | roles, permissions, branch scopes, approvals | 1 (approvals engine 6) |
-| settings | company settings, numbering series, financial periods | 1 |
-| audit | audit log, attachment metadata | 1 |
-| ledger | chart of accounts, account mappings, journals, posting engine, opening balances | 2 |
-| catalogue | categories, products, units, conversions | 3 |
-| inventory | stock movements, cost layers, balances, adjustments, counts | 3 |
-| parties | customers, suppliers (shared "party" model) | 4–5 |
-| purchasing | purchase invoices, goods receipts, supplier payments, supplier returns, landed costs | 4 |
-| sales | POS, invoices, receipts, allocations, returns, credit notes, refunds | 5–6 |
-| treasury | cash & bank accounts, transfers, cash book, bank book | 4–7 |
-| reporting | day book, GL, TB, P&L, balance sheet, ageing, statements, reconciliations | 7 |
-| assets | fixed asset register, depreciation runs, disposals | 7 |
-| services / production | quotations, projects, BOM, production orders, WIP | 9 |
+| Module                | Owns                                                                                 | Phase                  |
+| --------------------- | ------------------------------------------------------------------------------------ | ---------------------- |
+| identity              | users, sessions, invitations, password recovery                                      | 1                      |
+| tenancy               | companies, branches, memberships                                                     | 1                      |
+| access                | roles, permissions, branch scopes, approvals                                         | 1 (approvals engine 6) |
+| settings              | company settings, numbering series, financial periods                                | 1                      |
+| audit                 | audit log, attachment metadata                                                       | 1                      |
+| ledger                | chart of accounts, account mappings, journals, posting engine, opening balances      | 2                      |
+| catalogue             | categories, products, units, conversions                                             | 3                      |
+| inventory             | stock movements, cost layers, balances, adjustments, counts                          | 3                      |
+| parties               | customers, suppliers (shared "party" model)                                          | 4–5                    |
+| purchasing            | purchase invoices, goods receipts, supplier payments, supplier returns, landed costs | 4                      |
+| sales                 | POS, invoices, receipts, allocations, returns, credit notes, refunds                 | 5–6                    |
+| treasury              | cash & bank accounts, transfers, cash book, bank book                                | 4–7                    |
+| reporting             | day book, GL, TB, P&L, balance sheet, ageing, statements, reconciliations            | 7                      |
+| assets                | fixed asset register, depreciation runs, disposals                                   | 7                      |
+| services / production | quotations, projects, BOM, production orders, WIP                                    | 9                      |
 
 Each backend module exposes **commands** (`sales.postSale`, `ledger.reverseJournal`…) and
 owns its collections. Modules call each other through domain service interfaces, never by
@@ -135,7 +135,7 @@ and the override is audited.
 - Hard limits enforced by schema: ≤ 100 lines per sale/purchase document, ≤ 200 journal lines
   per manual journal. Larger inputs (opening balance imports, stock counts) use a
   **durable batch workflow**: a batch document moves through `draft → validated → posting →
-  posted | failed`, each chunk is posted in its own idempotent transaction keyed by
+posted | failed`, each chunk is posted in its own idempotent transaction keyed by
   `batchId:chunkNo`, and the batch is only marked `posted` once a reconciliation step confirms
   every chunk. Readers treat a batch that is not `posted` as not posted; reports exclude
   ledger entries whose `batchStatus != posted`.
@@ -181,20 +181,22 @@ document per account updated on every posting (see ADR-0004):
 
 ## 9. Environments
 
-| Env | Firebase project | Purpose |
-|---|---|---|
-| local | emulators only (`demo-bms`) | development and all automated tests |
-| staging | `bms-staging` (to be created) | pilot rehearsal, synthetic data only |
-| production | `bms-prod` (to be created) | controlled pilot |
+| Env        | Firebase project              | Purpose                              |
+| ---------- | ----------------------------- | ------------------------------------ |
+| local      | emulators only (`demo-bms`)   | development and all automated tests  |
+| staging    | `bms-staging` (to be created) | pilot rehearsal, synthetic data only |
+| production | `bms-prod` (to be created)    | controlled pilot                     |
 
-Region: **needs decision** (see `OPEN_DECISIONS.md`).
+Region: **needs decision** (see `OPEN_DECISIONS.md`). Code defaults to `europe-west1` through
+`FUNCTIONS_REGION` / `VITE_FUNCTIONS_REGION` until it is confirmed.
 
 ## 10. Frontend architecture
 
-- React 19 + TypeScript strict, Vite, React Router (data routers), TanStack Query for
-  server state over Firestore listeners and callable functions.
-- UI: Tailwind CSS + shadcn/ui (Radix primitives → keyboard and screen-reader support).
-  TanStack Table for financial tables (sorting, filtering, pagination, virtualisation).
+- React 19 + TypeScript strict, Vite, React Router (data router). Server state comes from
+  Firestore live listeners (`useDoc`, `useCollection`) and callable commands (`useAction`).
+- UI: Tailwind CSS with small in-repo components on Radix primitives (dialog, menu, label)
+  for keyboard and screen-reader support. A table library (TanStack Table) is planned for
+  the large financial tables from Phase 2.
 - Forms: React Hook Form + Zod resolvers using the shared schemas.
 - Company context: URL-scoped (`/c/:companyId/...`) so links are tenant-explicit; the
   company switcher only lists active memberships. The URL is a hint, never authority.

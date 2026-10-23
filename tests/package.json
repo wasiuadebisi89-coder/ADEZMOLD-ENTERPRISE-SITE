@@ -1,0 +1,17 @@
+{
+  "name": "@bms/tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@bms/domain": "workspace:*",
+    "@bms/functions": "workspace:*",
+    "@bms/schemas": "workspace:*",
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0",
+    "firebase-admin": "14.5.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

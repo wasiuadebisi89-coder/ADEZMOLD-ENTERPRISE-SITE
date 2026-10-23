@@ -1,21 +1,11 @@
-# Adezmold Enterprise Platform
+# Adezmold platform
 
-GitHub-ready production repository.
+This repository holds two products:
 
-## Core Product
-Commodity Control System™
-
-## Included
-- Company profile
-- CCS integration
-- Product demo structure
-- Dashboard showcase structure
-- SEO foundation
-- Analytics readiness
-- Firebase integration preparation
-
-## Deployable On
-- AppDeploy
-- Firebase Hosting
-- Vercel
-- Netlify
+- **Adezmold BMS** (`apps/web`, `functions`, `packages/*`): a multi-tenant business
+  management SaaS for SMEs, with double-entry accounting at its core. Start with
+  [docs/bms/ARCHITECTURE.md](docs/bms/ARCHITECTURE.md) and
+  [docs/bms/DEVELOPMENT.md](docs/bms/DEVELOPMENT.md). Progress is tracked in
+  [docs/bms/PROGRESS.md](docs/bms/PROGRESS.md).
+- **Company site** (`apps/site`): the existing Adezmold Enterprise site, moved here unchanged.
+  See [apps/site/README.md](apps/site/README.md).

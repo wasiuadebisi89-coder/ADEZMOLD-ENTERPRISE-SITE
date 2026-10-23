@@ -1,0 +1,7 @@
+packages:
+  - apps/web
+  - functions
+  - packages/*
+  - tests
+# apps/site is the existing marketing site. It keeps its own npm setup and is not part of
+# the BMS workspace yet (see docs/bms/adr/0006-host-bms-in-site-repo.md).

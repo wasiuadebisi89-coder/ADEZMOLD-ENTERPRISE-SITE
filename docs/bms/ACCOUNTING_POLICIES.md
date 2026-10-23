@@ -9,11 +9,13 @@ company. The software records policy choices per company so it can serve busines
 other frameworks.
 
 ## 1. Entity and currency
+
 - One base (functional) currency per company, chosen at registration and locked after the
   first posting. DECISION 2: proposed default currency for the pilot = **NGN**.
 - Multi-currency transactions are out of scope until a later phase.
 
 ## 2. Financial periods
+
 - Fiscal year start month configurable (DECISION 3: proposed January).
 - Monthly periods. Status: `open → soft_closed → closed`.
   - `soft_closed`: only users with `settings.periods.postSoftClosed` (Accountant/Admin) may post.
@@ -26,6 +28,7 @@ other frameworks.
   journal (Phase 7).
 
 ## 3. Double entry and immutability
+
 - Every posted journal balances, has ≥ 2 lines, uses active postable accounts.
 - Posted journals and documents are never edited or deleted. Corrections: full reversal
   (mirror journal dated in an open period, linked both ways) and, if needed, a new
@@ -34,6 +37,7 @@ other frameworks.
   modules, never from manual journals.
 
 ## 4. Inventory
+
 - Perpetual inventory system.
 - Costing method per company, chosen before the first stock posting and then locked
   (DECISION 5: proposed default **weighted average (perpetual, moving)**; FIFO available).
@@ -46,6 +50,7 @@ other frameworks.
   adjustments require approval initially).
 
 ## 5. Purchases
+
 - Purchase invoice and goods receipt can occur at different times:
   - Goods receipt first: Dr Inventory / Cr **GRNI** (goods received not invoiced) at order
     or expected cost.
@@ -60,6 +65,7 @@ other frameworks.
   variance account.
 
 ## 6. Landed costs
+
 - Only charges flagged as **capitalisable** on the charge type (e.g. freight-in, insurance
   in transit, non-recoverable import duties) are added to inventory.
 - Other charges (e.g. outward delivery, general handling, storage after receipt) are expensed.
@@ -68,6 +74,7 @@ other frameworks.
   units goes to cost of sales.
 
 ## 7. Sales
+
 - Revenue recognised when control passes: at POS completion for cash/walk-in sales, at
   delivery/invoice posting for credit sales.
 - Line discounts reduce revenue (revenue is recorded net); no separate discount expense.
@@ -79,6 +86,7 @@ other frameworks.
   (DECISION 7).
 
 ## 8. Returns, credit notes and refunds
+
 - A sales return references the original sale line, cannot exceed sold minus already
   returned quantity, captures reason and condition.
 - Goods effect (at original COGS cost of the returned units):
@@ -91,18 +99,21 @@ other frameworks.
   Cr Cash/Bank, dated when money is actually paid. Cash/bank change only on the refund.
 
 ## 9. Rounding
+
 - Line totals rounded half-away-from-zero to minor units; document totals sum rounded
   lines; tax computed per line (DECISION 8: per line vs per document).
 - Inventory value rounding residue from WAC goes to the last movement that empties the
   balance, so value reaches exactly zero when quantity reaches zero.
 
 ## 10. Tax
+
 - Tax codes (name, rate, recoverable flag, output/input accounts) are configured per company.
   No rate is seeded. Prices may be tax-inclusive or tax-exclusive per company
   (DECISION 9: proposed exclusive). Companies not registered for VAT simply have no
   tax codes.
 
 ## 11. Fixed assets
+
 - Recognised at cost incl. directly attributable costs to bring to working condition.
 - Straight-line method first. Monthly depreciation starts from the available-for-use date.
   DECISION 10: first month convention — proposed **full month if available for use on or
@@ -112,6 +123,7 @@ other frameworks.
 - Disposal: remove cost and accumulated depreciation, record proceeds, gain/loss to P&L.
 
 ## 12. Opening balances
+
 - Opening-balance batch at a cut-over date: GL balances, AR and AP per open invoice, stock
   quantities and costs per product/location, fixed assets with accumulated depreciation.
 - Batch must balance; any difference must be explicitly posted to an "Opening balance

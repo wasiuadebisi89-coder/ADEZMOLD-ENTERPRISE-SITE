@@ -6,13 +6,13 @@ commands. Every company document carries `companyId`, `createdAt`, `createdBy`,
 
 ## 1. Numeric representation
 
-| Kind | Stored as | Example |
-|---|---|---|
-| Money | integer **minor units** (`number`, asserted `Number.isSafeInteger`) | ₦1,250.50 → `125050` |
-| Quantity | integer **milli-units** of the product's base unit (3 dp) | 2.5 kg → `2500` |
-| Unit cost | integer in minor units × 10⁴ (`costScaled`) | ₦12.34567/unit → `123457` |
-| Rates (tax, discount %) | integer basis points × 100 (6 dp of percent) | 7.5% → `750000` |
-| Dates | `postingDate` as `YYYY-MM-DD` string (business date, company time zone) plus server `Timestamp`s for audit |
+| Kind                    | Stored as                                                                                                  | Example                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Money                   | integer **minor units** (`number`, asserted `Number.isSafeInteger`)                                        | ₦1,250.50 → `125050`      |
+| Quantity                | integer **milli-units** of the product's base unit (3 dp)                                                  | 2.5 kg → `2500`           |
+| Unit cost               | integer in minor units × 10⁴ (`costScaled`)                                                                | ₦12.34567/unit → `123457` |
+| Rates (tax, discount %) | integer basis points × 100 (6 dp of percent)                                                               | 7.5% → `750000`           |
+| Dates                   | `postingDate` as `YYYY-MM-DD` string (business date, company time zone) plus server `Timestamp`s for audit |
 
 All arithmetic in `packages/domain` uses `bigint`; values are range-checked before storage.
 Rounding: half-away-from-zero to the minor unit at line level; document totals are sums of
