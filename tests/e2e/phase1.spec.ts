@@ -33,7 +33,12 @@ test('A1/B1/D1/D3/F2 owner sets up a company and a colleague joins with limited 
 
   // Close the first period of the year
   await page.getByRole('link', { name: 'Financial periods' }).click();
+  // Header + 12 monthly periods, never a partial list from the local cache.
+  await expect(page.getByRole('table', { name: 'Financial periods' }).getByRole('row')).toHaveCount(
+    13,
+  );
   const firstRow = page.getByRole('row').nth(1);
+  await expect(firstRow).toContainText(/-01/);
   await firstRow.getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByRole('button', { name: 'Close period' }).click();
   await expect(firstRow.getByText('Closed')).toBeVisible();

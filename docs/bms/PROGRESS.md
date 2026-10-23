@@ -50,7 +50,9 @@ validated and stored; enforcement arrives with the first branch-scoped command, 
 KNOWN_LIMITATIONS.md). I4/I5 are configured in CI and need the first CI run to confirm.
 
 **Bugs found by tests and fixed**: empty optional fields were sent as `null` by the callable
-encoding and rejected by the server schema; an empty trading name failed client validation.
+encoding and rejected by the server schema; an empty trading name failed client validation;
+live lists could briefly show a partial list from the local cache (for example 1 of 12
+periods), so screens now wait for the server's first answer.
 
 **Next**: owner review of Phase 1 and the open policy decisions, then Phase 2 (chart of
 accounts, posting engine, journals, opening balances).
