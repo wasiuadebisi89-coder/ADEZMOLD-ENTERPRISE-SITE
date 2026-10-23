@@ -226,3 +226,43 @@ CI runs on the Phase 5 pull request.
 
 **Next**: Phase 6 (returns, credit notes, refunds), which also gives a way to undo a wrong
 sale.
+
+## Phase 6 — returns, refunds and bank reconciliation (2026-10-23)
+
+Owner merged Phase 5 (PR #6) and asked to proceed. Built on the recommended approval rule
+(DECISION 17, put to the owner): sales officers' returns and refunds wait for a manager.
+
+**Built**
+
+- `packages/domain`: the returned share of a sale line, worked on running totals so partial
+  returns add up exactly. New permission `ledger.bank.reconcile` (Accountant, Admin); Managers
+  can now post refunds.
+- Commands (54 in total): `creditNote.create/decide/allocate`, `customerRefund.create/decide`,
+  `bankReconciliation.complete`. A command can now require any one of several permissions.
+  Applying a receipt or credit note to invoices shares one helper.
+- Rules: returns and refunds readable by sales readers, or by the sales officer who raised
+  them; bank records by ledger readers. No client writes. New indexes.
+- Web: return goods from a sale (resalable or damaged, refund account for walk-ins), return
+  and refund pages with approve and reject, refund dialog on receipts and returns, apply
+  credit to invoices, Returns and Refunds tabs, returns on sale and customer pages, waiting
+  returns and refunds on the Approvals page, bank reconciliation page.
+
+**Verified (run locally on 2026-10-23, Node 22.22.0, firebase-tools 15.34.1)**
+
+| Check                                          | Result              |
+| ---------------------------------------------- | ------------------- |
+| `pnpm format:check`, `pnpm lint`               | clean               |
+| `pnpm typecheck` (all 5 packages)              | clean               |
+| `pnpm build`                                   | succeeds            |
+| `pnpm test:unit`                               | 117 passed          |
+| `pnpm test:emulator` (rules + integration)     | 244 passed (35 new) |
+| `pnpm test:e2e` (Playwright, desktop + mobile) | 20 passed           |
+
+CI runs on the Phase 6 pull request.
+
+**Acceptance coverage (PHASE6_ACCEPTANCE.md)**: R1–R8 covered by automated tests.
+
+**Needs the owner**: DECISION 17 (who approves returns and refunds) and 18 (return time limit).
+
+**Next**: Phase 7 (reports, financial statements, fixed assets), which needs DECISION 10
+(depreciation first-month convention).

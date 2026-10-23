@@ -1,5 +1,6 @@
 import type { CommandName } from '@bms/schemas';
 import type { AnyCommand } from './lib/command.js';
+import { completeBankReconciliation } from './commands/bank.js';
 import { createBranch, updateBranch } from './commands/branch.js';
 import { createCompany, updateCompanySettings } from './commands/company.js';
 import {
@@ -54,6 +55,13 @@ import {
   updateTaxCode,
 } from './commands/sales.js';
 import { platformSupportRead, revokeAllSessions } from './commands/platform.js';
+import {
+  allocateCreditNote,
+  createCreditNote,
+  createCustomerRefund,
+  decideCreditNote,
+  decideCustomerRefund,
+} from './commands/returns.js';
 import { createRole, deleteRole, updateRole } from './commands/role.js';
 
 /** Every command the API accepts. Keyed by name so a missing command fails type-checking. */
@@ -104,6 +112,12 @@ export const COMMANDS: Record<CommandName, AnyCommand> = {
   'customerOpeningBalance.post': postCustomerOpeningBalance,
   'customerReceipt.post': postCustomerReceipt,
   'customerReceipt.allocate': allocateCustomerReceipt,
+  'creditNote.create': createCreditNote,
+  'creditNote.decide': decideCreditNote,
+  'creditNote.allocate': allocateCreditNote,
+  'customerRefund.create': createCustomerRefund,
+  'customerRefund.decide': decideCustomerRefund,
+  'bankReconciliation.complete': completeBankReconciliation,
   'platform.supportRead': platformSupportRead,
   'session.revokeAll': revokeAllSessions,
 };

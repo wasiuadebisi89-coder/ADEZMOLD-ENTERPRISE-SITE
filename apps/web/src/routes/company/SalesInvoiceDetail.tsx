@@ -12,9 +12,29 @@ import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { qty } from '../../lib/inventory';
 import { money } from '../../lib/ledger';
-import { salesOutstanding, type SalesInvoiceRow } from '../../lib/sales';
+import {
+  salesOutstanding,
+  useRaisedDocs,
+  type CreditNoteRow,
+  type SalesInvoiceRow,
+} from '../../lib/sales';
 import { formatDate } from '../../lib/utils';
+import { CreditNoteTable } from './CreditNoteDetail';
 import { InvoiceStatus } from './CustomerDetail';
+
+function SaleReturns({ invoiceId }: { invoiceId: string }) {
+  const { companyId } = useCompany();
+  const rows = useRaisedDocs<CreditNoteRow>(companyId, 'creditNotes', { invoiceId });
+  if (rows.loading || rows.data.length === 0) return null;
+  return (
+    <>
+      <h2 className="mb-3 mt-6 text-base font-semibold">Returns</h2>
+      <Card>
+        <CreditNoteTable rows={rows.data as CreditNoteRow[]} />
+      </Card>
+    </>
+  );
+}
 
 export default function SalesInvoiceDetail() {
   const { companyId, company, can } = useCompany();
@@ -33,6 +53,8 @@ export default function SalesInvoiceDetail() {
   const p = `/c/${companyId}/sales`;
   const discounts = i.lines.some((l) => l.discountMinor > 0);
   const taxed = i.lines.some((l) => l.taxCode);
+  const returned = i.lines.some((l) => l.returnedQtyMilli > 0);
+  const returnable = i.kind === 'invoice' && i.lines.some((l) => l.returnedQtyMilli < l.qtyMilli);
 
   return (
     <>
@@ -50,6 +72,11 @@ export default function SalesInvoiceDetail() {
             {can('sales.receipt.post') && i.customerId && left > 0 && (
               <Button asChild>
                 <Link to={`${p}/receipts/new?customer=${i.customerId}`}>Receive payment</Link>
+              </Button>
+            )}
+            {can('sales.return.create') && returnable && (
+              <Button variant="secondary" asChild>
+                <Link to={`${p}/invoices/${invoiceId}/return`}>Return goods</Link>
               </Button>
             )}
             {can('sales.invoice.post') && (
@@ -132,6 +159,7 @@ export default function SalesInvoiceDetail() {
               <Tr>
                 <Th>Product</Th>
                 <Th className="text-right">Quantity</Th>
+                {returned && <Th className="text-right">Returned</Th>}
                 <Th className="text-right">Price</Th>
                 {discounts && <Th className="text-right">Discount</Th>}
                 {taxed && <Th>Tax</Th>}
@@ -145,6 +173,11 @@ export default function SalesInvoiceDetail() {
                     <span className="font-mono">{l.sku}</span> {l.productName}
                   </Td>
                   <Td className="text-right tabular-nums">{qty(l.qtyMilli, l.unit)}</Td>
+                  {returned && (
+                    <Td className="text-right tabular-nums">
+                      {l.returnedQtyMilli ? qty(l.returnedQtyMilli, l.unit) : '—'}
+                    </Td>
+                  )}
                   <Td className="text-right tabular-nums">{money(l.unitPriceMinor, currency)}</Td>
                   {discounts && (
                     <Td className="text-right tabular-nums">
@@ -188,9 +221,18 @@ export default function SalesInvoiceDetail() {
                 <dd className="inline">{money(pay.amountMinor, currency)}</dd>
               </div>
             ))}
+            {(i.returnedMinor ?? 0) > 0 && (
+              <div>
+                <dt className="inline text-slate-500">Credited for returns </dt>
+                <dd className="inline" data-testid="invoice-returned">
+                  {money(i.returnedMinor ?? 0, currency)}
+                </dd>
+              </div>
+            )}
           </dl>
         </Card>
       )}
+      <SaleReturns invoiceId={invoiceId} />
     </>
   );
 }

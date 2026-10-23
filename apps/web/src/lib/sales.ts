@@ -49,6 +49,9 @@ export interface SalesLineRow {
   grossMinor: number;
   costMinor: number;
   returnedQtyMilli: number;
+  returnedNetMinor?: number;
+  returnedTaxMinor?: number;
+  returnedCostMinor?: number;
 }
 
 export interface SalesInvoiceRow {
@@ -72,6 +75,7 @@ export interface SalesInvoiceRow {
   payments: { accountId: string; accountName: string; amountMinor: number }[];
   paidMinor: number;
   creditedMinor: number;
+  returnedMinor?: number;
   status: 'open' | 'paid';
   creditOverride: { by: 'permission' | 'approval'; approvalId: string | null } | null;
   journalId: string;
@@ -90,6 +94,7 @@ export interface CustomerReceiptRow {
   depositAccountName: string;
   amountMinor: number;
   allocatedMinor: number;
+  refundedMinor?: number;
   reference: string | null;
   memo: string | null;
   allocations: {
@@ -103,6 +108,73 @@ export interface CustomerReceiptRow {
   postedAt: Stamp;
   postedBy: string;
 }
+
+export type DocStatus = 'pending' | 'posted' | 'rejected';
+
+export interface CreditNoteRow {
+  id: string;
+  number: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  customerId: string | null;
+  customerName: string;
+  branchId: string;
+  reason: string;
+  lines: {
+    lineNo: number;
+    productId: string;
+    sku: string;
+    productName: string;
+    unit: UnitCode;
+    qtyMilli: number;
+    condition: 'resalable' | 'damaged';
+    locationId: string;
+    netMinor: number | null;
+    taxMinor: number | null;
+    costMinor: number | null;
+  }[];
+  refundAccountId: string | null;
+  status: DocStatus;
+  createdAt: Stamp;
+  createdBy: string;
+  decidedBy: string | null;
+  decisionReason: string | null;
+  postingDate: string | null;
+  netMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+  allocatedMinor: number;
+  refundedMinor: number;
+  allocations: CustomerReceiptRow['allocations'];
+  journalId: string | null;
+}
+
+export interface CustomerRefundRow {
+  id: string;
+  number: string;
+  customerId: string;
+  customerName: string;
+  branchId: string;
+  source: { type: 'customerReceipt' | 'creditNote'; id: string; number: string };
+  accountId: string;
+  accountName: string;
+  amountMinor: number;
+  reason: string;
+  reference: string | null;
+  status: DocStatus;
+  createdAt: Stamp;
+  createdBy: string;
+  decidedBy: string | null;
+  decisionReason: string | null;
+  postingDate: string | null;
+  journalId: string | null;
+}
+
+/** What a customer can still use or be paid back from a receipt or credit note. */
+export const unusedCredit = (
+  total: number,
+  d: { allocatedMinor: number; refundedMinor?: number },
+) => total - d.allocatedMinor - (d.refundedMinor ?? 0);
 
 export const salesOutstanding = (
   i: Pick<SalesInvoiceRow, 'totalMinor' | 'paidMinor' | 'creditedMinor'>,
@@ -218,4 +290,32 @@ export function useMyCreditApprovals(companyId: string, uid: string | undefined)
     status: 'pending' | 'approved';
     target: { customerId: string; customerName: string; amountMinor: number };
   }>(q, `credit-approvals-${companyId}-${uid}`);
+}
+
+type RaisedCollection = 'creditNotes' | 'customerRefunds';
+
+/**
+ * Returns or refunds, newest first: for a customer or a sale, or waiting for approval. Staff who
+ * only read their own see the ones they raised.
+ */
+export function useRaisedDocs<T extends { id: string }>(
+  companyId: string,
+  coll: RaisedCollection,
+  filter: { customerId?: string; invoiceId?: string; sourceId?: string; pending?: boolean } = {},
+) {
+  const own = useOwnOnly();
+  const { customerId, invoiceId, sourceId, pending } = filter;
+  const q = useMemo(() => {
+    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc'), limit(100)];
+    if (own) constraints.unshift(where('createdBy', '==', own));
+    if (customerId) constraints.unshift(where('customerId', '==', customerId));
+    if (invoiceId) constraints.unshift(where('invoiceId', '==', invoiceId));
+    if (sourceId) constraints.unshift(where('source.id', '==', sourceId));
+    if (pending) constraints.unshift(where('status', '==', 'pending'));
+    return query(collection(db, `companies/${companyId}/${coll}`), ...constraints);
+  }, [companyId, coll, customerId, invoiceId, sourceId, pending, own]);
+  return useCollection<Omit<T, 'id'>>(
+    q,
+    `${coll}-${companyId}-${customerId ?? ''}-${invoiceId ?? ''}-${sourceId ?? ''}-${pending ? 'p' : ''}-${own ?? 'any'}`,
+  );
 }

@@ -5,30 +5,16 @@ import {
   allocationInput,
   allocationTotal,
 } from '../../components/AllocationTable';
+import { openInvoices } from '../../components/ApplyCreditDialog';
 import { BackdateNotice, useBackdate, useToday } from '../../components/BackdateNotice';
 import { Button } from '../../components/ui/button';
 import { Alert, Card, PageHeader, Spinner } from '../../components/ui/feedback';
 import { Field, Input, Select } from '../../components/ui/form';
 import { useCompany } from '../../lib/company';
 import { money, tryParseMoney, useAccounts } from '../../lib/ledger';
-import {
-  salesOutstanding,
-  useCustomers,
-  useOpenSalesInvoices,
-  useOwnOnly,
-  type SalesInvoiceRow,
-} from '../../lib/sales';
+import { useCustomers, useOpenSalesInvoices, useOwnOnly } from '../../lib/sales';
 import { useAction } from '../../lib/useAction';
 import { usePostingBranches } from './NewJournal';
-
-export const openInvoices = (rows: readonly SalesInvoiceRow[]) =>
-  rows.map((i) => ({
-    id: i.id,
-    number: i.number,
-    reference: i.reference,
-    dueDate: i.dueDate,
-    outstandingMinor: salesOutstanding(i),
-  }));
 
 export default function NewCustomerReceipt() {
   const { companyId, company } = useCompany();

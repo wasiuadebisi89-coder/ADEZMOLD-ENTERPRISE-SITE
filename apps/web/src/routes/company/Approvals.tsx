@@ -10,8 +10,11 @@ import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useCollection } from '../../lib/firestore-hooks';
 import { money } from '../../lib/ledger';
+import { useRaisedDocs, type CreditNoteRow, type CustomerRefundRow } from '../../lib/sales';
 import { useAction } from '../../lib/useAction';
 import { formatDate, formatDateTime } from '../../lib/utils';
+import { CreditNoteTable } from './CreditNoteDetail';
+import { RefundTable } from './CustomerRefundDetail';
 
 export type ApprovalRow = {
   id: string;
@@ -118,6 +121,36 @@ function DecideDialog({
   );
 }
 
+/** Returns and refunds that sales staff raised, waiting for a manager. */
+function WaitingDocuments() {
+  const { companyId } = useCompany();
+  const returns = useRaisedDocs<CreditNoteRow>(companyId, 'creditNotes', { pending: true });
+  const refunds = useRaisedDocs<CustomerRefundRow>(companyId, 'customerRefunds', {
+    pending: true,
+  });
+  if (returns.loading || refunds.loading) return <Spinner />;
+  return (
+    <>
+      <h2 className="mb-3 mt-6 text-base font-semibold">Returns waiting</h2>
+      {returns.data.length === 0 ? (
+        <EmptyState title="No returns waiting" />
+      ) : (
+        <Card>
+          <CreditNoteTable rows={returns.data as CreditNoteRow[]} />
+        </Card>
+      )}
+      <h2 className="mb-3 mt-6 text-base font-semibold">Refunds waiting</h2>
+      {refunds.data.length === 0 ? (
+        <EmptyState title="No refunds waiting" />
+      ) : (
+        <Card>
+          <RefundTable rows={refunds.data as CustomerRefundRow[]} />
+        </Card>
+      )}
+    </>
+  );
+}
+
 export default function Approvals() {
   const { can, member, company } = useCompany();
   const approvals = useOpenApprovals();
@@ -130,7 +163,7 @@ export default function Approvals() {
     <>
       <PageHeader
         title="Approvals"
-        description="Requests that need a second person: reopening closed periods, posting beyond the backdating window and selling over a customer's credit limit."
+        description="Requests that need a second person: reopening closed periods, posting beyond the backdating window, selling over a customer's credit limit, and returns and refunds raised by sales staff."
       />
       {approvals.loading ? (
         <Spinner />
@@ -193,6 +226,7 @@ export default function Approvals() {
           </Table>
         </Card>
       )}
+      {(can('sales.return.post') || can('sales.refund.approve')) && <WaitingDocuments />}
       {deciding && <DecideDialog {...deciding} onClose={() => setDeciding(null)} />}
     </>
   );

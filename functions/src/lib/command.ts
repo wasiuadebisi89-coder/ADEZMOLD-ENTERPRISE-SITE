@@ -40,7 +40,11 @@ export interface CompanyContext {
 
 export type Access<I> =
   | { kind: 'authenticated'; requireVerifiedEmail: boolean }
-  | { kind: 'company'; permission: Permission | ((input: I) => Permission) }
+  | {
+      kind: 'company';
+      /** A list means any one of them. */
+      permission: Permission | readonly Permission[] | ((input: I) => Permission);
+    }
   | { kind: 'platformAdmin' };
 
 export type AuditTarget =
@@ -216,7 +220,8 @@ export async function runCommand<N extends CommandName, R>(
       company = await loadCompanyContext(tx, companyId, caller.uid);
       const required =
         typeof access.permission === 'function' ? access.permission(input) : access.permission;
-      if (!company.permissions.has(required)) throw denied('missing_permission');
+      const anyOf: readonly Permission[] = typeof required === 'string' ? [required] : required;
+      if (!anyOf.some((p) => company!.permissions.has(p))) throw denied('missing_permission');
     }
     if (access.kind === 'platformAdmin') {
       const adminSnap = await tx.get(db.doc(`platformAdmins/${caller.uid}`));

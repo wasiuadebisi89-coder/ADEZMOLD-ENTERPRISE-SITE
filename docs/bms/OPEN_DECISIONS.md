@@ -21,6 +21,8 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
 | 14  | Default chart of accounts template  | **Confirmed:** trading chart in CHART_OF_ACCOUNTS.md                                                        | Phase 2                |
 | 15  | Sign-in methods                     | Email/password + verification; Google sign-in later                                                         | Phase 1                |
 | 16  | Supplier payment approval           | **Confirmed:** none; anyone with `purchasing.payment.post` pays directly (Accountant, Manager, Admin)       | Phase 4                |
+| 17  | Return and refund approvals         | Sales officers' returns and refunds wait for a manager; managers, accountants and admins post directly      | Phase 6                |
+| 18  | Time limit on returns               | None; the approver applies any shop policy                                                                  | Phase 6                |
 
 ## Confirmed decisions
 

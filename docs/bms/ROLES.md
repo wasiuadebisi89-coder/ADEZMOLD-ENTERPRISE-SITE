@@ -22,8 +22,9 @@ customise templates. Platform Super Admin is not a company role.
 | Credit limit override       | A             | A       | request        | —              | —            | R       |
 | Sales / POS                 | P             | P       | P (own branch) | —              | R            | R       |
 | Customer receipts           | P             | P       | P              | —              | P            | R       |
-| Sales returns               | P             | P       | W (approval)   | receive goods  | R            | R       |
-| Refunds                     | A             | A       | request        | —              | P (approval) | R       |
+| Sales returns, credit notes | P             | P, A    | request        | —              | R            | R       |
+| Refunds                     | P             | P, A    | request        | —              | P            | R       |
+| Bank reconciliation         | P             | R       | —              | —              | P            | R       |
 | Backdated postings          | A             | A       | —              | —              | request      | R       |
 | Fixed assets, depreciation  | A             | R       | —              | —              | P            | R       |
 | Reports                     | R             | R       | own sales      | stock only     | R            | R       |

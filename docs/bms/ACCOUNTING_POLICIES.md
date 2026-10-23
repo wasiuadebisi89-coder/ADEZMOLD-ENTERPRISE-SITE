@@ -1,7 +1,7 @@
 # BMS — Accounting policies (Phase 0)
 
 Status: **Draft for review.** Items marked **DECISION** need the owner's confirmation
-(#1, #4–#9, #14 and #16 confirmed 2026-10-23);
+(#1, #4–#9, #14 and #16 confirmed 2026-10-23; #17 and #18 proposed for Phase 6);
 the value shown is the proposed safe default, not a fact. No tax rate is hard-coded:
 tax codes and rates are entered per company by an authorised user.
 
@@ -136,16 +136,30 @@ other frameworks.
 
 ## 8. Returns, credit notes and refunds
 
-- A sales return references the original sale line, cannot exceed sold minus already
-  returned quantity, captures reason and condition.
-- Goods effect (at original COGS cost of the returned units):
-  - Resalable → Dr Inventory (store) / Cr COGS.
-  - Damaged / quarantined → Dr Inventory (quarantine location) / Cr COGS; later write-off
-    by approved adjustment to an expense account.
-- Financial effect: a **credit note** Dr Revenue (and output tax) / Cr AR. For cash sales
-  the credit sits as a customer credit balance (AR in credit / customer advances).
-- **Refund** is a separate document, approval-controlled: Dr AR (or customer advance) /
-  Cr Cash/Bank, dated when money is actually paid. Cash/bank change only on the refund.
+- A return (credit note, `CN-…`) is raised against a posted sale. Each line names the sale line
+  and the quantity coming back, which cannot exceed what was sold less what was already
+  returned. A reason is required; each line is marked as resalable or damaged. Opening-balance
+  invoices cannot be returned.
+- Goods go back at the cost they were sold at, not today's cost: the returned share of the
+  sale line's cost of goods sold. Resalable goods go back to the store they were sold from;
+  damaged goods to a quarantine location at the same branch, for a later approved write-off.
+  Dr 1300 Inventory / Cr 5100 Cost of goods sold.
+- The credit is the returned share of the line's revenue and tax (quantity returned ÷
+  quantity sold, worked on the running total so partial returns add up exactly to the line):
+  Dr 4100 Revenue, Dr 2200 Output tax. It first reduces what is still owed on that sale (Cr 1200
+  Trade receivables). Any rest is held for the customer as a credit (Cr 2250 Customer advances)
+  that can be applied to other invoices or paid back. A walk-in sale has no account to hold it,
+  so the rest is paid back at once from the cash or bank account chosen.
+- A refund (`RF-…`) pays back money a customer holds with us, from a specific unallocated
+  receipt or credit note, up to what is left on it: Dr 2250 Customer advances / Cr Cash or
+  Bank, dated the day it is posted.
+- Approvals (DECISION 17, proposed): someone with `sales.return.post` (Managers, Admins) posts a
+  return directly, and someone with `sales.refund.post` (Accountants, Managers, Admins) posts a
+  refund directly. Sales officers raise them for approval; a manager approves and they post on
+  the day of approval, re-checked against the sale as it is then. Nobody approves their own
+  request, and every step is in the audit log.
+- Returns have no time limit (DECISION 18, proposed); a company that wants one applies it as a
+  policy for whoever approves.
 
 ## 9. Rounding
 
@@ -185,3 +199,14 @@ other frameworks.
 - Batch must balance; any difference must be explicitly posted to an "Opening balance
   equity" account and is reported. Subledger totals must match their control accounts
   before the batch can post.
+
+## 13. Bank reconciliation
+
+- Each cash or bank account is reconciled to statements in date order. The ledger entries that
+  appear on the statement are ticked off; with everything reconciled before, they must add up
+  exactly to the statement's closing balance, or the reconciliation cannot be finished.
+- Each ledger entry can be cleared once. Nothing is posted by reconciling: bank charges,
+  interest or receipts on the statement that are not in the books are recorded first (a manual
+  journal or the relevant document), then ticked.
+- The first reconciliation of an account starts from zero, so it includes every entry up to
+  the first statement, opening balance included.

@@ -82,9 +82,9 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
 
 ## Phase 5
 
-- **No sales returns, credit notes or refunds yet** (Phase 6). A sale posted in error cannot
-  be undone until then: receivables and inventory are control accounts, so manual journals
-  cannot touch them.
+- **A sale cannot be voided.** Since Phase 6 a wrong sale is corrected with a return of every
+  line (and a refund if money was taken); manual journals cannot touch receivables or
+  inventory.
 - **One revenue account.** Every sale credits the account with the Revenue role; revenue by
   product line needs per-category accounts (CHART_OF_ACCOUNTS question 1). Branch is on every
   ledger line, so revenue by branch already works.
@@ -105,3 +105,24 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
   with Phase 7.
 - **Changing a tax rate or the "prices include tax" setting** affects sales posted afterwards
   only; there is no effective date.
+
+## Phase 6
+
+- **Returns and refunds are dated the day they are posted** (or approved), not the day the
+  goods came back. There is no backdating for them.
+- **Approving a return re-checks the sale, not the stock count.** Goods are put back at the
+  sold cost even if the shop's cost has changed since.
+- **Store officers do not receive returned goods separately.** `sales.return.receiveGoods`
+  exists but is not used: posting the return puts the goods back in stock.
+- **Damaged goods stay in quarantine** until someone posts a stock adjustment to write them off
+  (with the usual approval).
+- **A return cannot change prices or be partial in value.** Price allowances without goods
+  coming back need credit notes without stock, which come later.
+- **Refunds come from one receipt or credit note at a time.** Paying back a customer's whole
+  credit from several sources needs one refund each.
+- **No supplier refunds or debit notes yet**, and no return time limit (DECISION 18).
+- **Bank reconciliation is manual.** There is no statement import or matching; the page looks
+  at the latest 1,000 entries on the account, and one reconciliation clears at most 400.
+  A reconciliation cannot be undone, and entries posted to an already reconciled date are
+  picked up by the next one.
+- **Lists show the latest 100 returns and refunds.**
