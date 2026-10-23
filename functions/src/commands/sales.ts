@@ -28,7 +28,9 @@ import {
   post,
   readSeries,
   readSystemAccounts,
+  recordSettlement,
   type PlannedAllocation,
+  type SettlementSource,
 } from '../lib/documents.js';
 import {
   CommandError,
@@ -683,8 +685,10 @@ function applyAllocations(
   companyId: string,
   planned: readonly PlannedAllocation[],
   invoices: Map<string, SalesInvoiceDoc>,
+  source: SettlementSource & { now: Timestamp },
 ) {
   const refs = companyRefs(companyId);
+  const { now, ...from } = source;
   for (const a of planned) {
     const inv = invoices.get(a.invoiceId)!;
     const paid = fromStorable(inv.paidMinor) + a.amountMinor;
@@ -692,6 +696,19 @@ function applyAllocations(
       paidMinor: toStorable(paid),
       status: settled(fromStorable(inv.totalMinor) - paid - fromStorable(inv.creditedMinor)),
     });
+    recordSettlement(
+      tx,
+      companyId,
+      { now },
+      {
+        ...from,
+        ledger: 'receivable',
+        invoiceId: a.invoiceId,
+        partyId: inv.customerId!,
+        kind: 'allocation',
+        amount: a.amountMinor,
+      },
+    );
   }
 }
 
@@ -756,7 +773,13 @@ export const postCustomerReceipt = defineCommand({
     );
     series.commit();
     const { journalId } = write();
-    applyAllocations(tx, input.companyId, planned, invoices);
+    applyAllocations(tx, input.companyId, planned, invoices, {
+      date: input.postingDate,
+      sourceType: 'customerReceipt',
+      sourceId: ref.id,
+      journalId,
+      now,
+    });
     const doc: CustomerReceiptDoc = {
       number: series.number,
       customerId: input.customerId,
@@ -844,10 +867,11 @@ export async function applyAdvance(
     ['receivable', 'customerAdvance'],
     ['receivable'],
   );
+  const postingDate = businessDate(ctx.now.toDate(), companyDoc.timeZone);
   const write = await post(tx, ctx, {
     origin: 'system',
     branchId: source.branchId,
-    postingDate: businessDate(ctx.now.toDate(), companyDoc.timeZone),
+    postingDate,
     memo: `${source.number}: applied to invoices`,
     reference: source.number,
     lines: [
@@ -860,7 +884,13 @@ export async function applyAdvance(
     total,
     commit: () => {
       const { journalId } = write();
-      applyAllocations(tx, companyId, planned, invoices);
+      applyAllocations(tx, companyId, planned, invoices, {
+        date: postingDate,
+        sourceType: source.type,
+        sourceId: source.id,
+        journalId,
+        now: ctx.now,
+      });
       tx.update(refs.customer(source.customerId), {
         balanceMinor: toStorable(fromStorable(customer.balanceMinor) - total),
         advanceMinor: toStorable(fromStorable(customer.advanceMinor) - total),

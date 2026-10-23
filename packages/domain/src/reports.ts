@@ -253,3 +253,61 @@ export function fiscalYearStart(date: string, startMonth: number): string {
   const startYear = month >= startMonth ? year : year - 1;
   return `${startYear}-${String(startMonth).padStart(2, '0')}-01`;
 }
+
+/**
+ * The year-end closing entries (ACCOUNTING_POLICIES.md §14): every income and expense account's
+ * balance for the year reversed, the net profit credited (a loss debited) to retained earnings.
+ * Signed amounts: positive is a debit.
+ */
+export function yearEndClosing(
+  movements: readonly AccountMovement[],
+  retainedEarningsId: string,
+): { entries: { accountId: string; amount: bigint }[]; profit: bigint } {
+  const entries: { accountId: string; amount: bigint }[] = [];
+  let profit = 0n;
+  for (const m of movements) {
+    if (m.account.type !== 'income' && m.account.type !== 'expense') continue;
+    const balance = m.debit - m.credit;
+    if (balance === 0n) continue;
+    entries.push({ accountId: m.account.id, amount: -balance });
+    profit -= balance;
+  }
+  if (profit !== 0n) entries.push({ accountId: retainedEarningsId, amount: -profit });
+  return { entries, profit };
+}
+
+export interface InvoiceForAgeing {
+  id: string;
+  partyId: string;
+  partyName: string;
+  invoiceDate: string;
+  dueDate: string;
+  totalMinor: bigint;
+  /** Paid at the time of the sale, so settled from the invoice date. */
+  paidAtInvoiceMinor: bigint;
+}
+
+/**
+ * What each invoice still owed at the end of `asAt`: its total less what was paid with it and
+ * every settlement dated on or before that day. Invoices dated later are left out.
+ */
+export function openItemsAsAt(
+  invoices: readonly InvoiceForAgeing[],
+  settlements: readonly { invoiceId: string; date: string; amountMinor: bigint }[],
+  asAt: string,
+): OpenItem[] {
+  const settled = new Map<string, bigint>();
+  for (const s of settlements) {
+    if (s.date > asAt) continue;
+    settled.set(s.invoiceId, (settled.get(s.invoiceId) ?? 0n) + s.amountMinor);
+  }
+  return invoices
+    .filter((i) => i.invoiceDate <= asAt)
+    .map((i) => ({
+      partyId: i.partyId,
+      partyName: i.partyName,
+      dueDate: i.dueDate,
+      outstanding: i.totalMinor - i.paidAtInvoiceMinor - (settled.get(i.id) ?? 0n),
+    }))
+    .filter((i) => i.outstanding !== 0n);
+}

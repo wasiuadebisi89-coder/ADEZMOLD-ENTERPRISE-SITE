@@ -39,7 +39,7 @@ export interface JournalRow {
   postingDate: string;
   periodId: string;
   branchId: string;
-  origin: 'manual' | 'opening_balance' | 'reversal' | 'system';
+  origin: 'manual' | 'opening_balance' | 'reversal' | 'system' | 'closing';
   currency: string;
   memo: string;
   reference: string | null;
@@ -90,6 +90,7 @@ export const ORIGIN_LABEL: Record<JournalRow['origin'], string> = {
   opening_balance: 'Opening balances',
   reversal: 'Reversal',
   system: 'System',
+  closing: 'Year-end close',
 };
 
 export function useAccounts(companyId: string) {

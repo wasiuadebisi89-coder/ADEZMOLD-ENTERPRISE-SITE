@@ -1,6 +1,8 @@
 import { collection, orderBy, query, where } from 'firebase/firestore';
 import { CalendarPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router';
+import { BackdateNotice, useBackdate, useToday } from '../../components/BackdateNotice';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { Alert, Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
@@ -11,6 +13,7 @@ import { db } from '../../lib/firebase';
 import { useCollection } from '../../lib/firestore-hooks';
 import { useAction } from '../../lib/useAction';
 import { formatDate, formatDateTime } from '../../lib/utils';
+import { usePostingBranches } from './NewJournal';
 
 export const PERIOD_STATUS = {
   open: { label: 'Open', tone: 'green' },
@@ -32,6 +35,7 @@ interface FiscalYearRow {
   id: string;
   startDate: string;
   endDate: string;
+  closingJournalIds?: string[];
 }
 interface ApprovalRow {
   id: string;
@@ -158,6 +162,79 @@ function ActionDialog({ pending, onClose }: { pending: Pending; onClose: () => v
   );
 }
 
+/** Moves the year's income and expenses into retained earnings (ACCOUNTING_POLICIES §14). */
+function YearEndClose({ year, periods }: { year: FiscalYearRow; periods: PeriodRow[] }) {
+  const { companyId, can } = useCompany();
+  const today = useToday();
+  const branches = usePostingBranches();
+  const backdate = useBackdate(year.endDate);
+  const action = useAction();
+  const [done, setDone] = useState<{ journalId: string; number: string } | null>(null);
+  const closings = year.closingJournalIds ?? [];
+  const ended = year.endDate < today;
+  const open = periods.filter((p) => p.status === 'open');
+  const branch = branches.data[0]?.id ?? '';
+  const run = async () => {
+    setDone(null);
+    try {
+      setDone(
+        await action.run<{ journalId: string; number: string }>('fiscalYear.close', {
+          companyId,
+          fiscalYearId: year.id,
+          branchId: branch,
+          ...(backdate.approvalId ? { backdateApprovalId: backdate.approvalId } : {}),
+        }),
+      );
+    } catch {
+      /* shown below */
+    }
+  };
+  return (
+    <Card className="mb-4 space-y-3 p-4">
+      <h2 className="text-base font-semibold">Year-end close</h2>
+      <p className="text-sm text-slate-600">
+        Moves this year&apos;s income and expenses into retained earnings with one journal dated{' '}
+        {formatDate(year.endDate)}. Profit and loss reports leave it out. If anything is posted to
+        the year later, close it again to move that too.
+      </p>
+      {closings.length > 0 && (
+        <p className="text-sm" data-testid="year-closed">
+          Closed {closings.length} time{closings.length === 1 ? '' : 's'}.
+        </p>
+      )}
+      {action.error && <Alert tone="error">{action.error.message}</Alert>}
+      {done && (
+        <Alert tone="success">
+          {done.number} posted.{' '}
+          {can('ledger.journal.read') && (
+            <Link className="underline" to={`/c/${companyId}/journals/${done.journalId}`}>
+              View journal
+            </Link>
+          )}
+        </Alert>
+      )}
+      {!ended ? (
+        <p className="text-sm text-slate-500">The year can be closed after it ends.</p>
+      ) : open.length > 0 ? (
+        <p className="text-sm text-slate-500">
+          Close or soft-close every month first ({open.length} still open).
+        </p>
+      ) : (
+        <>
+          <BackdateNotice date={year.endDate} state={backdate} />
+          <Button
+            onClick={() => void run()}
+            loading={action.pending}
+            disabled={!branch || (backdate.needsApproval && !backdate.approvalId)}
+          >
+            {closings.length > 0 ? 'Close the year again' : 'Close the year'}
+          </Button>
+        </>
+      )}
+    </Card>
+  );
+}
+
 export default function Periods() {
   const { companyId, can, member } = useCompany();
   const yearsQ = useMemo(
@@ -251,6 +328,9 @@ export default function Periods() {
         </Alert>
       )}
 
+      {canClose && !periods.loading && years.data.find((y) => y.id === yearId) && (
+        <YearEndClose year={years.data.find((y) => y.id === yearId)!} periods={rows} />
+      )}
       <Card>
         {periods.loading || years.loading ? (
           <Spinner />

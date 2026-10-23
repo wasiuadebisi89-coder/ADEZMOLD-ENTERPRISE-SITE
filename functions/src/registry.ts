@@ -2,6 +2,7 @@ import type { CommandName } from '@bms/schemas';
 import type { AnyCommand } from './lib/command.js';
 import { createFixedAsset, disposeFixedAsset, runDepreciation } from './commands/assets.js';
 import { completeBankReconciliation } from './commands/bank.js';
+import { closeFiscalYear } from './commands/closing.js';
 import { createBranch, updateBranch } from './commands/branch.js';
 import { createCompany, updateCompanySettings } from './commands/company.js';
 import {
@@ -81,6 +82,7 @@ export const COMMANDS: Record<CommandName, AnyCommand> = {
   'member.setStatus': setMemberStatus,
   'period.setStatus': setPeriodStatus,
   'fiscalYear.create': createFiscalYear,
+  'fiscalYear.close': closeFiscalYear,
   'approval.request': requestApproval,
   'approval.decide': decideApproval,
   'chart.applyTemplate': applyChartTemplate,

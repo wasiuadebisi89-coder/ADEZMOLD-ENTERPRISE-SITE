@@ -166,6 +166,14 @@ beforeEach(async () => {
         status: 'active',
       });
       await setDoc(doc(db, `companies/${companyId}/depreciationRuns/dr1`), { month: '2026-09' });
+      await setDoc(doc(db, `companies/${companyId}/settlements/st1`), {
+        ledger: 'receivable',
+        date: '2026-10-01',
+      });
+      await setDoc(doc(db, `companies/${companyId}/settlements/st2`), {
+        ledger: 'payable',
+        date: '2026-10-01',
+      });
       for (const m of members) await setDoc(doc(db, `companies/${companyId}/members/${m.uid}`), m);
     }
     await setDoc(doc(db, `users/${ADMIN_A}`), {
@@ -218,6 +226,8 @@ const COMPANY_PATHS = [
   'companies/A/bankClearings/j1_1',
   'companies/A/fixedAssets/fa1',
   'companies/A/depreciationRuns/dr1',
+  'companies/A/settlements/st1',
+  'companies/A/settlements/st2',
 ];
 
 describe('C1 unauthenticated access', () => {
@@ -287,6 +297,7 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/fixedAssets/fa1', { status: 'disposed' }],
     ['companies/A/fixedAssets/fa2', { number: 'FA-000002', costMinor: 1 }],
     ['companies/A/depreciationRuns/dr2', { month: '2026-10' }],
+    ['companies/A/settlements/st3', { ledger: 'receivable', amountMinor: 1 }],
     ['companies/NEW', { legalName: 'Self-made' }],
     ['invitations/inv2', { companyId: 'A' }],
   ];
@@ -424,6 +435,18 @@ describe('fixed assets (Phase 7)', () => {
       await assertFails(getDoc(doc(db(SALES_A), path)));
     }
     await assertFails(deleteDoc(doc(db(ADMIN_A), 'companies/A/fixedAssets/fa1')));
+  });
+});
+
+describe('settlements (ageing at a past date)', () => {
+  it('each side is readable only by readers of that side', async () => {
+    await assertSucceeds(getDoc(doc(db(AUDITOR_A), 'companies/A/settlements/st1')));
+    await assertSucceeds(getDoc(doc(db(AUDITOR_A), 'companies/A/settlements/st2')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/settlements/st1')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/settlements/st2')));
+    const all = collection(db(AUDITOR_A), 'companies/A/settlements');
+    await assertSucceeds(getDocs(query(all, where('ledger', '==', 'payable'))));
+    await assertFails(getDocs(collection(db(SALES_A), 'companies/A/settlements')));
   });
 });
 

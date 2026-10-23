@@ -131,6 +131,22 @@ test('F2 ageing and stock reports agree with their ledger accounts', async ({ pa
   await expect(page.getByTestId('stock-total')).toHaveText(/4,800\.00/);
   await expect(page.getByText('It agrees with the stock records.')).toBeVisible();
   await noA11yViolations(page);
+
+  // Everything was posted today, so yesterday there was nothing.
+  const yesterday = addDays(TODAY, -1);
+  await page.getByLabel('As at').fill(yesterday);
+  await page.getByRole('button', { name: 'Show report' }).click();
+  await expect(page.getByText('No stock on hand')).toBeVisible();
+  await expect(page.getByText('It agrees with the stock records.')).toBeVisible();
+  await page.getByRole('tab', { name: 'Receivables ageing' }).click();
+  await page.getByLabel('As at').fill(yesterday);
+  await page.getByRole('button', { name: 'Show report' }).click();
+  await expect(page.getByText('Nothing outstanding')).toBeVisible();
+  await expect(page.getByText('It agrees with the open invoices.')).toBeVisible();
+
+  await nav(page, 'Financial periods');
+  await expect(page.getByRole('heading', { name: 'Year-end close' })).toBeVisible();
+  await expect(page.getByText('The year can be closed after it ends.')).toBeVisible();
 });
 
 test('@mobile the reports fit a phone screen', async ({ page }) => {

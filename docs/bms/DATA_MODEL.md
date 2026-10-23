@@ -249,10 +249,22 @@ Running totals (`chargedMonths`, `accumulatedMinor`) include what was charged be
 months less what was charged, so the charges add up exactly to cost less residual value.
 Asset categories with default lives are not built; each asset carries its own accounts.
 
-## 11. Indexes (initial)
+## 11. Settlements (as built)
+
+```
+  settlements/{id}       ★ ledger (receivable | payable), invoiceId, partyId, date, amountMinor,
+                         kind (allocation | credit), sourceType, sourceId, journalId
+```
+
+One per amount settled against an invoice after it was posted: a receipt or supplier payment
+allocated (on the receipt's date, or the day a later allocation is posted), or a credit from a
+return. Payments taken at a sale are on the invoice. Ageing at a past date is each invoice dated
+by then, less those payments and every settlement dated by then.
+
+## 12. Indexes (initial)
 
 `ledgerEntries`: (accountId, postingDate), (accountId, postingDate desc), (journalId, lineNo); later (partyId, postingDate).
-`stockMovements`: (productId, postedAt desc). `costLayers`: (productId, locationId, open, seq).
+`stockMovements`: (productId, postedAt desc), (productId, postingDate). `settlements`: (ledger, date). `costLayers`: (productId, locationId, open, seq).
 `stockBalances`: (locationId, qtyMilli). Purchasing documents: (supplierId, postedAt desc);
 `goodsReceipts`: (supplierId, invoiceStatus, postedAt desc); `purchaseInvoices`: (supplierId,
 status, dueDate) and (status, dueDate). `salesInvoices` and `customerReceipts`: (customerId,

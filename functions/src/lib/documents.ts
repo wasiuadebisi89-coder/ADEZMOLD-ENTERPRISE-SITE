@@ -10,13 +10,14 @@ import {
   fromStorable,
   parseMoney,
   parseQuantity,
+  toStorable,
   type AccountSubtype,
   type JournalLine,
   type UnitCode,
 } from '@bms/domain';
 import type { Caller, CompanyContext } from './command.js';
 import { CommandError, failedPrecondition, invalid } from './errors.js';
-import { companyRefs, type AccountDoc, type NumberSeriesDoc } from './model.js';
+import { companyRefs, type AccountDoc, type NumberSeriesDoc, type SettlementDoc } from './model.js';
 import { preparePosting, writePosting, type PostingRequest } from './posting.js';
 import { inventoryError } from './stock.js';
 
@@ -192,3 +193,24 @@ export function planAllocations(
 }
 
 export type PlannedAllocation = ReturnType<typeof planAllocations>['planned'][number];
+
+export type SettlementSource = Pick<
+  SettlementDoc,
+  'date' | 'sourceType' | 'sourceId' | 'journalId'
+>;
+
+/** Records an amount settled against an invoice, for ageing as at a past date. */
+export function recordSettlement(
+  tx: Transaction,
+  companyId: string,
+  ctx: { now: Timestamp },
+  s: Omit<SettlementDoc, 'at' | 'amountMinor'> & { amount: bigint },
+) {
+  const { amount, ...rest } = s;
+  if (amount === 0n) return;
+  tx.set(companyRefs(companyId).settlements.doc(), {
+    ...rest,
+    amountMinor: toStorable(amount),
+    at: ctx.now,
+  } satisfies SettlementDoc);
+}

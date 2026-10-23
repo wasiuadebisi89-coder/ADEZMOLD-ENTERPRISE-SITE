@@ -1,6 +1,7 @@
 import {
   collection,
   getAggregateFromServer,
+  getDocs,
   limit,
   orderBy,
   query,
@@ -128,4 +129,34 @@ export async function loadMovements(
         };
       }),
   );
+}
+
+/**
+ * The year-end closing journals' lines in a date range, so profit and loss can leave them out:
+ * they move the year's result to retained earnings and are not income or expense themselves.
+ */
+export async function withoutClosing<
+  T extends { account: { id: string }; debit: bigint; credit: bigint },
+>(companyId: string, rows: T[], range: { from?: string; to: string }): Promise<T[]> {
+  const snap = await getDocs(
+    query(collection(db, `companies/${companyId}/journals`), where('origin', '==', 'closing')),
+  );
+  const closing = new Map<string, { debit: bigint; credit: bigint }>();
+  for (const d of snap.docs) {
+    const j = d.data() as {
+      postingDate: string;
+      lines: { accountId: string; debit: number; credit: number }[];
+    };
+    if (j.postingDate > range.to || (range.from && j.postingDate < range.from)) continue;
+    for (const l of j.lines) {
+      const c = closing.get(l.accountId) ?? { debit: 0n, credit: 0n };
+      c.debit += BigInt(l.debit);
+      c.credit += BigInt(l.credit);
+      closing.set(l.accountId, c);
+    }
+  }
+  return rows.map((r) => {
+    const c = closing.get(r.account.id);
+    return c ? { ...r, debit: r.debit - c.debit, credit: r.credit - c.credit } : r;
+  });
 }

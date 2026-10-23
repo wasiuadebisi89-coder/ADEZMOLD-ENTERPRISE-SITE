@@ -92,6 +92,8 @@ export interface FiscalYearDoc {
   startDate: string;
   endDate: string;
   status: 'open' | 'closed';
+  /** Year-end closing journals, in order; a later one closes anything posted after the first. */
+  closingJournalIds?: string[];
   createdAt: Timestamp;
   createdBy: string;
 }
@@ -798,6 +800,25 @@ export interface DepreciationRunDoc {
   postedBy: string;
 }
 
+/**
+ * One amount settled against an invoice after it was posted: a receipt or payment allocated, or
+ * a credit from a return. Lets ageing be worked out as at any date (DATA_MODEL.md §11).
+ * Payments taken at a sale are on the invoice itself.
+ */
+export interface SettlementDoc {
+  ledger: 'receivable' | 'payable';
+  invoiceId: string;
+  partyId: string;
+  /** The business date of the journal that settled it. */
+  date: string;
+  amountMinor: number;
+  kind: 'allocation' | 'credit';
+  sourceType: string;
+  sourceId: string;
+  journalId: string;
+  at: Timestamp;
+}
+
 export interface NumberSeriesDoc {
   prefix: string;
   next: number;
@@ -882,6 +903,7 @@ export function companyRefs(companyId: string) {
     fixedAsset: (id: string) => company.collection('fixedAssets').doc(id),
     fixedAssets: company.collection('fixedAssets'),
     depreciationRuns: company.collection('depreciationRuns'),
+    settlements: company.collection('settlements'),
     auditLogs: company.collection('auditLogs'),
   };
 }

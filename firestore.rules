@@ -253,6 +253,14 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Amounts settled against invoices, for ageing at a past date: readable by whoever reads
+      // that side's invoices. Queries must name the ledger so the rule can check it.
+      match /settlements/{settlementId} {
+        allow read: if (resource.data.ledger == 'receivable' && can(companyId, 'sales.read'))
+          || (resource.data.ledger == 'payable' && can(companyId, 'purchasing.read'));
+        allow write: if false;
+      }
+
       // Fixed assets: the register and depreciation runs, posted only by server commands.
       match /fixedAssets/{assetId} {
         allow read: if can(companyId, 'assets.read');

@@ -6,7 +6,9 @@ import {
   balanceSheet,
   daysOverdue,
   fiscalYearStart,
+  openItemsAsAt,
   profitAndLoss,
+  yearEndClosing,
   type AccountMovement,
 } from './reports.js';
 
@@ -103,5 +105,56 @@ describe('financial year start', () => {
     expect(fiscalYearStart('2026-10-23', 1)).toBe('2026-01-01');
     expect(fiscalYearStart('2026-03-10', 7)).toBe('2025-07-01');
     expect(fiscalYearStart('2026-07-01', 7)).toBe('2026-07-01');
+  });
+});
+
+describe('year-end closing', () => {
+  it('reverses income and expenses into retained earnings', () => {
+    const { entries, profit } = yearEndClosing(books, 'RE');
+    expect(profit).toBe(270n);
+    expect(entries).toEqual([
+      { accountId: '4100', amount: 500n },
+      { accountId: '5100', amount: -200n },
+      { accountId: '6600', amount: -30n },
+      { accountId: 'RE', amount: -270n },
+    ]);
+    expect(entries.reduce((s, e) => s + e.amount, 0n)).toBe(0n);
+  });
+  it('debits retained earnings with a loss and ignores balance sheet accounts', () => {
+    const { entries, profit } = yearEndClosing(
+      [row('6900', 'expense', 'general', 100n), row('1110', 'asset', 'cash', 0n, 100n)],
+      'RE',
+    );
+    expect(profit).toBe(-100n);
+    expect(entries).toEqual([
+      { accountId: '6900', amount: -100n },
+      { accountId: 'RE', amount: 100n },
+    ]);
+  });
+});
+
+describe('open items as at a date', () => {
+  const invoice = (id: string, invoiceDate: string, total: bigint, paid = 0n) => ({
+    id,
+    partyId: 'c1',
+    partyName: 'Ade',
+    invoiceDate,
+    dueDate: invoiceDate,
+    totalMinor: total,
+    paidAtInvoiceMinor: paid,
+  });
+  const invoices = [invoice('a', '2026-09-01', 1_000n, 200n), invoice('b', '2026-10-10', 500n)];
+  const settlements = [
+    { invoiceId: 'a', date: '2026-09-15', amountMinor: 300n },
+    { invoiceId: 'a', date: '2026-10-05', amountMinor: 500n },
+  ];
+  it('counts only what was settled by the date and invoices dated by then', () => {
+    expect(openItemsAsAt(invoices, settlements, '2026-09-30').map((i) => i.outstanding)).toEqual([
+      500n,
+    ]);
+    expect(openItemsAsAt(invoices, settlements, '2026-10-31').map((i) => i.outstanding)).toEqual([
+      500n,
+    ]);
+    expect(openItemsAsAt(invoices, settlements, '2026-08-31')).toEqual([]);
   });
 });
