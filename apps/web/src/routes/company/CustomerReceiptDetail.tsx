@@ -1,89 +1,18 @@
 import { doc } from 'firebase/firestore';
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import {
-  AllocationTable,
-  allocationInput,
-  allocationTotal,
-} from '../../components/AllocationTable';
+import { ApplyCreditDialog } from '../../components/ApplyCreditDialog';
+import { RefundDialog } from '../../components/RefundDialog';
 import { Button } from '../../components/ui/button';
-import { Dialog } from '../../components/ui/dialog';
-import { Alert, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
+import { Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { money } from '../../lib/ledger';
-import { useOpenSalesInvoices, type CustomerReceiptRow } from '../../lib/sales';
-import { useAction } from '../../lib/useAction';
+import { unusedCredit, type CustomerReceiptRow } from '../../lib/sales';
 import { formatDate, formatDateTime } from '../../lib/utils';
-import { openInvoices } from './NewCustomerReceipt';
-
-function ApplyAdvanceDialog({
-  receipt,
-  onClose,
-}: {
-  receipt: CustomerReceiptRow;
-  onClose: () => void;
-}) {
-  const { companyId, company } = useCompany();
-  const currency = company?.baseCurrency ?? 'NGN';
-  const invoices = useOpenSalesInvoices(companyId, receipt.customerId);
-  const action = useAction();
-  const [values, setValues] = useState<Record<string, string>>({});
-  const available = BigInt(receipt.amountMinor - receipt.allocatedMinor);
-  const total = allocationTotal(values, currency);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await action.run('customerReceipt.allocate', {
-        companyId,
-        receiptId: receipt.id,
-        allocations: allocationInput(values),
-      });
-      onClose();
-    } catch {
-      /* shown below */
-    }
-  };
-  return (
-    <Dialog
-      open
-      onOpenChange={(o) => !o && onClose()}
-      title={`Apply ${receipt.number} to invoices`}
-      description={`${money(available, currency)} of this payment is not yet allocated. Applying it is dated today.`}
-    >
-      <form onSubmit={submit} className="space-y-4" noValidate>
-        {action.error && <Alert tone="error">{action.error.message}</Alert>}
-        {invoices.loading ? (
-          <Spinner />
-        ) : (
-          <AllocationTable
-            invoices={openInvoices(invoices.data)}
-            values={values}
-            onChange={setValues}
-            available={available}
-            referenceLabel="Reference"
-            emptyText="This customer has no unpaid invoices."
-            actionLabel="Settle"
-          />
-        )}
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            loading={action.pending}
-            disabled={total === null || total <= 0n || total > available}
-          >
-            Apply
-          </Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-}
+import { RefundList } from './CustomerRefundDetail';
 
 export default function CustomerReceiptDetail() {
   const { companyId, company, can } = useCompany();
@@ -94,11 +23,11 @@ export default function CustomerReceiptDetail() {
     [companyId, receiptId],
   );
   const receipt = useDoc<Omit<CustomerReceiptRow, 'id'>>(ref);
-  const [applying, setApplying] = useState(false);
+  const [open, setOpen] = useState<'apply' | 'refund' | null>(null);
   if (receipt.loading) return <Spinner />;
   const x = receipt.data;
   if (!x) return <EmptyState title="Receipt not found" />;
-  const unallocated = x.amountMinor - x.allocatedMinor;
+  const unallocated = unusedCredit(x.amountMinor, x);
   const p = `/c/${companyId}/sales`;
 
   return (
@@ -111,8 +40,13 @@ export default function CustomerReceiptDetail() {
             <Button variant="secondary" asChild>
               <Link to={`${p}?tab=receipts`}>All payments</Link>
             </Button>
+            {(can('sales.refund.post') || can('sales.refund.request')) && unallocated > 0 && (
+              <Button variant="secondary" onClick={() => setOpen('refund')}>
+                Refund
+              </Button>
+            )}
             {can('sales.receipt.post') && unallocated > 0 && (
-              <Button onClick={() => setApplying(true)}>Apply to invoices</Button>
+              <Button onClick={() => setOpen('apply')}>Apply to invoices</Button>
             )}
           </>
         }
@@ -129,6 +63,12 @@ export default function CustomerReceiptDetail() {
               {money(unallocated, currency)}
             </dd>
           </div>
+          {(x.refundedMinor ?? 0) > 0 && (
+            <div>
+              <dt className="text-slate-500">Paid back</dt>
+              <dd className="font-medium tabular-nums">{money(x.refundedMinor ?? 0, currency)}</dd>
+            </div>
+          )}
           <div>
             <dt className="text-slate-500">Received on</dt>
             <dd className="font-medium">{formatDate(x.postingDate)}</dd>
@@ -199,7 +139,23 @@ export default function CustomerReceiptDetail() {
           </Table>
         )}
       </Card>
-      {applying && <ApplyAdvanceDialog receipt={x} onClose={() => setApplying(false)} />}
+      <RefundList source={{ type: 'customerReceipt', id: receiptId }} />
+      {open === 'apply' && (
+        <ApplyCreditDialog
+          target={{ command: 'customerReceipt.allocate', receiptId }}
+          number={x.number}
+          customerId={x.customerId}
+          available={BigInt(unallocated)}
+          onClose={() => setOpen(null)}
+        />
+      )}
+      {open === 'refund' && (
+        <RefundDialog
+          source={{ type: 'customerReceipt', id: receiptId, number: x.number }}
+          available={unallocated}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </>
   );
 }

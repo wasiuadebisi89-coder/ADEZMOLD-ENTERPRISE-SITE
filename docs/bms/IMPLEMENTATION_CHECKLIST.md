@@ -61,21 +61,33 @@ Green in CI on PR #5 and merged.
 
 ## Phase 5 — Customers and sales
 
-- [~] Tax codes per company, no rate preset; prices including or excluding tax by company setting; tax per line
-- [~] Customers with payment terms, credit limits, balances and advances; customer opening balances
-- [~] Sales at the till and on credit in one document, with part payment, change, walk-in customers and stock taken out at cost
-- [~] Credit limits enforced, with a manager's single-use approval or the override permission
-- [~] Price changes and discounts limited to `sales.priceOverride`
-- [~] Customer receipts with allocation, advances and later application
-- [~] Stock availability (quantities only) for sales staff; sales officers see only their own sales
-- [~] Screens for all of the above, and credit requests on the Approvals page
-- [ ] Sales returns, credit notes and refunds (Phase 6); receipts printing to thermal printers, barcode scanning, shifts and cash-up (later)
+- [x] Tax codes per company, no rate preset; prices including or excluding tax by company setting; tax per line
+- [x] Customers with payment terms, credit limits, balances and advances; customer opening balances
+- [x] Sales at the till and on credit in one document, with part payment, change, walk-in customers and stock taken out at cost
+- [x] Credit limits enforced, with a manager's single-use approval or the override permission
+- [x] Price changes and discounts limited to `sales.priceOverride`
+- [x] Customer receipts with allocation, advances and later application
+- [x] Stock availability (quantities only) for sales staff; sales officers see only their own sales
+- [x] Screens for all of the above, and credit requests on the Approvals page
+- [x] Sales returns, credit notes and refunds (Phase 6)
+- [ ] Receipts printing to thermal printers, barcode scanning, shifts and cash-up (later)
 
-`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 5 pull request.
+Green in CI on PR #6 and merged.
 
-## Phases 6–9
+## Phase 6 — Returns, refunds and bank reconciliation
 
-- [ ] 6 Sales returns, credit notes, refunds, approvals, reconciliations
+- [~] Returns against a sale line, never more than sold; goods back at their sold cost, to the store or to quarantine if damaged
+- [~] Credit notes reversing revenue and tax, settling the sale first and keeping the rest as customer credit, or paying a walk-in customer back at once
+- [~] Customer credit applied to other invoices; refunds from unused receipts and credit notes
+- [~] Sales officers' returns and refunds wait for a manager; no self-approval; waiting items on the Approvals page
+- [~] Bank reconciliation of cash and bank accounts against statements, each entry cleared once
+- [~] Screens for all of the above
+- [ ] Supplier refunds and debit notes, statement import, return time limits (later)
+
+`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 6 pull request.
+
+## Phases 7–9
+
 - [ ] 7 Reports, financial statements, fixed assets
 - [ ] 8 Security review, load/concurrency tests, monitoring, backups, recovery drill, deploy
 - [ ] 9 Services and production modules

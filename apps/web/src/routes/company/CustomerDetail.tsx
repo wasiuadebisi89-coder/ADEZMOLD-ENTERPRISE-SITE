@@ -18,11 +18,17 @@ import {
   type CustomerReceiptRow,
   type CustomerRow,
   type SalesInvoiceRow,
+  unusedCredit,
+  useRaisedDocs,
+  type CreditNoteRow,
+  type CustomerRefundRow,
 } from '../../lib/sales';
 import { useAction } from '../../lib/useAction';
 import { formatDate } from '../../lib/utils';
 import { usePostingBranches } from './NewJournal';
+import { CreditNoteTable } from './CreditNoteDetail';
 import { CustomerDialog } from './Customers';
+import { RefundTable } from './CustomerRefundDetail';
 
 function OpeningBalanceDialog({
   customer,
@@ -146,6 +152,8 @@ export default function CustomerDetail() {
   const customer = useDoc<Omit<CustomerRow, 'id'>>(ref);
   const invoices = useSalesDocs<SalesInvoiceRow>(companyId, 'salesInvoices', customerId);
   const receipts = useSalesDocs<CustomerReceiptRow>(companyId, 'customerReceipts', customerId);
+  const returns = useRaisedDocs<CreditNoteRow>(companyId, 'creditNotes', { customerId });
+  const refunds = useRaisedDocs<CustomerRefundRow>(companyId, 'customerRefunds', { customerId });
   const [editing, setEditing] = useState(false);
   const [opening, setOpening] = useState(false);
 
@@ -282,7 +290,7 @@ export default function CustomerDetail() {
                 <Th>Date</Th>
                 <Th>Into</Th>
                 <Th className="text-right">Amount</Th>
-                <Th className="text-right">Not yet allocated</Th>
+                <Th className="text-right">Not yet used</Th>
               </Tr>
             </THead>
             <TBody>
@@ -297,7 +305,7 @@ export default function CustomerDetail() {
                   <Td>{r.depositAccountName}</Td>
                   <Td className="text-right tabular-nums">{money(r.amountMinor, currency)}</Td>
                   <Td className="text-right tabular-nums">
-                    {money(r.amountMinor - r.allocatedMinor, currency)}
+                    {money(unusedCredit(r.amountMinor, r), currency)}
                   </Td>
                 </Tr>
               ))}
@@ -305,6 +313,22 @@ export default function CustomerDetail() {
           </Table>
         )}
       </Card>
+      {returns.data.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-6 text-base font-semibold">Returns</h2>
+          <Card>
+            <CreditNoteTable rows={returns.data as CreditNoteRow[]} />
+          </Card>
+        </>
+      )}
+      {refunds.data.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-6 text-base font-semibold">Refunds</h2>
+          <Card>
+            <RefundTable rows={refunds.data as CustomerRefundRow[]} />
+          </Card>
+        </>
+      )}
       {editing && <CustomerDialog customer={c} onClose={() => setEditing(false)} />}
       {opening && <OpeningBalanceDialog customer={c} onClose={() => setOpening(false)} />}
     </>

@@ -10,6 +10,7 @@ import {
   CalendarRange,
   ChevronsUpDown,
   History,
+  Landmark,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -54,6 +55,12 @@ const NAV: NavItem[] = [
     label: 'Trial balance',
     icon: Scale,
     permission: 'reports.financial.read',
+  },
+  {
+    to: 'bank-reconciliation',
+    label: 'Bank reconciliation',
+    icon: Landmark,
+    permission: ['ledger.bank.reconcile', 'ledger.journal.read'],
   },
   { to: 'products', label: 'Products', icon: Package, permission: 'inventory.products.read' },
   {

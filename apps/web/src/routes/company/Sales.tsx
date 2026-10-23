@@ -9,13 +9,19 @@ import { useCompany } from '../../lib/company';
 import { money } from '../../lib/ledger';
 import {
   salesOutstanding,
+  unusedCredit,
   useOwnOnly,
+  useRaisedDocs,
   useSalesDocs,
+  type CreditNoteRow,
   type CustomerReceiptRow,
+  type CustomerRefundRow,
   type SalesInvoiceRow,
 } from '../../lib/sales';
 import { cn, formatDate } from '../../lib/utils';
+import { CreditNoteTable } from './CreditNoteDetail';
 import { InvoiceStatus } from './CustomerDetail';
+import { RefundTable } from './CustomerRefundDetail';
 
 const TABS = [
   { id: 'invoices', label: 'Sales', create: 'sales.invoice.post', newLabel: 'New sale', to: 'new' },
@@ -26,12 +32,15 @@ const TABS = [
     newLabel: 'Receive payment',
     to: 'receipts/new',
   },
+  // Returns start from the sale, refunds from a payment or return.
+  { id: 'returns', label: 'Returns' },
+  { id: 'refunds', label: 'Refunds' },
 ] as const satisfies readonly {
   id: string;
   label: string;
-  create: Permission;
-  newLabel: string;
-  to: string;
+  create?: Permission;
+  newLabel?: string;
+  to?: string;
 }[];
 type Tab = (typeof TABS)[number]['id'];
 
@@ -116,7 +125,7 @@ function Receipts() {
               <Td>{r.depositAccountName}</Td>
               <Td className="text-right tabular-nums">{money(r.amountMinor, currency)}</Td>
               <Td className="text-right tabular-nums">
-                {money(r.amountMinor - r.allocatedMinor, currency)}
+                {money(unusedCredit(r.amountMinor, r), currency)}
               </Td>
             </Tr>
           ))}
@@ -126,6 +135,51 @@ function Receipts() {
   );
 }
 
+function Returns() {
+  const { companyId } = useCompany();
+  const rows = useRaisedDocs<CreditNoteRow>(companyId, 'creditNotes');
+  if (rows.loading) return <Spinner />;
+  if (rows.data.length === 0) {
+    return (
+      <EmptyState
+        title="No returns yet"
+        description="To take goods back, open the sale and choose Return goods."
+      />
+    );
+  }
+  return (
+    <Card>
+      <CreditNoteTable rows={rows.data as CreditNoteRow[]} />
+    </Card>
+  );
+}
+
+function Refunds() {
+  const { companyId } = useCompany();
+  const rows = useRaisedDocs<CustomerRefundRow>(companyId, 'customerRefunds');
+  if (rows.loading) return <Spinner />;
+  if (rows.data.length === 0) {
+    return (
+      <EmptyState
+        title="No refunds yet"
+        description="Refunds pay back money a customer has not used, from a payment or a return."
+      />
+    );
+  }
+  return (
+    <Card>
+      <RefundTable rows={rows.data as CustomerRefundRow[]} />
+    </Card>
+  );
+}
+
+const PANELS: Record<Tab, () => React.JSX.Element> = {
+  invoices: Invoices,
+  receipts: Receipts,
+  returns: Returns,
+  refunds: Refunds,
+};
+
 export default function Sales() {
   const { companyId, can } = useCompany();
   const own = useOwnOnly();
@@ -134,6 +188,7 @@ export default function Sales() {
     ? (params.get('tab') as Tab)
     : 'invoices';
   const current = TABS.find((t) => t.id === tab)!;
+  const Panel = PANELS[tab];
 
   return (
     <>
@@ -141,10 +196,11 @@ export default function Sales() {
         title="Sales"
         description={
           own
-            ? 'The sales and payments you recorded.'
-            : 'Sales at the till and on credit, and payments received from customers.'
+            ? 'The sales, payments, returns and refunds you recorded.'
+            : 'Sales at the till and on credit, payments received, returns and refunds.'
         }
         actions={
+          'create' in current &&
           can(current.create) && (
             <Button asChild>
               <Link to={`/c/${companyId}/sales/${current.to}`}>
@@ -173,7 +229,7 @@ export default function Sales() {
           </button>
         ))}
       </div>
-      {tab === 'invoices' ? <Invoices /> : <Receipts />}
+      <Panel />
     </>
   );
 }

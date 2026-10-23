@@ -177,13 +177,15 @@ history. Posted documents are immutable; corrections are new documents.
                                      productName, unit, qtyMilli, listPriceMinor,
                                      unitPriceMinor, discountMinor, netMinor, taxCodeId,
                                      taxCode, taxRateBp, taxMinor, grossMinor, costMinor,
-                                     returnedQtyMilli}], netMinor, taxMinor, totalMinor,
+                                     returnedQtyMilli, returnedNetMinor, returnedTaxMinor,
+                                     returnedCostMinor}], netMinor, taxMinor, totalMinor,
                                      costMinor, payments[{accountId, accountName,
-                                     amountMinor}], paidMinor, creditedMinor, status
+                                     amountMinor}], paidMinor, creditedMinor, returnedMinor,
+                                     status
                                      (open|paid), creditOverride, journalId, postedBy
   customerReceipts/{id}              ★ number CR-…, customerId, branchId, postingDate,
                                      depositAccountId, amountMinor, allocatedMinor,
-                                     allocations[{invoiceId, invoiceNumber, amountMinor,
+                                     refundedMinor, allocations[{invoiceId, invoiceNumber, amountMinor,
                                      journalId, allocatedAt}], journalId, postedBy
   stockAvailability/{product__loc}   ★ productId, locationId, branchId, qtyMilli — written with
                                      every stock balance, readable by sales staff (no values)
@@ -195,7 +197,41 @@ receipts allocated to it. Sales officers (`sales.readOwn`) read only documents w
 `postedBy`, so their queries filter on it. Credit-limit approvals are `approvalRequests` with
 action `sales.creditOverride` and target {customerId, customerName, amountMinor}.
 
-## 8. Fixed assets (Phase 7)
+## 8. Returns, credit notes and refunds (Phase 6, as built)
+
+```
+  creditNotes/{id}        ★ number CN-…, invoiceId, invoiceNumber, customerId (null = walk-in),
+                          customerName, branchId, reason, lines[{lineNo (the sale line),
+                          productId, sku, productName, unit, qtyMilli, condition
+                          (resalable|damaged), locationId, ★ netMinor, taxMinor, costMinor}],
+                          quarantineLocationId, refundAccountId (walk-in only), status
+                          (pending|posted|rejected), createdBy, decidedBy, decisionReason,
+                          ★ postingDate, netMinor, taxMinor, totalMinor, costMinor,
+                          allocatedMinor, refundedMinor, allocations[], journalId
+  customerRefunds/{id}    ★ number RF-…, customerId, branchId, source {type
+                          (customerReceipt|creditNote), id, number}, accountId, accountName,
+                          amountMinor, reason, reference, status (pending|posted|rejected),
+                          createdBy, decidedBy, decisionReason, ★ postingDate, journalId
+```
+
+A credit note posted straight away (by someone with `sales.return.post`) or on approval holds
+its amounts; a pending one holds only what was asked for and is re-checked when approved.
+What a customer can still use or be paid back from a receipt or credit note is its amount less
+`allocatedMinor` and `refundedMinor`; the customer's `advanceMinor` is the sum of those.
+Sales officers read only returns and refunds with their own `createdBy`.
+
+## 9. Bank reconciliation (Phase 6, as built)
+
+```
+  bankStates/{accountId}       ★ reconciledBalanceMinor, lastStatementDate, lastReconciliationId
+  bankReconciliations/{id}     ★ accountId, accountName, statementDate, openingBalanceMinor,
+                               statementBalanceMinor, entryIds[], clearedDebitMinor,
+                               clearedCreditMinor, completedBy
+  bankClearings/{entryId}      ★ accountId, reconciliationId, statementDate — one per ledger
+                               entry cleared, so an entry can be cleared only once
+```
+
+## 10. Fixed assets (Phase 7)
 
 ```
   assetCategories/{id}   default life, method, accounts
@@ -204,9 +240,9 @@ action `sales.creditOverride` and target {customerId, customerName, amountMinor}
   depreciationRuns/{id}  ★ periodId, status, journalId
 ```
 
-## 9. Indexes (initial)
+## 11. Indexes (initial)
 
-`ledgerEntries`: (accountId, postingDate), (journalId, lineNo); later (partyId, postingDate).
+`ledgerEntries`: (accountId, postingDate), (accountId, postingDate desc), (journalId, lineNo); later (partyId, postingDate).
 `stockMovements`: (productId, postedAt desc). `costLayers`: (productId, locationId, open, seq).
 `stockBalances`: (locationId, qtyMilli). Purchasing documents: (supplierId, postedAt desc);
 `goodsReceipts`: (supplierId, invoiceStatus, postedAt desc); `purchaseInvoices`: (supplierId,
@@ -214,6 +250,11 @@ status, dueDate) and (status, dueDate). `salesInvoices` and `customerReceipts`: 
 postedAt desc), (postedBy, postedAt desc), (customerId, postedBy, postedAt desc);
 `salesInvoices`: (customerId, status, dueDate), (customerId, postedBy, status, dueDate),
 (status, dueDate). `approvalRequests`: (action, target.customerId, requestedBy, status).
+`creditNotes` and `customerRefunds`: (createdBy, createdAt desc), (customerId, createdAt desc),
+(customerId, createdBy, createdAt desc), (status, createdAt desc); `creditNotes`: (invoiceId,
+createdAt desc), (invoiceId, createdBy, createdAt desc); `customerRefunds`: (source.id,
+createdAt desc), (source.id, createdBy, createdAt desc). `bankReconciliations`: (accountId,
+completedAt desc).
 `journals`: (postingDate),
 (sourceType, sourceId). `auditLogs`: (entityType, entityId, at), (actorUid, at).
 Defined in `firestore.indexes.json` and reviewed each phase.
