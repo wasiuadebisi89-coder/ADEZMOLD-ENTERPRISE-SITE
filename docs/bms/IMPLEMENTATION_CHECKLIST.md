@@ -38,17 +38,29 @@ Green in CI on PR #3 and merged.
 
 ## Phase 3 — Catalogue and inventory
 
-- [~] Locations (store and quarantine per branch), categories, products
-- [~] Stock balances, movements and FIFO cost layers; moving weighted average or FIFO, locked after the first stock posting
-- [~] Stock adjustments, counts and opening stock, each approved by a second person and posted to the ledger in the same transaction
-- [~] Products, stock card and adjustment screens; costing method in Settings
+- [x] Locations (store and quarantine per branch), categories, products
+- [x] Stock balances, movements and FIFO cost layers; moving weighted average or FIFO, locked after the first stock posting
+- [x] Stock adjustments, counts and opening stock, each approved by a second person and posted to the ledger in the same transaction
+- [x] Products, stock card and adjustment screens; costing method in Settings
 - [ ] Location transfers, unit conversions, barcodes (later phases, KNOWN_LIMITATIONS.md)
 
-`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 3 pull request.
+Green in CI on PR #4 and merged.
 
-## Phases 4–9
+## Phase 4 — Suppliers and purchasing
 
-- [ ] 4 Suppliers, purchases, receipts, payments, supplier returns, landed costs
+- [~] Suppliers with payment terms, balances and advances; supplier opening balances
+- [~] Goods receipts into stock against GRNI
+- [~] Supplier invoices matched to receipts, with price differences split between stock and cost of sales; expense lines; entered input tax
+- [~] Landed costs spread over a receipt by value or quantity
+- [~] Supplier payments with allocation, advances and later application
+- [~] Returns to suppliers, before or after invoicing
+- [~] Screens for all of the above; one shared stock engine for every stock movement
+- [ ] Purchase orders, supplier refunds, debit notes, weight-based landed costs (later)
+
+`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 4 pull request.
+
+## Phases 5–9
+
 - [ ] 5 Customers, POS, cash/credit sales, receipts, allocations
 - [ ] 6 Sales returns, credit notes, refunds, approvals, reconciliations
 - [ ] 7 Reports, financial statements, fixed assets

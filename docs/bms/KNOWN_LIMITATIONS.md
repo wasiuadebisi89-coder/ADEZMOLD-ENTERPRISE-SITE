@@ -59,3 +59,23 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
 - **No negative-stock override.** Negative stock is always refused.
 - **Self-approval is never allowed**, so a single-person company cannot post stock
   adjustments until a second person with approval rights joins.
+
+## Phase 4
+
+- **No purchase orders.** The receipt's unit cost stands in for the agreed price; there is no
+  three-way match against an order.
+- **Supplier payments need no second approval** (OPEN_DECISIONS #16). The
+  `purchasing.payment.approve` permission exists for when an approval step is wanted.
+- **Input tax is typed, not computed.** No tax codes or rates exist yet (OPEN_DECISIONS #9).
+- **A supplier return credit cannot exceed what is still owed on its invoice.** Refunds from
+  suppliers and debit balances on a supplier come later.
+- **Landed costs spread by value or quantity only**, over a single receipt per charge line.
+  Weight-based spreading needs product weights.
+- **Invoices and receipts must be at the same branch**, and returns are taken from a location
+  at the receipt's branch.
+- **Lists show the latest 100 documents**, and a supplier page shows the latest 100 of each
+  kind. Search, filters, ageing and statements come with reports in Phase 7.
+- **No editing or voiding of posted purchase documents.** A wrong receipt is corrected with a
+  return; a wrong invoice amount with a manual journal or, later, a debit note.
+- **Weighted average "on hand"** for price differences is an approximation: the smaller of
+  the invoiced quantity and the quantity now at the location (ACCOUNTING_POLICIES §5).

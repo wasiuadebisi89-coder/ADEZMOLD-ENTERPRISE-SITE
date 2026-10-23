@@ -20,6 +20,7 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
 | 13  | Firebase projects / billing         | Owner creates `bms-staging` and `bms-prod` (Blaze plan needed for Functions)                                | Phase 1 deploy         |
 | 14  | Default chart of accounts template  | **Confirmed:** trading chart in CHART_OF_ACCOUNTS.md                                                        | Phase 2                |
 | 15  | Sign-in methods                     | Email/password + verification; Google sign-in later                                                         | Phase 1                |
+| 16  | Supplier payment approval           | None: anyone with `purchasing.payment.post` pays directly (Accountant, Manager, Admin)                      | Phase 4                |
 
 ## Confirmed decisions
 

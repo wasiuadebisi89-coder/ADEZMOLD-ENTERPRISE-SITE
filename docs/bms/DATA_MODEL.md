@@ -130,22 +130,40 @@ lives on the company (`costingMethod`) and is locked by `locks.costingMethod` at
 stock posting. Unit conversions, product types, tax codes and per-category accounts are not
 built yet (KNOWN_LIMITATIONS.md).
 
-## 6. Parties and documents (Phases 4–6)
+## 6. Suppliers and purchasing (Phase 4, as built)
 
 ```
-  parties/{partyId}                  kind flags {customer, supplier}, name, contacts[],
-                                     creditLimit?, paymentTermsDays, status
-  purchaseInvoices/{id}, goodsReceipts/{id}, supplierPayments/{id}, supplierReturns/{id}
-  sales/{id}, customerReceipts/{id}, salesReturns/{id}, creditNotes/{id}, refunds/{id}
-  allocations/{id}                   ★ payment/credit ↔ invoice links with amounts
-  landedCosts/{id}                   charges + allocation basis + target receipt lines
-  cashAccounts/{id}                  links a ledger account (cash or bank) to a branch/till
+  suppliers/{id}                     code (unique), name, contactName, phone, email, address,
+                                     taxId, paymentTermsDays, status,
+                                     ★ balanceMinor (owed), ★ advanceMinor (paid in advance)
+  goodsReceipts/{id}                 ★ number GRN-…, supplierId, locationId, branchId,
+                                     postingDate, reference, lines[{lineNo, productId, sku,
+                                     productName, unit, qtyMilli, unitCostScaled, valueMinor,
+                                     clearedQtyMilli, clearedValueMinor}], totalMinor,
+                                     invoiceStatus, journalId
+  purchaseInvoices/{id}              ★ number PI-…, kind (invoice|opening), supplierId,
+                                     supplierInvoiceNo, branchId, invoiceDate, dueDate,
+                                     lines[{kind receipt|expense|landed|opening, amountMinor,
+                                     receipt link and quantity, grniMinor, inventoryMinor,
+                                     cogsMinor, returnedQtyMilli, returnedCreditMinor, basis,
+                                     accountId}], inputTaxMinor, totalMinor, paidMinor,
+                                     creditedMinor, status (open|paid), journalId
+  supplierInvoiceKeys/{hash}         ★ server-only; makes supplier invoice numbers unique
+  supplierPayments/{id}              ★ number SP-…, supplierId, branchId, postingDate,
+                                     paymentAccountId, amountMinor, allocatedMinor,
+                                     allocations[{invoiceId, invoiceNumber, amountMinor,
+                                     journalId, allocatedAt}], journalId
+  supplierReturns/{id}               ★ number SR-…, supplierId, locationId, branchId,
+                                     postingDate, reason, lines[{goodsReceiptId, lineNo,
+                                     invoiceId?, productId, qtyMilli, costMinor,
+                                     creditMinor}], journalId
 ```
 
-Document lines snapshot `productName`, `sku`, `unitCode`, `factorMilli`, `unitPrice`,
-`discount`, `taxCode`, `taxRate` at the time of posting, so product edits never change history.
-Document status: `draft → posted → (partially_paid|paid|returned_partial|returned|voided_by_reversal)`.
-Posted documents are immutable; corrections are reversals or new documents.
+★ written only by the server. Supplier balances sum to 2100 Trade payables, advances to 1350,
+and received-but-not-cleared receipt value to 2150 GRNI; an emulator test checks all three
+after a mixed run. Customers, sales, receipts, returns and refunds follow the same pattern in
+Phases 5–6. Document lines snapshot product names and SKUs, so product edits never change
+history. Posted documents are immutable; corrections are new documents.
 
 ## 7. Fixed assets (Phase 7)
 
@@ -160,6 +178,8 @@ Posted documents are immutable; corrections are reversals or new documents.
 
 `ledgerEntries`: (accountId, postingDate), (journalId, lineNo); later (partyId, postingDate).
 `stockMovements`: (productId, postedAt desc). `costLayers`: (productId, locationId, open, seq).
-`stockBalances`: (locationId, qtyMilli). `journals`: (postingDate),
+`stockBalances`: (locationId, qtyMilli). Purchasing documents: (supplierId, postedAt desc);
+`goodsReceipts`: (supplierId, invoiceStatus, postedAt desc); `purchaseInvoices`: (supplierId,
+status, dueDate) and (status, dueDate). `journals`: (postingDate),
 (sourceType, sourceId). `auditLogs`: (entityType, entityId, at), (actorUid, at).
 Defined in `firestore.indexes.json` and reviewed each phase.

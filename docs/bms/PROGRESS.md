@@ -106,7 +106,7 @@ Scroll containers are now positioned so the page never scrolls sideways.
 (catalogue, inventory, costing, adjustments), which needs decisions #5 (costing method) and
 #6 (adjustment approvals).
 
-## 2026-10-23 — Phase 2 merged; Phase 3 inventory implemented (pending CI)
+## 2026-10-23 — Phase 2 merged; Phase 3 inventory implemented
 
 Owner merged Phase 2 (CI green), confirmed OPEN_DECISIONS #14 (trading chart), #5 (moving
 weighted average, FIFO optional) and #6 (every stock adjustment approved by a second person),
@@ -145,3 +145,46 @@ CI runs on the Phase 3 pull request.
 
 **Next**: Phase 4 (suppliers, purchases, goods received, supplier invoices and payments,
 supplier returns, landed costs).
+
+## 2026-10-23 — Phase 3 merged; Phase 4 purchasing implemented (pending CI)
+
+Owner merged Phase 3 (PR #4, all four CI checks green) and asked to proceed with Phase 4.
+
+**Built**
+
+- `packages/domain`: GRNI clearing (cumulative, never over-releases), price-difference split
+  between stock and cost of sales, landed-cost spreading by value or quantity, allocation
+  checks.
+- Shared stock engine (`functions/src/lib/stock.ts`) used by every stock movement; stock
+  adjustments were moved onto it with their Phase 3 tests unchanged and passing.
+- Commands (40 in total): `supplier.create/update`, `goodsReceipt.post`,
+  `purchaseInvoice.post`, `supplierOpeningBalance.post`, `supplierPayment.post`,
+  `supplierPayment.allocate`, `supplierReturn.post`. New permission
+  `purchasing.suppliers.manage` (Admin, Manager, Accountant).
+- Rules: purchasing records readable with `purchasing.read`; supplier invoice-number keys
+  server-only; no client writes. Indexes for supplier documents, open receipts and open
+  invoices.
+- Web: suppliers list and page (balances, invoices, receipts, payments, returns, opening
+  balance), purchases hub with tabs, receive goods, record invoice (match receipts, add
+  charges, landed costs, input tax), pay supplier (allocate oldest first, advances), apply an
+  advance, return goods; stock card links to purchasing documents.
+
+**Verified (run locally on 2026-10-23, Node 22.22.0, firebase-tools 15.34.1)**
+
+| Check                                          | Result                                        |
+| ---------------------------------------------- | --------------------------------------------- |
+| `pnpm format:check`, `pnpm lint`               | clean                                         |
+| `pnpm typecheck` (all 5 packages)              | clean                                         |
+| `pnpm build`                                   | succeeds                                      |
+| `pnpm test:unit`                               | 102 passed                                    |
+| `pnpm test:emulator` (rules + integration)     | 170 passed (94 rules, 76 integration; 36 new) |
+| `pnpm test:e2e` (Playwright, desktop + mobile) | 13 passed                                     |
+
+CI runs on the Phase 4 pull request.
+
+**Acceptance coverage (PHASE4_ACCEPTANCE.md)**: P1–P8 covered by automated tests.
+
+**Needs the owner**: OPEN_DECISIONS #16 (supplier payments post without a second approval).
+
+**Next**: Phase 5 (customers, POS, cash and credit sales, receipts, allocations), which needs
+decisions #7 (credit limits), #8 (tax rounding) and #9 (tax-inclusive prices and rates).
