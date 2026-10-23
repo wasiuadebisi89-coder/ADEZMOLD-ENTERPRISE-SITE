@@ -58,7 +58,8 @@ export interface MovementRow {
     | 'purchaseInvoice'
     | 'supplierReturn'
     | 'salesInvoice'
-    | 'creditNote';
+    | 'creditNote'
+    | 'productionOrder';
   sourceId: string;
   sourceNumber: string;
   balanceQtyMilli: number;
@@ -110,6 +111,9 @@ export const MOVEMENT_LABEL = {
   cost_adjustment: 'Cost adjusted',
   sale: 'Sold',
   sales_return: 'Returned by customer',
+  production_issue: 'Issued to production',
+  production_return: 'Returned from production',
+  production_output: 'Produced',
 } as const;
 
 /** Where a stock movement's source document lives in the app. */
@@ -129,6 +133,8 @@ export function movementSourcePath(
       return `${base}/sales/invoices/${m.sourceId}`;
     case 'creditNote':
       return `${base}/sales/returns/${m.sourceId}`;
+    case 'productionOrder':
+      return `${base}/production/${m.sourceId}`;
     default:
       return `${base}/stock-adjustments/${m.sourceId}`;
   }

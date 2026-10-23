@@ -71,6 +71,7 @@ export const SUBTYPE_LABEL: Record<AccountSubtype, string> = {
   receivable: 'Trade receivables',
   payable: 'Trade payables',
   inventory: 'Inventory',
+  wip: 'Work in progress',
   grni: 'Goods received not invoiced',
   inputTax: 'Input tax',
   outputTax: 'Output tax',

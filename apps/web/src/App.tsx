@@ -12,6 +12,9 @@ const Companies = lazy(() => import('./routes/Companies'));
 const CreateCompany = lazy(() => import('./routes/CreateCompany'));
 const AcceptInvite = lazy(() => import('./routes/AcceptInvite'));
 const Projects = lazy(() => import('./routes/company/Projects'));
+const Production = lazy(() => import('./routes/company/Production'));
+const Boms = lazy(() => import('./routes/company/Boms'));
+const ProductionOrderDetail = lazy(() => import('./routes/company/ProductionOrderDetail'));
 const ProjectDetail = lazy(() => import('./routes/company/ProjectDetail'));
 const Quotations = lazy(() => import('./routes/company/Quotations'));
 const NewQuotation = lazy(() => import('./routes/company/NewQuotation'));
@@ -176,6 +179,9 @@ const router = createBrowserRouter([
       { path: 'fixed-assets/:assetId', element: <FixedAssetDetail /> },
       { path: 'projects', element: <Projects /> },
       { path: 'projects/:projectId', element: <ProjectDetail /> },
+      { path: 'production', element: <Production /> },
+      { path: 'production/boms', element: <Boms /> },
+      { path: 'production/:orderId', element: <ProductionOrderDetail /> },
       { path: 'quotations', element: <Quotations /> },
       { path: 'quotations/new', element: <NewQuotation /> },
       { path: 'quotations/:quotationId', element: <QuotationDetail /> },

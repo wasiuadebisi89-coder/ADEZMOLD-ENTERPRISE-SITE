@@ -281,14 +281,18 @@ export type StockMovementType =
   | 'purchase_return'
   | 'cost_adjustment'
   | 'sale'
-  | 'sales_return';
+  | 'sales_return'
+  | 'production_issue'
+  | 'production_return'
+  | 'production_output';
 export type StockSourceType =
   | 'stockAdjustment'
   | 'goodsReceipt'
   | 'purchaseInvoice'
   | 'supplierReturn'
   | 'salesInvoice'
-  | 'creditNote';
+  | 'creditNote'
+  | 'productionOrder';
 
 /** Quantity only, so sales staff can see what is available without seeing cost. */
 export interface StockAvailabilityDoc {
@@ -892,6 +896,93 @@ export interface QuotationDoc {
   statusChangedBy: string;
 }
 
+/** A recipe: the components that make `outputQtyMilli` of a finished product. Never edited. */
+export interface BomDoc {
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  name: string;
+  outputQtyMilli: number;
+  components: {
+    productId: string;
+    sku: string;
+    productName: string;
+    unit: UnitCode;
+    qtyMilli: number;
+  }[];
+  status: 'active' | 'inactive';
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface ProductionComponentDoc {
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  /** What the bill calls for at the planned quantity; a guide, not a limit. */
+  requiredQtyMilli: number;
+  /** Net of returns. */
+  issuedQtyMilli: number;
+  issuedValueMinor: number;
+}
+
+export interface ProductionCostDoc {
+  description: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  amountMinor: number;
+  journalId: string;
+  postingDate: string;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
+export const PRODUCTION_STATUSES = ['open', 'completed', 'cancelled'] as const;
+export type ProductionStatus = (typeof PRODUCTION_STATUSES)[number];
+
+/**
+ * A production order (ACCOUNTING_POLICIES.md §16). Its cost sits in the WIP account until it is
+ * completed (finished goods at actual cost, DECISION 21) or cancelled.
+ */
+export interface ProductionOrderDoc {
+  number: string;
+  bomId: string;
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  locationId: string;
+  branchId: string;
+  plannedQtyMilli: number;
+  memo: string | null;
+  components: ProductionComponentDoc[];
+  costs: ProductionCostDoc[];
+  materialsMinor: number;
+  directCostMinor: number;
+  /** What the order holds in WIP: materials plus direct costs, until completed or cancelled. */
+  wipMinor: number;
+  status: ProductionStatus;
+  goodQtyMilli: number | null;
+  normalLossQtyMilli: number | null;
+  abnormalLossQtyMilli: number | null;
+  finishedCostMinor: number | null;
+  writtenOffMinor: number | null;
+  writeOffAccountId: string | null;
+  closingJournalId: string | null;
+  closedDate: string | null;
+  closeReason: string | null;
+  journalIds: string[];
+  createdAt: Timestamp;
+  createdBy: string;
+  closedAt: Timestamp | null;
+  closedBy: string | null;
+}
+
 export interface SettlementDoc {
   ledger: 'receivable' | 'payable';
   invoiceId: string;
@@ -995,6 +1086,10 @@ export function companyRefs(companyId: string) {
     projects: company.collection('projects'),
     quotation: (id: string) => company.collection('quotations').doc(id),
     quotations: company.collection('quotations'),
+    bom: (id: string) => company.collection('boms').doc(id),
+    boms: company.collection('boms'),
+    productionOrder: (id: string) => company.collection('productionOrders').doc(id),
+    productionOrders: company.collection('productionOrders'),
     auditLogs: company.collection('auditLogs'),
   };
 }

@@ -17,6 +17,7 @@ export const ACCOUNT_SUBTYPES = [
   'receivable',
   'payable',
   'inventory',
+  'wip',
   'grni',
   'inputTax',
   'outputTax',
@@ -44,6 +45,7 @@ export const SUBTYPES_BY_TYPE: Readonly<Record<AccountType, readonly AccountSubt
     'bank',
     'receivable',
     'inventory',
+    'wip',
     'inputTax',
     'supplierAdvance',
     'fixedAsset',
@@ -70,6 +72,7 @@ export const CONTROL_SUBTYPES: readonly AccountSubtype[] = [
   'receivable',
   'payable',
   'inventory',
+  'wip',
   'grni',
 ];
 

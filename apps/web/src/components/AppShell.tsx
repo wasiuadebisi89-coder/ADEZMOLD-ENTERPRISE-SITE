@@ -6,6 +6,7 @@ import {
   Building,
   CheckSquare,
   FileText,
+  Factory,
   FolderKanban,
   Contact,
   ClipboardList,
@@ -99,6 +100,7 @@ const NAV: NavItem[] = [
     permission: ['sales.read', 'sales.quotation.manage'],
   },
   { to: 'projects', label: 'Projects', icon: FolderKanban, permission: 'projects.read' },
+  { to: 'production', label: 'Production', icon: Factory, permission: 'production.read' },
   {
     to: 'customers',
     label: 'Customers',

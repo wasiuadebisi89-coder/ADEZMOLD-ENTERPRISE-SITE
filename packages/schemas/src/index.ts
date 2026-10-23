@@ -777,6 +777,64 @@ export const setQuotationStatusInput = scoped.extend({
   status: z.enum(['sent', 'accepted', 'declined', 'cancelled']),
 });
 
+// --- Production (Phase 9) --------------------------------------------------------------------
+
+const bomComponent = z.object({ productId: docId, quantity });
+export const createBomInput = scoped.extend({
+  /** The finished product the bill makes. */
+  productId: docId,
+  name: trimmed(2, 120),
+  /** How much the components below make, e.g. "10" bags. */
+  outputQuantity: quantity,
+  components: z
+    .array(bomComponent)
+    .min(1, 'Add at least one component')
+    .max(50, 'Use at most 50 components'),
+});
+export const setBomStatusInput = scoped.extend({
+  bomId: docId,
+  status: z.enum(['active', 'inactive']),
+});
+
+export const createProductionOrderInput = scoped.extend({
+  bomId: docId,
+  /** Store the materials come from and the finished goods go to. */
+  locationId: docId,
+  quantity,
+  memo: optionalText(300),
+});
+export const moveProductionMaterialsInput = scoped.extend({
+  orderId: docId,
+  /** issue: store to the order; return: unused materials back to the store. */
+  direction: z.enum(['issue', 'return']),
+  lines: z
+    .array(bomComponent)
+    .min(1, 'Add at least one line')
+    .max(50, 'Use at most 50 lines'),
+});
+export const addProductionCostInput = scoped.extend({
+  orderId: docId,
+  /** The account credited: cash, bank, an accrual, or the expense being moved into the order. */
+  accountId: docId,
+  description: trimmed(3, 200),
+  amount,
+});
+export const completeProductionOrderInput = scoped.extend({
+  orderId: docId,
+  goodQuantity: quantity,
+  /** Expected loss: recorded, and its cost spread over the good output (DECISION 22). */
+  normalLossQuantity: quantity.optional(),
+  /** Loss beyond what is expected: its share of cost is written off to writeOffAccountId. */
+  abnormalLossQuantity: quantity.optional(),
+  writeOffAccountId: docId.optional(),
+});
+export const cancelProductionOrderInput = scoped.extend({
+  orderId: docId,
+  reason: trimmed(3, 300),
+  /** Needed when the order still holds cost; that cost is written off to this account. */
+  writeOffAccountId: docId.optional(),
+});
+
 // --- Platform and session ------------------------------------------------------------------
 
 export const platformSupportReadInput = base.extend({
@@ -847,6 +905,13 @@ export const COMMAND_SCHEMAS = {
   'project.update': updateProjectInput,
   'quotation.create': createQuotationInput,
   'quotation.setStatus': setQuotationStatusInput,
+  'bom.create': createBomInput,
+  'bom.setStatus': setBomStatusInput,
+  'productionOrder.create': createProductionOrderInput,
+  'productionOrder.moveMaterials': moveProductionMaterialsInput,
+  'productionOrder.addCost': addProductionCostInput,
+  'productionOrder.complete': completeProductionOrderInput,
+  'productionOrder.cancel': cancelProductionOrderInput,
   'platform.supportRead': platformSupportReadInput,
   'session.revokeAll': revokeSessionsInput,
 } as const;

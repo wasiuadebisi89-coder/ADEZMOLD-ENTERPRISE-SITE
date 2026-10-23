@@ -12,51 +12,52 @@ role the posting services look up exists exactly once.
 always equal a subledger (customers, suppliers, stock), so they only accept postings from
 their own module, never from manual journals or the general opening-balance journal.
 
-| Code | Account                             | Type      | Role                     | Notes                                      |
-| ---- | ----------------------------------- | --------- | ------------------------ | ------------------------------------------ |
-| 1000 | **Assets**                          | Asset     | heading                  |                                            |
-| 1100 | — **Cash and bank**                 | Asset     | heading                  |                                            |
-| 1110 | — — Cash on hand                    | Asset     | Cash                     |                                            |
-| 1120 | — — Bank current account            | Asset     | Bank                     | Add one account per bank account           |
-| 1200 | — Trade receivables                 | Asset     | Trade receivables        | Control account (customers, Phase 5)       |
-| 1250 | — Other receivables, prepayments    | Asset     | General                  |                                            |
-| 1300 | — Inventory                         | Asset     | Inventory                | Control account (stock, Phase 3)           |
-| 1350 | — Advances to suppliers             | Asset     | Supplier advances        |                                            |
-| 1400 | — Input tax recoverable             | Asset     | Input tax                | Used only if the company sets up tax codes |
-| 1500 | — **Property, plant and equipment** | Asset     | heading                  |                                            |
-| 1510 | — — Furniture and fittings          | Asset     | Fixed asset              |                                            |
-| 1520 | — — Motor vehicles                  | Asset     | Fixed asset              |                                            |
-| 1530 | — — Office equipment                | Asset     | Fixed asset              |                                            |
-| 1590 | — — Accumulated depreciation        | Asset     | Accumulated depreciation | Contra-asset: normally a credit balance    |
-| 2000 | **Liabilities**                     | Liability | heading                  |                                            |
-| 2100 | — Trade payables                    | Liability | Trade payables           | Control account (suppliers, Phase 4)       |
-| 2150 | — Goods received not invoiced       | Liability | GRNI                     | Control account (purchases, Phase 4)       |
-| 2200 | — Output tax payable                | Liability | Output tax               | Used only if the company sets up tax codes |
-| 2250 | — Customer advances and credits     | Liability | Customer advances        |                                            |
-| 2300 | — Accruals and other payables       | Liability | General                  |                                            |
-| 2400 | — Loans and borrowings              | Liability | General                  |                                            |
-| 3000 | **Equity**                          | Equity    | heading                  |                                            |
-| 3100 | — Share capital                     | Equity    | General                  |                                            |
-| 3200 | — Retained earnings                 | Equity    | Retained earnings        | Year-end close target (Phase 7)            |
-| 3300 | — Opening balance equity            | Equity    | Opening balance equity   | Takes the opening-balance difference       |
-| 4000 | **Income**                          | Income    | heading                  |                                            |
-| 4100 | — Sales revenue                     | Income    | Revenue                  |                                            |
-| 4200 | — Service revenue                   | Income    | Service revenue          | Service items sold (DECISION 19)           |
-| 4900 | — Other income                      | Income    | General                  |                                            |
-| 5000 | **Cost of sales**                   | Expense   | heading                  |                                            |
-| 5100 | — Cost of goods sold                | Expense   | Cost of goods sold       |                                            |
-| 5200 | — Inventory adjustments             | Expense   | Inventory adjustments    |                                            |
-| 5300 | — Purchase price variance           | Expense   | Purchase price variance  |                                            |
-| 5400 | — Direct service costs              | Expense   | Direct service costs     | Costs of delivering services (DECISION 20) |
-| 6000 | **Operating expenses**              | Expense   | heading                  |                                            |
-| 6100 | — Salaries and wages                | Expense   | General                  |                                            |
-| 6200 | — Rent                              | Expense   | General                  |                                            |
-| 6300 | — Utilities                         | Expense   | General                  |                                            |
-| 6400 | — Transport and delivery            | Expense   | General                  |                                            |
-| 6500 | — Repairs and maintenance           | Expense   | General                  |                                            |
-| 6600 | — Depreciation                      | Expense   | Depreciation             |                                            |
-| 6700 | — Bank charges                      | Expense   | General                  |                                            |
-| 6900 | — Other expenses                    | Expense   | General                  |                                            |
+| Code | Account                             | Type      | Role                     | Notes                                        |
+| ---- | ----------------------------------- | --------- | ------------------------ | -------------------------------------------- |
+| 1000 | **Assets**                          | Asset     | heading                  |                                              |
+| 1100 | — **Cash and bank**                 | Asset     | heading                  |                                              |
+| 1110 | — — Cash on hand                    | Asset     | Cash                     |                                              |
+| 1120 | — — Bank current account            | Asset     | Bank                     | Add one account per bank account             |
+| 1200 | — Trade receivables                 | Asset     | Trade receivables        | Control account (customers, Phase 5)         |
+| 1250 | — Other receivables, prepayments    | Asset     | General                  |                                              |
+| 1300 | — Inventory                         | Asset     | Inventory                | Control account (stock, Phase 3)             |
+| 1320 | — Work in progress                  | Asset     | Work in progress         | Control account (production orders, Phase 9) |
+| 1350 | — Advances to suppliers             | Asset     | Supplier advances        |                                              |
+| 1400 | — Input tax recoverable             | Asset     | Input tax                | Used only if the company sets up tax codes   |
+| 1500 | — **Property, plant and equipment** | Asset     | heading                  |                                              |
+| 1510 | — — Furniture and fittings          | Asset     | Fixed asset              |                                              |
+| 1520 | — — Motor vehicles                  | Asset     | Fixed asset              |                                              |
+| 1530 | — — Office equipment                | Asset     | Fixed asset              |                                              |
+| 1590 | — — Accumulated depreciation        | Asset     | Accumulated depreciation | Contra-asset: normally a credit balance      |
+| 2000 | **Liabilities**                     | Liability | heading                  |                                              |
+| 2100 | — Trade payables                    | Liability | Trade payables           | Control account (suppliers, Phase 4)         |
+| 2150 | — Goods received not invoiced       | Liability | GRNI                     | Control account (purchases, Phase 4)         |
+| 2200 | — Output tax payable                | Liability | Output tax               | Used only if the company sets up tax codes   |
+| 2250 | — Customer advances and credits     | Liability | Customer advances        |                                              |
+| 2300 | — Accruals and other payables       | Liability | General                  |                                              |
+| 2400 | — Loans and borrowings              | Liability | General                  |                                              |
+| 3000 | **Equity**                          | Equity    | heading                  |                                              |
+| 3100 | — Share capital                     | Equity    | General                  |                                              |
+| 3200 | — Retained earnings                 | Equity    | Retained earnings        | Year-end close target (Phase 7)              |
+| 3300 | — Opening balance equity            | Equity    | Opening balance equity   | Takes the opening-balance difference         |
+| 4000 | **Income**                          | Income    | heading                  |                                              |
+| 4100 | — Sales revenue                     | Income    | Revenue                  |                                              |
+| 4200 | — Service revenue                   | Income    | Service revenue          | Service items sold (DECISION 19)             |
+| 4900 | — Other income                      | Income    | General                  |                                              |
+| 5000 | **Cost of sales**                   | Expense   | heading                  |                                              |
+| 5100 | — Cost of goods sold                | Expense   | Cost of goods sold       |                                              |
+| 5200 | — Inventory adjustments             | Expense   | Inventory adjustments    |                                              |
+| 5300 | — Purchase price variance           | Expense   | Purchase price variance  |                                              |
+| 5400 | — Direct service costs              | Expense   | Direct service costs     | Costs of delivering services (DECISION 20)   |
+| 6000 | **Operating expenses**              | Expense   | heading                  |                                              |
+| 6100 | — Salaries and wages                | Expense   | General                  |                                              |
+| 6200 | — Rent                              | Expense   | General                  |                                              |
+| 6300 | — Utilities                         | Expense   | General                  |                                              |
+| 6400 | — Transport and delivery            | Expense   | General                  |                                              |
+| 6500 | — Repairs and maintenance           | Expense   | General                  |                                              |
+| 6600 | — Depreciation                      | Expense   | Depreciation             |                                              |
+| 6700 | — Bank charges                      | Expense   | General                  |                                              |
+| 6900 | — Other expenses                    | Expense   | General                  |                                              |
 
 ## Questions for the owner
 

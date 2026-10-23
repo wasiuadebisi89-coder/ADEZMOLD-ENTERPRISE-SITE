@@ -44,6 +44,7 @@ export const TRADING_TEMPLATE: ChartTemplate = {
     a('1200', 'Trade receivables', 'asset', '1000', 'receivable'),
     a('1250', 'Other receivables and prepayments', 'asset', '1000'),
     a('1300', 'Inventory', 'asset', '1000', 'inventory'),
+    a('1320', 'Work in progress', 'asset', '1000', 'wip'),
     a('1350', 'Advances to suppliers', 'asset', '1000', 'supplierAdvance'),
     a('1400', 'Input tax recoverable', 'asset', '1000', 'inputTax'),
     h('1500', 'Property, plant and equipment', 'asset', '1000'),

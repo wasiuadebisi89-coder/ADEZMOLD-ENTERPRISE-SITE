@@ -175,6 +175,8 @@ beforeEach(async () => {
         date: '2026-10-01',
       });
       await setDoc(doc(db, `companies/${companyId}/projects/pr1`), { code: 'FIT-1' });
+      await setDoc(doc(db, `companies/${companyId}/boms/b1`), { name: 'Bread' });
+      await setDoc(doc(db, `companies/${companyId}/productionOrders/mo1`), { number: 'MO-000001' });
       await setDoc(doc(db, `companies/${companyId}/quotations/q1`), {
         number: 'QT-000001',
         createdBy: ADMIN_A,
@@ -311,6 +313,9 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/projects/pr2', { code: 'NEW' }],
     ['companies/A/quotations/q2', { status: 'accepted' }],
     ['companies/A/quotations/q3', { number: 'QT-000003', createdBy: SALES_A }],
+    ['companies/A/boms/b1', { status: 'inactive' }],
+    ['companies/A/productionOrders/mo1', { status: 'completed' }],
+    ['companies/A/productionOrders/mo2', { number: 'MO-000002' }],
     ['companies/NEW', { legalName: 'Self-made' }],
     ['invitations/inv2', { companyId: 'A' }],
   ];
@@ -472,6 +477,14 @@ describe('services (Phase 9)', () => {
     await assertSucceeds(getDoc(doc(db(SALES_A), 'companies/A/quotations/q2')));
     await assertFails(getDoc(doc(db(SALES_A), 'companies/A/quotations/q1')));
     await assertFails(getDoc(doc(db(ADMIN_B), 'companies/A/quotations/q2')));
+  });
+
+  it('bills of materials and production orders are for production readers', async () => {
+    await assertSucceeds(getDoc(doc(db(AUDITOR_A), 'companies/A/boms/b1')));
+    await assertSucceeds(getDoc(doc(db(AUDITOR_A), 'companies/A/productionOrders/mo1')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/boms/b1')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/productionOrders/mo1')));
+    await assertFails(getDoc(doc(db(ADMIN_B), 'companies/A/productionOrders/mo1')));
   });
 });
 
