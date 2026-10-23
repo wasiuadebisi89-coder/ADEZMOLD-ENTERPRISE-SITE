@@ -33,6 +33,7 @@ export interface TaxCodeRow {
 
 export interface SalesLineRow {
   lineNo: number;
+  itemType?: 'stock' | 'service';
   productId: string;
   sku: string;
   productName: string;
@@ -78,6 +79,8 @@ export interface SalesInvoiceRow {
   returnedMinor?: number;
   status: 'open' | 'paid';
   creditOverride: { by: 'permission' | 'approval'; approvalId: string | null } | null;
+  projectId?: string | null;
+  quotationId?: string | null;
   journalId: string;
   postedAt: Stamp;
   postedBy: string;

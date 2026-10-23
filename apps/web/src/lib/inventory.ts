@@ -8,6 +8,8 @@ export interface ProductRow {
   id: string;
   sku: string;
   name: string;
+  /** Missing on products from before Phase 9, which are stock items. */
+  type?: 'stock' | 'service';
   unit: UnitCode;
   categoryId: string | null;
   description: string;
@@ -16,6 +18,8 @@ export interface ProductRow {
   status: 'active' | 'inactive';
   hasMovements: boolean;
 }
+
+export const isService = (p: Pick<ProductRow, 'type'>) => p.type === 'service';
 
 export interface CategoryRow {
   id: string;

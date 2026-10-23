@@ -42,6 +42,7 @@ import {
 } from '../lib/errors.js';
 import {
   companyRefs,
+  productType,
   type AccountDoc,
   type ApprovalRequestDoc,
   type CompanyDoc,
@@ -50,6 +51,8 @@ import {
   type LocationDoc,
   type PaymentAllocationDoc,
   type ProductDoc,
+  type ProjectDoc,
+  type QuotationDoc,
   type SalePaymentDoc,
   type SalesInvoiceDoc,
   type SalesInvoiceLineDoc,
@@ -276,18 +279,28 @@ export const postSalesInvoice = defineCommand({
     if (paymentAccountIds.length !== input.payments.length) {
       throw invalid('duplicate_payment', 'Enter each payment account once');
     }
-    const [companySnap, settingsSnap, locationSnap, customerSnap, approvalSnap, ...rest] =
-      await tx.getAll(
-        refs.company,
-        refs.settings,
-        refs.location(input.locationId),
-        // Unused placeholders keep the positions fixed when there is no customer or approval.
-        refs.customer(input.customerId ?? '_'),
-        refs.approval(input.creditApprovalId ?? '_'),
-        ...productIds.map((id) => refs.product(id)),
-        ...taxCodeIds.map((id) => refs.taxCode(id)),
-        ...paymentAccountIds.map((id) => refs.account(id)),
-      );
+    const [
+      companySnap,
+      settingsSnap,
+      locationSnap,
+      customerSnap,
+      approvalSnap,
+      projectSnap,
+      quotationSnap,
+      ...rest
+    ] = await tx.getAll(
+      refs.company,
+      refs.settings,
+      refs.location(input.locationId),
+      // Unused placeholders keep the positions fixed when there is no customer or approval.
+      refs.customer(input.customerId ?? '_'),
+      refs.approval(input.creditApprovalId ?? '_'),
+      refs.project(input.projectId ?? '_'),
+      refs.quotation(input.quotationId ?? '_'),
+      ...productIds.map((id) => refs.product(id)),
+      ...taxCodeIds.map((id) => refs.taxCode(id)),
+      ...paymentAccountIds.map((id) => refs.account(id)),
+    );
     const companyDoc = companySnap!.data() as CompanyDoc;
     const settings = settingsSnap!.data() as SettingsDoc;
     const currency = companyDoc.baseCurrency;
@@ -321,11 +334,51 @@ export const postSalesInvoice = defineCommand({
         rest[productIds.length + taxCodeIds.length + i]!.data() as AccountDoc | undefined,
       ]),
     );
+    // --- Project and quotation (Phase 9)
+    if (input.projectId) {
+      const project = projectSnap!.data() as ProjectDoc | undefined;
+      if (!project) throw notFound('project_not_found', 'Project not found');
+      if (project.customerId && project.customerId !== (input.customerId ?? null)) {
+        throw failedPrecondition(
+          'project_customer_mismatch',
+          `Project ${project.code} is for ${project.customerName}; sell to that customer`,
+        );
+      }
+    }
+    let quotation: QuotationDoc | null = null;
+    if (input.quotationId) {
+      quotation = (quotationSnap!.data() as QuotationDoc | undefined) ?? null;
+      if (!quotation) throw notFound('quotation_not_found', 'Quotation not found');
+      if (quotation.status !== 'sent' && quotation.status !== 'accepted') {
+        throw failedPrecondition(
+          'quotation_not_open',
+          `Quotation ${quotation.number} is ${quotation.status}; only a sent or accepted quotation can be invoiced`,
+        );
+      }
+      if (quotation.customerId !== input.customerId) {
+        throw failedPrecondition(
+          'quotation_customer_mismatch',
+          `Quotation ${quotation.number} is for ${quotation.customerName}`,
+        );
+      }
+    }
+    // Prices agreed on the quotation may be used without the price override permission.
+    const quotedPrice = new Map(
+      (quotation?.lines ?? []).map((q) => [
+        q.productId,
+        { price: BigInt(q.unitPriceMinor), discount: BigInt(q.discountMinor) },
+      ]),
+    );
+
+    const stockIds = productIds.filter((id) => {
+      const p = products.get(id);
+      return !p || productType(p) === 'stock';
+    });
     const book = await StockBook.read(
       tx,
       input.companyId,
       companyDoc.costingMethod === 'fifo',
-      productIds.map((productId) => ({
+      stockIds.map((productId) => ({
         productId,
         locationId: input.locationId,
         branchId: location.branchId,
@@ -352,7 +405,10 @@ export const postSalesInvoice = defineCommand({
         );
       }
       const discount = l.discount !== undefined ? money(l.discount, currency, lineNo) : 0n;
-      if ((price !== listPrice || discount !== 0n) && !mayOverridePrice) {
+      const quoted = quotedPrice.get(l.productId);
+      const asQuoted =
+        quoted !== undefined && quoted.price === price && quoted.discount >= discount;
+      if ((price !== listPrice || discount !== 0n) && !mayOverridePrice && !asQuoted) {
         throw denied(
           'price_override_not_allowed',
           `Line ${lineNo}: you cannot change the price of ${product.sku} or give a discount`,
@@ -376,9 +432,12 @@ export const postSalesInvoice = defineCommand({
           rateBp: tax?.rateBp ?? 0,
           pricesIncludeTax: settings.pricesIncludeTax,
         });
-        const cost = book.issue(l.productId, input.locationId, qty, 'sale');
+        const itemType = productType(product);
+        const cost =
+          itemType === 'service' ? 0n : book.issue(l.productId, input.locationId, qty, 'sale');
         return {
           lineNo,
+          itemType,
           productId: l.productId,
           sku: product.sku,
           productName: product.name,
@@ -403,6 +462,11 @@ export const postSalesInvoice = defineCommand({
     const sumOf = (k: 'netMinor' | 'taxMinor' | 'grossMinor' | 'costMinor') =>
       lines.reduce((s, l) => s + BigInt(l[k]), 0n);
     const net = sumOf('netMinor');
+    // Service items earn service revenue (DECISION 19); goods earn sales revenue.
+    const serviceNet = lines
+      .filter((l) => l.itemType === 'service')
+      .reduce((s, l) => s + BigInt(l.netMinor), 0n);
+    const goodsNet = net - serviceNet;
     const tax = sumOf('taxMinor');
     const total = sumOf('grossMinor');
     const cost = sumOf('costMinor');
@@ -474,9 +538,10 @@ export const postSalesInvoice = defineCommand({
       tx,
       input.companyId,
       [
-        'revenue',
-        'inventory',
-        'cogs',
+        ...(goodsNet !== 0n || serviceNet === 0n
+          ? (['revenue', 'inventory', 'cogs'] as const)
+          : []),
+        ...(serviceNet !== 0n ? (['serviceRevenue'] as const) : []),
         ...(tax > 0n ? (['outputTax'] as const) : []),
         ...(onCredit > 0n ? (['receivable'] as const) : []),
       ],
@@ -485,10 +550,15 @@ export const postSalesInvoice = defineCommand({
     const entries = [
       ...payments.map((p) => ({ accountId: p.accountId, amount: BigInt(p.amountMinor) })),
       ...(onCredit > 0n ? [{ accountId: accounts.receivable!, amount: onCredit }] : []),
-      { accountId: accounts.revenue, amount: -net },
+      ...(accounts.revenue ? [{ accountId: accounts.revenue, amount: -goodsNet }] : []),
+      ...(serviceNet !== 0n ? [{ accountId: accounts.serviceRevenue!, amount: -serviceNet }] : []),
       ...(tax > 0n ? [{ accountId: accounts.outputTax!, amount: -tax }] : []),
-      { accountId: accounts.cogs, amount: cost },
-      { accountId: accounts.inventory, amount: -cost },
+      ...(cost !== 0n
+        ? [
+            { accountId: accounts.cogs!, amount: cost },
+            { accountId: accounts.inventory!, amount: -cost },
+          ]
+        : []),
     ];
     const customerName = customer?.name ?? WALK_IN;
     const write = await post(
@@ -503,6 +573,7 @@ export const postSalesInvoice = defineCommand({
         lines: journalFrom(entries),
         backdateApprovalId: input.backdateApprovalId,
         source: { type: 'salesInvoice', id: ref.id, number: series.number },
+        projectId: input.projectId,
       },
     );
     const dueDate =
@@ -525,6 +596,15 @@ export const postSalesInvoice = defineCommand({
     });
     if (approvalToUse) {
       tx.update(refs.approval(approvalToUse), { status: 'used', usedAt: now, usedFor: ref.id });
+    }
+    if (quotation) {
+      tx.update(refs.quotation(input.quotationId!), {
+        status: 'invoiced',
+        invoiceId: ref.id,
+        invoiceNumber: series.number,
+        statusChangedAt: now,
+        statusChangedBy: caller.uid,
+      });
     }
     if (customer && onCredit > 0n) {
       tx.update(refs.customer(input.customerId!), {
@@ -553,6 +633,8 @@ export const postSalesInvoice = defineCommand({
       creditedMinor: 0,
       status: settled(onCredit),
       creditOverride,
+      projectId: input.projectId ?? null,
+      quotationId: input.quotationId ?? null,
       journalId,
       postedAt: now,
       postedBy: caller.uid,

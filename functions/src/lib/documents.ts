@@ -52,6 +52,7 @@ const ROLE_NAMES: Partial<Record<AccountSubtype, string>> = {
   openingBalanceEquity: 'Opening balance equity',
   receivable: 'Trade receivables',
   revenue: 'Sales revenue',
+  serviceRevenue: 'Service revenue',
   outputTax: 'Output tax payable',
   customerAdvance: 'Customer advances',
 };

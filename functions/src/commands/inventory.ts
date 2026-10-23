@@ -17,6 +17,7 @@ import { defineCommand } from '../lib/command.js';
 import { conflict, denied, failedPrecondition, invalid, notFound } from '../lib/errors.js';
 import {
   companyRefs,
+  productType,
   type CategoryDoc,
   type CompanyDoc,
   type LocationDoc,
@@ -213,10 +214,17 @@ export const createProduct = defineCommand({
     const same = await tx.get(refs.products.where('sku', '==', input.sku).limit(1));
     if (!same.empty) throw conflict('sku_taken', `SKU ${input.sku} is already used`);
     await checkCategory(tx, input.companyId, input.categoryId);
+    if (input.type === 'service' && input.reorderLevel !== undefined) {
+      throw invalid(
+        'not_stocked',
+        'A service item is not held in stock, so it has no reorder level',
+      );
+    }
     const ref = refs.products.doc();
     const doc: ProductDoc = {
       sku: input.sku,
       name: input.name,
+      type: input.type,
       unit: input.unit,
       categoryId: input.categoryId,
       description: input.description ?? '',
@@ -236,7 +244,13 @@ export const createProduct = defineCommand({
         target: { scope: 'company', companyId: input.companyId },
         entityType: 'product',
         entityId: ref.id,
-        after: { sku: doc.sku, name: doc.name, unit: doc.unit, salePrice: doc.salePrice },
+        after: {
+          sku: doc.sku,
+          name: doc.name,
+          type: doc.type,
+          unit: doc.unit,
+          salePrice: doc.salePrice,
+        },
       },
     };
   },
@@ -261,6 +275,12 @@ export const updateProduct = defineCommand({
     const price = parseOptionalMoney(input.salePrice, company.baseCurrency);
     if (price !== undefined) patch.salePrice = price;
     const reorder = parseOptionalQty(input.reorderLevel, product.unit);
+    if (reorder !== undefined && reorder !== null && productType(product) === 'service') {
+      throw invalid(
+        'not_stocked',
+        'A service item is not held in stock, so it has no reorder level',
+      );
+    }
     if (reorder !== undefined) patch.reorderLevelMilli = reorder;
 
     tx.update(refs.product(input.productId), { ...patch, updatedAt: now, updatedBy: caller.uid });
@@ -338,6 +358,12 @@ export const createStockAdjustment = defineCommand({
       const product = products[i]!.data() as ProductDoc | undefined;
       if (!product || product.status !== 'active') {
         throw failedPrecondition('product_inactive', `Line ${lineNo}: choose an active product`);
+      }
+      if (productType(product) === 'service') {
+        throw failedPrecondition(
+          'not_stocked',
+          `Line ${lineNo}: ${product.sku} is a service item and is not held in stock`,
+        );
       }
       const balance = balanceOf(balances[i]!.data() as StockBalanceDoc | undefined);
       let entered: bigint;

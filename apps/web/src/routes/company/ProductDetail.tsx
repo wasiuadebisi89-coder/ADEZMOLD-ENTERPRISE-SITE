@@ -58,14 +58,20 @@ export default function ProductDetail() {
     <>
       <PageHeader
         title={`${p.sku} · ${p.name}`}
-        description={`Counted in ${p.unit}.`}
+        description={
+          p.type === 'service'
+            ? `A service, sold by the ${p.unit} and never held in stock.`
+            : `Counted in ${p.unit}.`
+        }
         actions={
           <Button variant="secondary" asChild>
             <Link to={`/c/${companyId}/products`}>All products</Link>
           </Button>
         }
       />
-      {!canSeeStock ? (
+      {p.type === 'service' ? (
+        <EmptyState title="Services have no stock" />
+      ) : !canSeeStock ? (
         <EmptyState title="Stock levels need stock report access" />
       ) : (
         <>

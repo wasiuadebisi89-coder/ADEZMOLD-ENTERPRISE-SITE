@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { branchAllowed } from '@bms/domain';
 import { BackdateNotice, useBackdate, useToday } from '../../components/BackdateNotice';
+import { ProjectField } from '../../components/ProjectField';
 import { JournalLines, emptyLine, lineTotals, type LineDraft } from '../../components/JournalLines';
 import { Button } from '../../components/ui/button';
 import { Alert, Card, PageHeader, Spinner } from '../../components/ui/feedback';
@@ -45,6 +46,7 @@ export default function NewJournal() {
   const [postingDate, setPostingDate] = useState(today);
   const [memo, setMemo] = useState('');
   const [reference, setReference] = useState('');
+  const [projectId, setProjectId] = useState('');
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine(), emptyLine()]);
   const backdate = useBackdate(postingDate);
 
@@ -70,6 +72,7 @@ export default function NewJournal() {
         memo: memo.trim(),
         ...(reference.trim() ? { reference: reference.trim() } : {}),
         lines: toLineInput(lines),
+        ...(projectId ? { projectId } : {}),
         ...(backdate.approvalId ? { backdateApprovalId: backdate.approvalId } : {}),
       });
       void navigate(`/c/${companyId}/journals/${res.journalId}`);
@@ -119,6 +122,11 @@ export default function NewJournal() {
                 maxLength={60}
               />
             </Field>
+            <ProjectField
+              value={projectId}
+              onChange={setProjectId}
+              error={action.error?.fields.projectId}
+            />
           </div>
           <Field label="Description" error={action.error?.fields.memo}>
             <Input value={memo} onChange={(e) => setMemo(e.target.value)} maxLength={300} />

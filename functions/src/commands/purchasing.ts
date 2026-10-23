@@ -46,6 +46,7 @@ import {
 import { sha256 } from '../lib/hash.js';
 import {
   companyRefs,
+  productType,
   type AccountDoc,
   type CompanyDoc,
   type GoodsReceiptDoc,
@@ -235,6 +236,12 @@ export const postGoodsReceipt = defineCommand({
       const product = products.get(l.productId);
       if (!product || product.status !== 'active') {
         throw failedPrecondition('product_inactive', `Line ${lineNo}: choose an active product`);
+      }
+      if (productType(product) === 'service') {
+        throw failedPrecondition(
+          'not_stocked',
+          `Line ${lineNo}: ${product.sku} is a service item and is not held in stock`,
+        );
       }
       const qty = positiveQuantity(l.quantity, product.unit, lineNo);
       let cost: bigint;
@@ -591,6 +598,7 @@ export const postPurchaseInvoice = defineCommand({
         lines: journalFrom(entries),
         backdateApprovalId: input.backdateApprovalId,
         source: { type: 'purchaseInvoice', id: ref.id, number: series.number },
+        projectId: input.projectId,
       },
     );
 
@@ -631,6 +639,7 @@ export const postPurchaseInvoice = defineCommand({
       paidMinor: 0,
       creditedMinor: 0,
       status: 'open',
+      projectId: input.projectId ?? null,
       journalId,
       postedAt: now,
       postedBy: caller.uid,

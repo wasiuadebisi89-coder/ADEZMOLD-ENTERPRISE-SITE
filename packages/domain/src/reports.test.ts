@@ -48,6 +48,18 @@ describe('profit and loss', () => {
     expect(pl.expenses.lines.map((l) => l.code)).toEqual(['6600']);
     expect(pl.netProfit).toBe(270n);
   });
+
+  it('counts service revenue as revenue and direct service costs as cost of sales', () => {
+    const pl = profitAndLoss([
+      row('4200', 'income', 'serviceRevenue', 0n, 900n),
+      row('5400', 'expense', 'directServiceCost', 400n),
+      row('6100', 'expense', 'general', 100n),
+    ]);
+    expect(pl.revenue.total).toBe(900n);
+    expect(pl.costOfSales.total).toBe(400n);
+    expect(pl.grossProfit).toBe(500n);
+    expect(pl.netProfit).toBe(400n);
+  });
 });
 
 describe('balance sheet', () => {

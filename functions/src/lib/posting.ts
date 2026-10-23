@@ -24,7 +24,7 @@ import {
   type LedgerAccount,
 } from '@bms/domain';
 import type { Caller, CompanyContext } from './command.js';
-import { CommandError, denied, failedPrecondition, invalid } from './errors.js';
+import { CommandError, denied, failedPrecondition, invalid, notFound } from './errors.js';
 import {
   companyRefs,
   type AccountDoc,
@@ -36,6 +36,7 @@ import {
   type LedgerEntryDoc,
   type NumberSeriesDoc,
   type PeriodDoc,
+  type ProjectDoc,
   type SettingsDoc,
 } from './model.js';
 
@@ -89,6 +90,8 @@ export interface PostingRequest {
   backdateApprovalId?: string | undefined;
   reversesJournalId?: string | undefined;
   source?: { type: string; id: string; number: string } | undefined;
+  /** Tags the journal and its ledger entries with a project (DECISION 20). */
+  projectId?: string | null | undefined;
 }
 
 export interface PreparedPosting {
@@ -200,6 +203,16 @@ export async function preparePosting(
     return ledgerErrorToCommand(e);
   }
 
+  if (request.projectId) {
+    const project = (await tx.get(refs.project(request.projectId))).data() as
+      ProjectDoc | undefined;
+    if (!project) throw notFound('project_not_found', 'Project not found');
+    // A reversal keeps the original's project even after the project has finished.
+    if (project.status !== 'active' && request.origin !== 'reversal') {
+      throw failedPrecondition('project_inactive', `Project ${project.code} is ${project.status}`);
+    }
+  }
+
   const seriesDoc = seriesSnap!.data() as NumberSeriesDoc | undefined;
   const next = seriesDoc?.next ?? 1;
   return {
@@ -257,6 +270,7 @@ export function writePosting(
     reversalReason: null,
     backdateApprovalId: prepared.approvalToUse,
     source: request.source ?? null,
+    projectId: request.projectId ?? null,
     postedAt: ctx.now,
     postedBy: ctx.caller.uid,
   };
@@ -271,6 +285,7 @@ export function writePosting(
       postingDate: request.postingDate,
       periodId: prepared.periodId,
       branchId: request.branchId,
+      projectId: request.projectId ?? null,
       origin: request.origin,
       debit: line.debit,
       credit: line.credit,

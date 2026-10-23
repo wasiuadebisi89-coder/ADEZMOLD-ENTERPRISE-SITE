@@ -201,6 +201,7 @@ export const postJournal = defineCommand({
         reference: input.reference,
         lines: parseLines(input.lines, currency),
         backdateApprovalId: input.backdateApprovalId,
+        projectId: input.projectId,
       },
     );
     const { journalId, number } = writePosting(
@@ -278,6 +279,7 @@ export const reverseJournal = defineCommand({
         ),
         backdateApprovalId: input.backdateApprovalId,
         reversesJournalId: input.journalId,
+        projectId: original.projectId ?? null,
       },
     );
     const { journalId, number } = writePosting(

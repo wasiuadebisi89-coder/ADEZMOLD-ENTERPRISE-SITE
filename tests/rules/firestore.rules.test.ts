@@ -174,6 +174,15 @@ beforeEach(async () => {
         ledger: 'payable',
         date: '2026-10-01',
       });
+      await setDoc(doc(db, `companies/${companyId}/projects/pr1`), { code: 'FIT-1' });
+      await setDoc(doc(db, `companies/${companyId}/quotations/q1`), {
+        number: 'QT-000001',
+        createdBy: ADMIN_A,
+      });
+      await setDoc(doc(db, `companies/${companyId}/quotations/q2`), {
+        number: 'QT-000002',
+        createdBy: SALES_A,
+      });
       for (const m of members) await setDoc(doc(db, `companies/${companyId}/members/${m.uid}`), m);
     }
     await setDoc(doc(db, `users/${ADMIN_A}`), {
@@ -298,6 +307,10 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/fixedAssets/fa2', { number: 'FA-000002', costMinor: 1 }],
     ['companies/A/depreciationRuns/dr2', { month: '2026-10' }],
     ['companies/A/settlements/st3', { ledger: 'receivable', amountMinor: 1 }],
+    ['companies/A/projects/pr1', { status: 'cancelled' }],
+    ['companies/A/projects/pr2', { code: 'NEW' }],
+    ['companies/A/quotations/q2', { status: 'accepted' }],
+    ['companies/A/quotations/q3', { number: 'QT-000003', createdBy: SALES_A }],
     ['companies/NEW', { legalName: 'Self-made' }],
     ['invitations/inv2', { companyId: 'A' }],
   ];
@@ -447,6 +460,18 @@ describe('settlements (ageing at a past date)', () => {
     const all = collection(db(AUDITOR_A), 'companies/A/settlements');
     await assertSucceeds(getDocs(query(all, where('ledger', '==', 'payable'))));
     await assertFails(getDocs(collection(db(SALES_A), 'companies/A/settlements')));
+  });
+});
+
+describe('services (Phase 9)', () => {
+  it('projects are for project readers; quotations follow the sales read rules', async () => {
+    await assertSucceeds(getDoc(doc(db(AUDITOR_A), 'companies/A/projects/pr1')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/projects/pr1')));
+    await assertFails(getDoc(doc(db(ADMIN_B), 'companies/A/projects/pr1')));
+    await assertSucceeds(getDoc(doc(db(AUDITOR_A), 'companies/A/quotations/q1')));
+    await assertSucceeds(getDoc(doc(db(SALES_A), 'companies/A/quotations/q2')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/quotations/q1')));
+    await assertFails(getDoc(doc(db(ADMIN_B), 'companies/A/quotations/q2')));
   });
 });
 

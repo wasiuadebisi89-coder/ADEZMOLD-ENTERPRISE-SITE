@@ -58,7 +58,10 @@ export default function NewCreditNote() {
   const rows = i.lines.map((l) => {
     const left = BigInt(l.qtyMilli - l.returnedQtyMilli);
     const q = parsed(quantities[l.lineNo] ?? '', l.unit);
-    return { line: l, left, q, condition: conditions[l.lineNo] ?? 'resalable' };
+    // A service has nothing to take back into stock, so it is never quarantined.
+    const condition: Condition =
+      l.itemType === 'service' ? 'resalable' : (conditions[l.lineNo] ?? 'resalable');
+    return { line: l, left, q, condition };
   });
   const chosen = rows.filter((r) => r.q !== null && r.q > 0n);
   const invalid = rows.some((r) => r.q === null || (r.q !== null && r.q > r.left));
@@ -143,17 +146,21 @@ export default function NewCreditNote() {
                     />
                   </Td>
                   <Td>
-                    <Select
-                      aria-label={`Condition line ${l.lineNo}`}
-                      value={condition}
-                      disabled={left === 0n}
-                      onChange={(e) =>
-                        setConditions({ ...conditions, [l.lineNo]: e.target.value as Condition })
-                      }
-                    >
-                      <option value="resalable">Can be sold again</option>
-                      <option value="damaged">Damaged</option>
-                    </Select>
+                    {l.itemType === 'service' ? (
+                      <span className="text-slate-500">Service, nothing returned</span>
+                    ) : (
+                      <Select
+                        aria-label={`Condition line ${l.lineNo}`}
+                        value={condition}
+                        disabled={left === 0n}
+                        onChange={(e) =>
+                          setConditions({ ...conditions, [l.lineNo]: e.target.value as Condition })
+                        }
+                      >
+                        <option value="resalable">Can be sold again</option>
+                        <option value="damaged">Damaged</option>
+                      </Select>
+                    )}
                   </Td>
                 </Tr>
               ))}

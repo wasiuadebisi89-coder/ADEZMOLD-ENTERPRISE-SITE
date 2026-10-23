@@ -27,6 +27,8 @@ customise templates. Platform Super Admin is not a company role.
 | Bank reconciliation         | P             | R       | —              | —              | P            | R       |
 | Backdated postings          | A             | A       | —              | —              | request      | R       |
 | Fixed assets, depreciation  | A             | R       | —              | —              | P            | R       |
+| Quotations                  | W             | W       | W              | —              | R            | R       |
+| Projects                    | W             | W       | —              | —              | W            | R       |
 | Reports                     | R             | R       | own sales      | stock only     | R            | R       |
 | Audit log                   | R             | R       | —              | —              | R            | R       |
 

@@ -41,11 +41,13 @@ their own module, never from manual journals or the general opening-balance jour
 | 3300 | — Opening balance equity            | Equity    | Opening balance equity   | Takes the opening-balance difference       |
 | 4000 | **Income**                          | Income    | heading                  |                                            |
 | 4100 | — Sales revenue                     | Income    | Revenue                  |                                            |
+| 4200 | — Service revenue                   | Income    | Service revenue          | Service items sold (DECISION 19)           |
 | 4900 | — Other income                      | Income    | General                  |                                            |
 | 5000 | **Cost of sales**                   | Expense   | heading                  |                                            |
 | 5100 | — Cost of goods sold                | Expense   | Cost of goods sold       |                                            |
 | 5200 | — Inventory adjustments             | Expense   | Inventory adjustments    |                                            |
 | 5300 | — Purchase price variance           | Expense   | Purchase price variance  |                                            |
+| 5400 | — Direct service costs              | Expense   | Direct service costs     | Costs of delivering services (DECISION 20) |
 | 6000 | **Operating expenses**              | Expense   | heading                  |                                            |
 | 6100 | — Salaries and wages                | Expense   | General                  |                                            |
 | 6200 | — Rent                              | Expense   | General                  |                                            |

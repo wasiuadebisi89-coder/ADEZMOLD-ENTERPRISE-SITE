@@ -88,7 +88,8 @@ async function prepareCreditNote(
 ) {
   const companyId = ctx.company.companyId;
   const refs = companyRefs(companyId);
-  const locationIds = [...new Set(note.lines.map((l) => l.locationId))];
+  const stockLines = note.lines.filter((l) => l.itemType !== 'service');
+  const locationIds = [...new Set(stockLines.map((l) => l.locationId))];
   const [companySnap, customerSnap, refundSnap, ...locationSnaps] = await tx.getAll(
     refs.company,
     refs.customer(note.customerId ?? '_'),
@@ -131,6 +132,10 @@ async function prepareCreditNote(
   });
   const sum = (k: 'net' | 'tax' | 'cost') => lines.reduce((s, l) => s + l[k], 0n);
   const net = sum('net');
+  const serviceNet = lines
+    .filter((l) => l.line.itemType === 'service')
+    .reduce((s, l) => s + l.net, 0n);
+  const goodsNet = net - serviceNet;
   const tax = sum('tax');
   const cost = sum('cost');
   const total = net + tax;
@@ -143,7 +148,7 @@ async function prepareCreditNote(
     tx,
     companyId,
     companyDoc.costingMethod === 'fifo',
-    note.lines.map((l) => ({
+    stockLines.map((l) => ({
       productId: l.productId,
       locationId: l.locationId,
       branchId: invoice.branchId,
@@ -151,6 +156,7 @@ async function prepareCreditNote(
   );
   const postingDate = businessDate(ctx.now.toDate(), companyDoc.timeZone);
   for (const l of lines) {
+    if (l.line.itemType === 'service') continue;
     book.receive(
       l.line.productId,
       l.line.locationId,
@@ -164,9 +170,8 @@ async function prepareCreditNote(
     tx,
     companyId,
     [
-      'revenue',
-      'inventory',
-      'cogs',
+      ...(goodsNet !== 0n || serviceNet === 0n ? (['revenue', 'inventory', 'cogs'] as const) : []),
+      ...(serviceNet !== 0n ? (['serviceRevenue'] as const) : []),
       ...(tax > 0n ? (['outputTax'] as const) : []),
       ...(applied > 0n ? (['receivable'] as const) : []),
       ...(customer && rest > 0n ? (['customerAdvance'] as const) : []),
@@ -180,7 +185,8 @@ async function prepareCreditNote(
     memo: `${note.number}: return on ${invoice.number} from ${note.customerName}`,
     reference: note.number,
     lines: journalFrom([
-      { accountId: accounts.revenue, amount: net },
+      ...(accounts.revenue ? [{ accountId: accounts.revenue, amount: goodsNet }] : []),
+      ...(serviceNet !== 0n ? [{ accountId: accounts.serviceRevenue!, amount: serviceNet }] : []),
       ...(tax > 0n ? [{ accountId: accounts.outputTax!, amount: tax }] : []),
       ...(applied > 0n ? [{ accountId: accounts.receivable!, amount: -applied }] : []),
       ...(rest > 0n
@@ -191,10 +197,15 @@ async function prepareCreditNote(
             },
           ]
         : []),
-      { accountId: accounts.inventory, amount: cost },
-      { accountId: accounts.cogs, amount: -cost },
+      ...(cost !== 0n
+        ? [
+            { accountId: accounts.inventory!, amount: cost },
+            { accountId: accounts.cogs!, amount: -cost },
+          ]
+        : []),
     ]),
     source: { type: 'creditNote', id: noteId, number: note.number },
+    projectId: invoice.projectId ?? null,
   });
 
   return {
@@ -308,7 +319,11 @@ export const createCreditNote = defineCommand({
     if (new Set(lineNos).size !== lineNos.length) {
       throw invalid('duplicate_line', 'Each sale line can appear only once');
     }
-    const needsQuarantine = input.lines.some((l) => l.condition === 'damaged');
+    const isService = (lineNo: number) =>
+      invoice.lines.find((s) => s.lineNo === lineNo)?.itemType === 'service';
+    const needsQuarantine = input.lines.some(
+      (l) => l.condition === 'damaged' && !isService(l.lineNo),
+    );
     if (needsQuarantine && !input.quarantineLocationId) {
       throw invalid('quarantine_required', 'Choose the quarantine location for damaged goods');
     }
@@ -348,15 +363,19 @@ export const createCreditNote = defineCommand({
           `Line ${l.lineNo}: only ${formatQuantity(left, sold.unit)} ${sold.unit} of ${sold.sku} is left to return`,
         );
       }
+      const service = sold.itemType === 'service';
       return {
         lineNo: l.lineNo,
+        itemType: service ? ('service' as const) : ('stock' as const),
         productId: sold.productId,
         sku: sold.sku,
         productName: sold.productName,
         unit: sold.unit,
         qtyMilli: toStorable(qty),
-        condition: l.condition,
-        locationId: l.condition === 'damaged' ? input.quarantineLocationId! : invoice.locationId!,
+        // A service is credited, not taken back; nothing goes to a location.
+        condition: service ? ('resalable' as const) : l.condition,
+        locationId:
+          l.condition === 'damaged' && !service ? input.quarantineLocationId! : invoice.locationId!,
         netMinor: null,
         taxMinor: null,
         costMinor: null,

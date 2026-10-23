@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { addDays, formatQuantity, toDecimalString } from '@bms/domain';
 import { BackdateNotice, useBackdate, useToday } from '../../components/BackdateNotice';
+import { ProjectField } from '../../components/ProjectField';
 import { Button } from '../../components/ui/button';
 import { Alert, Card, PageHeader, Spinner } from '../../components/ui/feedback';
 import { Field, Input, Select } from '../../components/ui/form';
@@ -65,6 +66,7 @@ export default function NewPurchaseInvoice() {
   const [dueDate, setDueDate] = useState('');
   const [supplierInvoiceNo, setSupplierInvoiceNo] = useState('');
   const [inputTax, setInputTax] = useState('');
+  const [projectId, setProjectId] = useState('');
   const [goods, setGoods] = useState<Record<string, GoodsDraft>>({});
   const [charges, setCharges] = useState<ChargeDraft[]>([]);
   const backdate = useBackdate(invoiceDate);
@@ -165,6 +167,7 @@ export default function NewPurchaseInvoice() {
           ),
         ],
         ...(inputTax.trim() ? { inputTax } : {}),
+        ...(projectId ? { projectId } : {}),
         ...(backdate.approvalId ? { backdateApprovalId: backdate.approvalId } : {}),
       });
       void navigate(`/c/${companyId}/purchases/invoices/${res.invoiceId}`);
@@ -249,6 +252,11 @@ export default function NewPurchaseInvoice() {
             >
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </Field>
+            <ProjectField
+              value={projectId}
+              onChange={setProjectId}
+              error={action.error?.fields.projectId}
+            />
           </div>
           <BackdateNotice date={invoiceDate} state={backdate} />
         </Card>

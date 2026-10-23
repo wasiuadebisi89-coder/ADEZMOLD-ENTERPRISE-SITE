@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router';
 import { formatRatePercent } from '@bms/domain';
 import { useToday } from '../../components/BackdateNotice';
 import { Button } from '../../components/ui/button';
-import { Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
+import { Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
@@ -137,6 +137,32 @@ export default function SalesInvoiceDetail() {
               </dd>
             </div>
           )}
+          {i.quotationId && (
+            <div>
+              <dt className="text-slate-500">From quotation</dt>
+              <dd>
+                <Link
+                  className="font-medium text-brand-700 underline"
+                  to={`/c/${companyId}/quotations/${i.quotationId}`}
+                >
+                  View quotation
+                </Link>
+              </dd>
+            </div>
+          )}
+          {i.projectId && can('projects.read') && (
+            <div>
+              <dt className="text-slate-500">Project</dt>
+              <dd>
+                <Link
+                  className="font-medium text-brand-700 underline"
+                  to={`/c/${companyId}/projects/${i.projectId}`}
+                >
+                  View project
+                </Link>
+              </dd>
+            </div>
+          )}
           {can('ledger.journal.read') && (
             <div>
               <dt className="text-slate-500">Ledger</dt>
@@ -171,6 +197,7 @@ export default function SalesInvoiceDetail() {
                 <Tr key={l.lineNo}>
                   <Td>
                     <span className="font-mono">{l.sku}</span> {l.productName}
+                    {l.itemType === 'service' && <Badge tone="blue">Service</Badge>}
                   </Td>
                   <Td className="text-right tabular-nums">{qty(l.qtyMilli, l.unit)}</Td>
                   {returned && (

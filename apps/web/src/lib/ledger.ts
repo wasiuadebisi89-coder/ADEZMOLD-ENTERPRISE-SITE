@@ -50,6 +50,8 @@ export interface JournalRow {
   reversesJournalId: string | null;
   reversedByJournalId: string | null;
   reversalReason: string | null;
+  source?: { type: string; id: string; number: string } | null;
+  projectId?: string | null;
   postedAt: { toDate(): Date };
   postedBy: string;
 }
@@ -79,7 +81,9 @@ export const SUBTYPE_LABEL: Record<AccountSubtype, string> = {
   retainedEarnings: 'Retained earnings',
   openingBalanceEquity: 'Opening balance equity',
   revenue: 'Revenue',
+  serviceRevenue: 'Service revenue',
   cogs: 'Cost of goods sold',
+  directServiceCost: 'Direct service costs',
   inventoryAdjustment: 'Inventory adjustments',
   purchasePriceVariance: 'Purchase price variance',
   depreciation: 'Depreciation',

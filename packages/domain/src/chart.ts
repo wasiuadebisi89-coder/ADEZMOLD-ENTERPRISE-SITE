@@ -67,12 +67,14 @@ export const TRADING_TEMPLATE: ChartTemplate = {
 
     h('4000', 'Income', 'income'),
     a('4100', 'Sales revenue', 'income', '4000', 'revenue'),
+    a('4200', 'Service revenue', 'income', '4000', 'serviceRevenue'),
     a('4900', 'Other income', 'income', '4000'),
 
     h('5000', 'Cost of sales', 'expense'),
     a('5100', 'Cost of goods sold', 'expense', '5000', 'cogs'),
     a('5200', 'Inventory adjustments', 'expense', '5000', 'inventoryAdjustment'),
     a('5300', 'Purchase price variance', 'expense', '5000', 'purchasePriceVariance'),
+    a('5400', 'Direct service costs', 'expense', '5000', 'directServiceCost'),
 
     h('6000', 'Operating expenses', 'expense'),
     a('6100', 'Salaries and wages', 'expense', '6000'),

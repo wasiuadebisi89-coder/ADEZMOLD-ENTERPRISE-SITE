@@ -5,6 +5,8 @@ import {
   BookOpen,
   Building,
   CheckSquare,
+  FileText,
+  FolderKanban,
   Contact,
   ClipboardList,
   ListTree,
@@ -90,6 +92,13 @@ const NAV: NavItem[] = [
     icon: Receipt,
     permission: ['sales.read', 'sales.readOwn'],
   },
+  {
+    to: 'quotations',
+    label: 'Quotations',
+    icon: FileText,
+    permission: ['sales.read', 'sales.quotation.manage'],
+  },
+  { to: 'projects', label: 'Projects', icon: FolderKanban, permission: 'projects.read' },
   {
     to: 'customers',
     label: 'Customers',

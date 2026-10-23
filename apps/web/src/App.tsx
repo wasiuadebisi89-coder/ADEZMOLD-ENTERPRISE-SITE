@@ -11,6 +11,11 @@ const VerifyEmail = lazy(() => import('./routes/auth/VerifyEmail'));
 const Companies = lazy(() => import('./routes/Companies'));
 const CreateCompany = lazy(() => import('./routes/CreateCompany'));
 const AcceptInvite = lazy(() => import('./routes/AcceptInvite'));
+const Projects = lazy(() => import('./routes/company/Projects'));
+const ProjectDetail = lazy(() => import('./routes/company/ProjectDetail'));
+const Quotations = lazy(() => import('./routes/company/Quotations'));
+const NewQuotation = lazy(() => import('./routes/company/NewQuotation'));
+const QuotationDetail = lazy(() => import('./routes/company/QuotationDetail'));
 const CompanyLayout = lazy(() => import('./routes/company/CompanyLayout'));
 const Dashboard = lazy(() => import('./routes/company/Dashboard'));
 const Members = lazy(() => import('./routes/company/Members'));
@@ -169,6 +174,11 @@ const router = createBrowserRouter([
       { path: 'fixed-assets', element: <FixedAssets /> },
       { path: 'fixed-assets/new', element: <NewFixedAsset /> },
       { path: 'fixed-assets/:assetId', element: <FixedAssetDetail /> },
+      { path: 'projects', element: <Projects /> },
+      { path: 'projects/:projectId', element: <ProjectDetail /> },
+      { path: 'quotations', element: <Quotations /> },
+      { path: 'quotations/new', element: <NewQuotation /> },
+      { path: 'quotations/:quotationId', element: <QuotationDetail /> },
       { path: 'purchases', element: <Purchases /> },
       { path: 'purchases/receipts/new', element: <NewGoodsReceipt /> },
       { path: 'purchases/receipts/:receiptId', element: <GoodsReceiptDetail /> },
