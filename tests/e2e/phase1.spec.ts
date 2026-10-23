@@ -1,6 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { createCompany, latestOob, resetEmulators, signOutFromShell, signUp } from './helpers';
+import {
+  createCompany,
+  latestOob,
+  resetEmulators,
+  signOut,
+  signOutFromShell,
+  signUp,
+} from './helpers';
 
 test.beforeEach(async () => {
   await resetEmulators();
@@ -82,7 +89,7 @@ test('A1/B1/D1/D3/F2 owner sets up a company and a colleague joins with limited 
 
 test('A3 password reset email can be requested and used', async ({ page }) => {
   await signUp(page, 'Ada Owner', 'owner@example.test');
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await signOut(page);
   await page.goto('/forgot-password');
   await page.getByLabel('Email').fill('owner@example.test');
   await page.getByRole('button', { name: 'Send reset link' }).click();
@@ -129,7 +136,7 @@ test('I2 key screens have no serious accessibility violations', async ({ page })
 
 test('I2 sign-in and company creation work with the keyboard only', async ({ page }) => {
   await signUp(page, 'Ada Owner', 'owner@example.test');
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await signOut(page);
   await page.goto('/sign-in');
   await page.getByLabel('Email').focus();
   await page.keyboard.type('owner@example.test');

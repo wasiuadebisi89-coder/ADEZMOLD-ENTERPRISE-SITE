@@ -8,7 +8,8 @@ import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useCollection, useDoc } from '../../lib/firestore-hooks';
 import {
-  KIND_LABEL,
+  MOVEMENT_LABEL,
+  movementSourcePath,
   qty,
   useLocations,
   useStockBalances,
@@ -120,11 +121,11 @@ export default function ProductDetail() {
                       <Td>
                         <Link
                           className="font-mono text-brand-700 hover:underline"
-                          to={`/c/${companyId}/stock-adjustments/${m.sourceId}`}
+                          to={movementSourcePath(companyId, m)}
                         >
                           {m.sourceNumber}
                         </Link>{' '}
-                        <span className="text-slate-500">{KIND_LABEL[m.movementType]}</span>
+                        <span className="text-slate-500">{MOVEMENT_LABEL[m.movementType]}</span>
                       </Td>
                       <Td>{locationName.get(m.locationId) ?? m.locationId}</Td>
                       <Td className="text-right tabular-nums">

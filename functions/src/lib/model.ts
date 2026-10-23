@@ -254,7 +254,14 @@ export interface CostLayerDoc {
   valueRemaining: number;
   receivedDate: string;
   sourceId: string;
+  /** The receipt line that created the layer, so invoice price differences find it. */
+  sourceLineNo: number | null;
 }
+
+export type StockMovementType =
+  'adjustment' | 'count' | 'opening' | 'receipt' | 'purchase_return' | 'cost_adjustment';
+export type StockSourceType =
+  'stockAdjustment' | 'goodsReceipt' | 'purchaseInvoice' | 'supplierReturn';
 
 export interface StockMovementDoc {
   productId: string;
@@ -263,9 +270,9 @@ export interface StockMovementDoc {
   /** Signed: positive into stock, negative out. */
   qtyMilli: number;
   valueMinor: number;
-  movementType: 'adjustment' | 'count' | 'opening';
+  movementType: StockMovementType;
   postingDate: string;
-  sourceType: 'stockAdjustment';
+  sourceType: StockSourceType;
   sourceId: string;
   sourceNumber: string;
   journalId: string | null;
@@ -308,6 +315,170 @@ export interface StockAdjustmentDoc {
   journalId: string | null;
   /** Net change in stock value when posted, minor units. */
   valueMinor: number | null;
+}
+
+// --- Suppliers and purchasing (DATA_MODEL.md §6) -------------------------------------------
+
+export interface SupplierDoc {
+  code: string;
+  name: string;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  taxId: string | null;
+  paymentTermsDays: number;
+  status: 'active' | 'inactive';
+  /** Owed on posted invoices, minor units. Sums to the trade payables account. */
+  balanceMinor: number;
+  /** Paid but not yet allocated to invoices. Sums to the supplier advances account. */
+  advanceMinor: number;
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface GoodsReceiptLineDoc {
+  lineNo: number;
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  qtyMilli: number;
+  unitCostScaled: number;
+  /** Value received into stock and credited to GRNI. */
+  valueMinor: number;
+  /** Quantity invoiced or returned before invoicing, and the GRNI value released for it. */
+  clearedQtyMilli: number;
+  clearedValueMinor: number;
+}
+
+export interface GoodsReceiptDoc {
+  number: string;
+  supplierId: string;
+  supplierName: string;
+  locationId: string;
+  branchId: string;
+  postingDate: string;
+  reference: string | null;
+  memo: string | null;
+  lines: GoodsReceiptLineDoc[];
+  totalMinor: number;
+  invoiceStatus: 'not_invoiced' | 'partly_invoiced' | 'invoiced';
+  journalId: string;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
+export interface PurchaseInvoiceLineDoc {
+  lineNo: number;
+  kind: 'receipt' | 'expense' | 'landed' | 'opening';
+  description: string;
+  amountMinor: number;
+  /** receipt and landed lines */
+  goodsReceiptId: string | null;
+  receiptNumber: string | null;
+  /** receipt lines */
+  receiptLineNo: number | null;
+  productId: string | null;
+  sku: string | null;
+  unit: UnitCode | null;
+  qtyMilli: number | null;
+  grniMinor: number | null;
+  returnedQtyMilli: number | null;
+  returnedCreditMinor: number | null;
+  /** receipt and landed lines: where the difference or charge went */
+  inventoryMinor: number | null;
+  cogsMinor: number | null;
+  /** landed lines */
+  basis: 'value' | 'quantity' | null;
+  /** expense lines */
+  accountId: string | null;
+  accountCode: string | null;
+}
+
+export interface PurchaseInvoiceDoc {
+  number: string;
+  kind: 'invoice' | 'opening';
+  supplierId: string;
+  supplierName: string;
+  supplierInvoiceNo: string;
+  branchId: string;
+  invoiceDate: string;
+  dueDate: string;
+  memo: string | null;
+  lines: PurchaseInvoiceLineDoc[];
+  inputTaxMinor: number;
+  totalMinor: number;
+  /** Settled by payment allocations and by returns credited to this invoice. */
+  paidMinor: number;
+  creditedMinor: number;
+  status: 'open' | 'paid';
+  journalId: string;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
+export interface PaymentAllocationDoc {
+  invoiceId: string;
+  invoiceNumber: string;
+  amountMinor: number;
+  /** The journal that moved this amount: the payment itself, or a later allocation. */
+  journalId: string;
+  allocatedAt: Timestamp;
+}
+
+export interface SupplierPaymentDoc {
+  number: string;
+  supplierId: string;
+  supplierName: string;
+  branchId: string;
+  postingDate: string;
+  paymentAccountId: string;
+  paymentAccountName: string;
+  amountMinor: number;
+  allocatedMinor: number;
+  reference: string | null;
+  memo: string | null;
+  allocations: PaymentAllocationDoc[];
+  journalId: string;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
+export interface SupplierReturnLineDoc {
+  lineNo: number;
+  goodsReceiptId: string;
+  receiptNumber: string;
+  receiptLineNo: number;
+  invoiceId: string | null;
+  invoiceNumber: string | null;
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  qtyMilli: number;
+  /** Stock value taken out at the costing method. */
+  costMinor: number;
+  /** Released from GRNI, or credited against the invoice. */
+  creditMinor: number;
+}
+
+export interface SupplierReturnDoc {
+  number: string;
+  supplierId: string;
+  supplierName: string;
+  locationId: string;
+  branchId: string;
+  postingDate: string;
+  reason: string;
+  lines: SupplierReturnLineDoc[];
+  costMinor: number;
+  creditMinor: number;
+  journalId: string;
+  postedAt: Timestamp;
+  postedBy: string;
 }
 
 export interface NumberSeriesDoc {
@@ -361,6 +532,17 @@ export function companyRefs(companyId: string) {
     stockMovements: company.collection('stockMovements'),
     stockAdjustment: (id: string) => company.collection('stockAdjustments').doc(id),
     stockAdjustments: company.collection('stockAdjustments'),
+    supplier: (id: string) => company.collection('suppliers').doc(id),
+    suppliers: company.collection('suppliers'),
+    goodsReceipt: (id: string) => company.collection('goodsReceipts').doc(id),
+    goodsReceipts: company.collection('goodsReceipts'),
+    purchaseInvoice: (id: string) => company.collection('purchaseInvoices').doc(id),
+    purchaseInvoices: company.collection('purchaseInvoices'),
+    supplierInvoiceKey: (id: string) => company.collection('supplierInvoiceKeys').doc(id),
+    supplierPayment: (id: string) => company.collection('supplierPayments').doc(id),
+    supplierPayments: company.collection('supplierPayments'),
+    supplierReturn: (id: string) => company.collection('supplierReturns').doc(id),
+    supplierReturns: company.collection('supplierReturns'),
     auditLogs: company.collection('auditLogs'),
   };
 }

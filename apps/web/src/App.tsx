@@ -31,6 +31,17 @@ const ProductDetail = lazy(() => import('./routes/company/ProductDetail'));
 const StockAdjustments = lazy(() => import('./routes/company/StockAdjustments'));
 const NewStockAdjustment = lazy(() => import('./routes/company/NewStockAdjustment'));
 const StockAdjustmentDetail = lazy(() => import('./routes/company/StockAdjustmentDetail'));
+const Suppliers = lazy(() => import('./routes/company/Suppliers'));
+const SupplierDetail = lazy(() => import('./routes/company/SupplierDetail'));
+const Purchases = lazy(() => import('./routes/company/Purchases'));
+const NewGoodsReceipt = lazy(() => import('./routes/company/NewGoodsReceipt'));
+const GoodsReceiptDetail = lazy(() => import('./routes/company/GoodsReceiptDetail'));
+const NewPurchaseInvoice = lazy(() => import('./routes/company/NewPurchaseInvoice'));
+const PurchaseInvoiceDetail = lazy(() => import('./routes/company/PurchaseInvoiceDetail'));
+const NewSupplierPayment = lazy(() => import('./routes/company/NewSupplierPayment'));
+const SupplierPaymentDetail = lazy(() => import('./routes/company/SupplierPaymentDetail'));
+const NewSupplierReturn = lazy(() => import('./routes/company/NewSupplierReturn'));
+const SupplierReturnDetail = lazy(() => import('./routes/company/SupplierReturnDetail'));
 const NotFound = lazy(() => import('./routes/NotFound'));
 
 function Home() {
@@ -124,6 +135,17 @@ const router = createBrowserRouter([
       { path: 'stock-adjustments', element: <StockAdjustments /> },
       { path: 'stock-adjustments/new', element: <NewStockAdjustment /> },
       { path: 'stock-adjustments/:adjustmentId', element: <StockAdjustmentDetail /> },
+      { path: 'suppliers', element: <Suppliers /> },
+      { path: 'suppliers/:supplierId', element: <SupplierDetail /> },
+      { path: 'purchases', element: <Purchases /> },
+      { path: 'purchases/receipts/new', element: <NewGoodsReceipt /> },
+      { path: 'purchases/receipts/:receiptId', element: <GoodsReceiptDetail /> },
+      { path: 'purchases/invoices/new', element: <NewPurchaseInvoice /> },
+      { path: 'purchases/invoices/:invoiceId', element: <PurchaseInvoiceDetail /> },
+      { path: 'purchases/payments/new', element: <NewSupplierPayment /> },
+      { path: 'purchases/payments/:paymentId', element: <SupplierPaymentDetail /> },
+      { path: 'purchases/returns/new', element: <NewSupplierReturn /> },
+      { path: 'purchases/returns/:returnId', element: <SupplierReturnDetail /> },
     ],
   },
   { path: '*', element: <NotFound /> },

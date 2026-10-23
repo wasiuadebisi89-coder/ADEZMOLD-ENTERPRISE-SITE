@@ -46,8 +46,9 @@ export interface MovementRow {
   locationId: string;
   qtyMilli: number;
   valueMinor: number;
-  movementType: 'adjustment' | 'count' | 'opening';
+  movementType: keyof typeof MOVEMENT_LABEL;
   postingDate: string;
+  sourceType: 'stockAdjustment' | 'goodsReceipt' | 'purchaseInvoice' | 'supplierReturn';
   sourceId: string;
   sourceNumber: string;
   balanceQtyMilli: number;
@@ -91,6 +92,31 @@ export const KIND_LABEL: Record<AdjustmentRow['kind'], string> = {
   count: 'Stock count',
   opening: 'Opening stock',
 };
+
+export const MOVEMENT_LABEL = {
+  ...KIND_LABEL,
+  receipt: 'Goods received',
+  purchase_return: 'Returned to supplier',
+  cost_adjustment: 'Cost adjusted',
+} as const;
+
+/** Where a stock movement's source document lives in the app. */
+export function movementSourcePath(
+  companyId: string,
+  m: Pick<MovementRow, 'sourceType' | 'sourceId'>,
+) {
+  const base = `/c/${companyId}`;
+  switch (m.sourceType) {
+    case 'goodsReceipt':
+      return `${base}/purchases/receipts/${m.sourceId}`;
+    case 'purchaseInvoice':
+      return `${base}/purchases/invoices/${m.sourceId}`;
+    case 'supplierReturn':
+      return `${base}/purchases/returns/${m.sourceId}`;
+    default:
+      return `${base}/stock-adjustments/${m.sourceId}`;
+  }
+}
 
 export const STATUS_TONE = { pending: 'amber', posted: 'green', rejected: 'slate' } as const;
 

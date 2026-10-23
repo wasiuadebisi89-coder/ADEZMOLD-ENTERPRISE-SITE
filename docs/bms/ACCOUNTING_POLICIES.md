@@ -66,27 +66,46 @@ other frameworks.
 
 ## 5. Purchases
 
-- Purchase invoice and goods receipt can occur at different times:
-  - Goods receipt first: Dr Inventory / Cr **GRNI** (goods received not invoiced) at order
-    or expected cost.
-  - Invoice later: Dr GRNI / Cr Accounts Payable; price differences between receipt and
-    invoice go to inventory if stock is still on hand, otherwise to cost of sales
-    (proportional split for partly-sold stock).
-  - Invoice without stock (services, expenses): Dr Expense / Cr AP.
-- Supplier payment: Dr AP / Cr Cash or Bank, allocated to invoices; unallocated payments
-  are supplier advances (Dr Supplier advances, an asset).
-- Supplier return: Dr AP (or Supplier receivable) / Cr Inventory at the cost carried for
-  the returned goods; difference to supplier's credit price goes to a purchase price
-  variance account.
+- Goods are received first: Dr 1300 Inventory / Cr 2150 **GRNI** (goods received not
+  invoiced) at the unit cost entered on the receipt. There are no purchase orders yet, so the
+  receipt cost is what the buyer expects to be invoiced.
+- The supplier's invoice is matched to receipt lines. For each line it releases GRNI at the
+  received cost (cumulatively, so partial invoices never release more than was received) and
+  credits 2100 Trade payables with the invoiced amount.
+- A difference between the invoiced amount and the received cost goes to stock for the share
+  of those goods still on hand and to 5100 Cost of goods sold for the rest. "Still on hand"
+  is exact under FIFO (what remains of that receipt's cost layer); under weighted average it is
+  the smaller of the invoiced quantity and the quantity now at the receipt's location. Stock
+  value never goes below zero; anything beyond goes to cost of sales.
+- Invoice lines for services and other costs debit the account chosen (any active, non-control
+  posting account).
+- **Input tax** is recorded only as the amount the supplier shows on the invoice, debited to
+  1400 Input tax recoverable. Nothing is calculated, and no rates are set (DECISION 9).
+- A supplier invoice number is unique per supplier (ignoring case and spaces).
+- Due date: the invoice date plus the supplier's payment terms, unless one is entered.
+- Supplier payment: Dr 2100 Trade payables for the amount allocated to invoices, Dr 1350
+  Advances to suppliers for any remainder, Cr the cash or bank account paid from. An advance
+  can be applied to invoices later (Dr Trade payables / Cr Advances, dated the day it is
+  applied). Payments are posted directly; see DECISION 16.
+- Supplier return, goods not yet invoiced: Dr GRNI at the received cost / Cr Inventory at the
+  costing method's current cost; the difference goes to 5300 Purchase price variance.
+- Supplier return, goods already invoiced: Dr Trade payables at the invoiced price (reducing
+  what is owed on that invoice) / Cr Inventory at current cost; the difference goes to 5300.
+  A credit larger than what is still owed on the invoice is refused until supplier refunds
+  exist.
+- Supplier opening balances: each unpaid invoice from before go-live is recorded as Dr 3300
+  Opening balance equity / Cr Trade payables.
 
 ## 6. Landed costs
 
-- Only charges flagged as **capitalisable** on the charge type (e.g. freight-in, insurance
-  in transit, non-recoverable import duties) are added to inventory.
-- Other charges (e.g. outward delivery, general handling, storage after receipt) are expensed.
-- Allocation basis per landed cost document: by value (default), by quantity or by weight.
-- If goods are already partly sold when the charge is posted, the share relating to sold
-  units goes to cost of sales.
+- A charge on a supplier invoice (from the goods' supplier or another, such as a freight
+  forwarder) can be added to the cost of one goods receipt instead of being expensed. The
+  buyer chooses this per charge; charges such as outward delivery should be entered as
+  expenses.
+- The charge is spread over the receipt's lines by value (default) or by quantity. Weight is
+  not supported yet. Parts always sum exactly to the charge.
+- Each line's share goes to stock for the part of that line still on hand and to cost of sales
+  for the rest, as for price differences (§5).
 
 ## 7. Sales
 

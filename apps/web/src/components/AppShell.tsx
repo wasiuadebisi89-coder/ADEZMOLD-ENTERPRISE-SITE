@@ -15,6 +15,8 @@ import {
   Package,
   Settings,
   ShieldCheck,
+  ShoppingCart,
+  Truck,
   Users,
   X,
 } from 'lucide-react';
@@ -55,6 +57,8 @@ const NAV: NavItem[] = [
     icon: ClipboardList,
     permission: 'reports.stock.read',
   },
+  { to: 'suppliers', label: 'Suppliers', icon: Truck, permission: 'purchasing.read' },
+  { to: 'purchases', label: 'Purchases', icon: ShoppingCart, permission: 'purchasing.read' },
   { to: 'approvals', label: 'Approvals', icon: CheckSquare, permission: 'approvals.read' },
   { to: 'members', label: 'Users', icon: Users, permission: 'company.members.read' },
   { to: 'roles', label: 'Roles', icon: ShieldCheck, permission: 'company.members.read' },

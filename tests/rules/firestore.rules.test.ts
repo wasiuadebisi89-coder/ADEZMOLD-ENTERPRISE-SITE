@@ -99,6 +99,12 @@ beforeEach(async () => {
       await setDoc(doc(db, `companies/${companyId}/stockMovements/m1`), { productId: 'p1' });
       await setDoc(doc(db, `companies/${companyId}/stockAdjustments/a1`), { status: 'pending' });
       await setDoc(doc(db, `companies/${companyId}/costLayers/l1`), { productId: 'p1' });
+      await setDoc(doc(db, `companies/${companyId}/suppliers/s1`), { code: 'S1', name: 'Mills' });
+      await setDoc(doc(db, `companies/${companyId}/goodsReceipts/g1`), { number: 'GRN-000001' });
+      await setDoc(doc(db, `companies/${companyId}/purchaseInvoices/i1`), { number: 'PI-000001' });
+      await setDoc(doc(db, `companies/${companyId}/supplierPayments/sp1`), { number: 'SP-000001' });
+      await setDoc(doc(db, `companies/${companyId}/supplierReturns/sr1`), { number: 'SR-000001' });
+      await setDoc(doc(db, `companies/${companyId}/supplierInvoiceKeys/k1`), { invoiceId: 'i1' });
       for (const m of members) await setDoc(doc(db, `companies/${companyId}/members/${m.uid}`), m);
     }
     await setDoc(doc(db, `users/${ADMIN_A}`), {
@@ -134,6 +140,11 @@ const COMPANY_PATHS = [
   'companies/A/stockBalances/p1__HQ-store',
   'companies/A/stockMovements/m1',
   'companies/A/stockAdjustments/a1',
+  'companies/A/suppliers/s1',
+  'companies/A/goodsReceipts/g1',
+  'companies/A/purchaseInvoices/i1',
+  'companies/A/supplierPayments/sp1',
+  'companies/A/supplierReturns/sr1',
 ];
 
 describe('C1 unauthenticated access', () => {
@@ -179,6 +190,13 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/stockMovements/m2', { productId: 'p1', qtyMilli: 1 }],
     ['companies/A/stockAdjustments/a1', { status: 'posted' }],
     ['companies/A/costLayers/l2', { productId: 'p1' }],
+    ['companies/A/suppliers/s1', { balanceMinor: 0 }],
+    ['companies/A/suppliers/s2', { code: 'S2', name: 'New' }],
+    ['companies/A/goodsReceipts/g2', { number: 'GRN-000002' }],
+    ['companies/A/purchaseInvoices/i1', { paidMinor: 999 }],
+    ['companies/A/supplierPayments/sp2', { amountMinor: 1 }],
+    ['companies/A/supplierReturns/sr2', { creditMinor: 1 }],
+    ['companies/A/supplierInvoiceKeys/k2', { invoiceId: 'x' }],
     ['companies/NEW', { legalName: 'Self-made' }],
     ['invitations/inv2', { companyId: 'A' }],
   ];
@@ -238,6 +256,26 @@ describe('inventory records (Phase 3)', () => {
   });
   it('cost layers are server-only', async () => {
     await assertFails(getDoc(doc(db(ADMIN_A), 'companies/A/costLayers/l1')));
+  });
+});
+
+describe('purchasing records (Phase 4)', () => {
+  const paths = [
+    'companies/A/suppliers/s1',
+    'companies/A/goodsReceipts/g1',
+    'companies/A/purchaseInvoices/i1',
+    'companies/A/supplierPayments/sp1',
+    'companies/A/supplierReturns/sr1',
+  ];
+  it('need purchasing read access: auditors yes, sales officers no', async () => {
+    for (const path of paths) {
+      await assertSucceeds(getDoc(doc(db(AUDITOR_A), path)));
+      await assertFails(getDoc(doc(db(SALES_A), path)));
+      await assertFails(getDoc(doc(db(ADMIN_B), path)));
+    }
+  });
+  it('supplier invoice-number keys are server-only', async () => {
+    await assertFails(getDoc(doc(db(ADMIN_A), 'companies/A/supplierInvoiceKeys/k1')));
   });
 });
 

@@ -15,6 +15,7 @@ customise templates. Platform Super Admin is not a company role.
 | Products, categories, units | W             | W       | R              | W              | R            | R       |
 | Stock adjustments           | A             | A       | —              | W (approval)   | R            | R       |
 | Stock counts                | A             | A       | —              | W              | R            | R       |
+| Suppliers                   | W             | W       | —              | R              | W            | R       |
 | Purchases, goods receipts   | P             | P       | —              | W (receipts P) | P            | R       |
 | Supplier payments           | A             | P       | —              | —              | P            | R       |
 | Sales / POS                 | P             | P       | P (own branch) | —              | R            | R       |
