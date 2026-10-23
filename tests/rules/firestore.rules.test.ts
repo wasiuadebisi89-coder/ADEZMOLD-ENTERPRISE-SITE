@@ -161,6 +161,11 @@ beforeEach(async () => {
         accountId: 'acc1',
         reconciliationId: 'br1',
       });
+      await setDoc(doc(db, `companies/${companyId}/fixedAssets/fa1`), {
+        number: 'FA-000001',
+        status: 'active',
+      });
+      await setDoc(doc(db, `companies/${companyId}/depreciationRuns/dr1`), { month: '2026-09' });
       for (const m of members) await setDoc(doc(db, `companies/${companyId}/members/${m.uid}`), m);
     }
     await setDoc(doc(db, `users/${ADMIN_A}`), {
@@ -211,6 +216,8 @@ const COMPANY_PATHS = [
   'companies/A/bankStates/acc1',
   'companies/A/bankReconciliations/br1',
   'companies/A/bankClearings/j1_1',
+  'companies/A/fixedAssets/fa1',
+  'companies/A/depreciationRuns/dr1',
 ];
 
 describe('C1 unauthenticated access', () => {
@@ -277,6 +284,9 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/bankStates/acc1', { reconciledBalanceMinor: 0 }],
     ['companies/A/bankReconciliations/br2', { accountId: 'acc1' }],
     ['companies/A/bankClearings/j2_1', { accountId: 'acc1' }],
+    ['companies/A/fixedAssets/fa1', { status: 'disposed' }],
+    ['companies/A/fixedAssets/fa2', { number: 'FA-000002', costMinor: 1 }],
+    ['companies/A/depreciationRuns/dr2', { month: '2026-10' }],
     ['companies/NEW', { legalName: 'Self-made' }],
     ['invitations/inv2', { companyId: 'A' }],
   ];
@@ -404,6 +414,16 @@ describe('returns, refunds and bank reconciliation (Phase 6)', () => {
       await assertSucceeds(getDoc(doc(db(AUDITOR_A), path)));
       await assertFails(getDoc(doc(db(SALES_A), path)));
     }
+  });
+});
+
+describe('fixed assets (Phase 7)', () => {
+  it('the register and depreciation runs are for asset readers, not sales officers', async () => {
+    for (const path of ['companies/A/fixedAssets/fa1', 'companies/A/depreciationRuns/dr1']) {
+      await assertSucceeds(getDoc(doc(db(AUDITOR_A), path)));
+      await assertFails(getDoc(doc(db(SALES_A), path)));
+    }
+    await assertFails(deleteDoc(doc(db(ADMIN_A), 'companies/A/fixedAssets/fa1')));
   });
 });
 

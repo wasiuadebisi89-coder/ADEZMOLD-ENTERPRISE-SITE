@@ -737,6 +737,67 @@ export interface BankClearingDoc {
   clearedAt: Timestamp;
 }
 
+// --- Fixed assets (DATA_MODEL.md §10) ---------------------------------------------------------
+
+export interface FixedAssetDoc {
+  number: string;
+  name: string;
+  branchId: string;
+  assetAccountId: string;
+  assetAccountName: string;
+  accumulatedAccountId: string;
+  expenseAccountId: string;
+  costMinor: number;
+  residualMinor: number;
+  usefulLifeMonths: number;
+  availableForUseDate: string;
+  /** The first month charged after the base (DECISION 10). */
+  firstMonth: string;
+  /** For assets brought in at cut-over: months and depreciation charged before. */
+  baseMonths: number;
+  baseAccumulatedMinor: number;
+  /** Running totals, including the base. */
+  chargedMonths: number;
+  accumulatedMinor: number;
+  /** The last month charged, or null. */
+  depreciatedThrough: string | null;
+  status: 'active' | 'disposed';
+  acquisition: {
+    kind: 'purchase' | 'opening';
+    date: string;
+    creditAccountId: string | null;
+    journalId: string;
+  };
+  disposal: {
+    date: string;
+    proceedsMinor: number;
+    proceedsAccountId: string | null;
+    gainLossAccountId: string;
+    /** Positive is a gain, negative a loss. */
+    gainMinor: number;
+    reason: string;
+    journalId: string;
+    disposedAt: Timestamp;
+    disposedBy: string;
+  } | null;
+  reference: string | null;
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt: Timestamp;
+}
+
+export interface DepreciationRunDoc {
+  branchId: string;
+  month: string;
+  postingDate: string;
+  totalMinor: number;
+  assets: { assetId: string; number: string; months: number; amountMinor: number }[];
+  journalId: string;
+  journalNumber: string;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
 export interface NumberSeriesDoc {
   prefix: string;
   next: number;
@@ -818,6 +879,9 @@ export function companyRefs(companyId: string) {
     bankReconciliations: company.collection('bankReconciliations'),
     bankClearing: (entryId: string) => company.collection('bankClearings').doc(entryId),
     bankClearings: company.collection('bankClearings'),
+    fixedAsset: (id: string) => company.collection('fixedAssets').doc(id),
+    fixedAssets: company.collection('fixedAssets'),
+    depreciationRuns: company.collection('depreciationRuns'),
     auditLogs: company.collection('auditLogs'),
   };
 }

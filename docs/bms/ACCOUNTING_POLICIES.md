@@ -1,7 +1,7 @@
 # BMS — Accounting policies (Phase 0)
 
 Status: **Draft for review.** Items marked **DECISION** need the owner's confirmation
-(#1, #4–#9, #14 and #16 confirmed 2026-10-23; #17 and #18 proposed for Phase 6);
+(#1, #4–#10, #14 and #16–#18 confirmed 2026-10-23);
 the value shown is the proposed safe default, not a fact. No tax rate is hard-coded:
 tax codes and rates are entered per company by an authorised user.
 
@@ -153,12 +153,12 @@ other frameworks.
 - A refund (`RF-…`) pays back money a customer holds with us, from a specific unallocated
   receipt or credit note, up to what is left on it: Dr 2250 Customer advances / Cr Cash or
   Bank, dated the day it is posted.
-- Approvals (DECISION 17, proposed): someone with `sales.return.post` (Managers, Admins) posts a
+- Approvals (DECISION 17, **confirmed**): someone with `sales.return.post` (Managers, Admins) posts a
   return directly, and someone with `sales.refund.post` (Accountants, Managers, Admins) posts a
   refund directly. Sales officers raise them for approval; a manager approves and they post on
   the day of approval, re-checked against the sale as it is then. Nobody approves their own
   request, and every step is in the audit log.
-- Returns have no time limit (DECISION 18, proposed); a company that wants one applies it as a
+- Returns have no time limit (DECISION 18, **confirmed**); a company that wants one applies it as a
   policy for whoever approves.
 
 ## 9. Rounding
@@ -181,13 +181,30 @@ other frameworks.
 
 ## 11. Fixed assets
 
-- Recognised at cost incl. directly attributable costs to bring to working condition.
-- Straight-line method first. Monthly depreciation starts from the available-for-use date.
-  DECISION 10: first month convention — proposed **full month if available for use on or
-  before the 15th, otherwise from the next month**; alternatives: daily pro-rata or full
-  month regardless.
-- Residual value and useful life per asset, reviewed manually.
-- Disposal: remove cost and accumulated depreciation, record proceeds, gain/loss to P&L.
+- Recognised at cost incl. directly attributable costs to bring to working condition. Each
+  asset (`FA-…`) records its cost, residual value, useful life in months, the date it was
+  available for use, and the three accounts it uses: the asset (cost) account, accumulated
+  depreciation, and the depreciation expense account.
+- Buying an asset: Dr asset account / Cr the account it was paid from or owed on (cash, bank,
+  or a liability or equity account that is not a control account; supplier invoices for
+  assets are not tracked through payables yet), dated the acquisition date.
+- Assets brought in at cut-over: Dr asset account (cost) / Cr accumulated depreciation (to
+  date) / Cr Opening balance equity, with the number of months already charged. Charging
+  continues the month after the as-at date over the remaining life.
+- Straight-line method. DECISION 10 (**confirmed**): a full month's charge for the month the
+  asset is available for use if that is on or before the 15th, otherwise from the next month.
+  No daily pro-rating.
+- Depreciation run for a month (`assets.depreciation.post`): one journal, dated the last day
+  of the month, Dr depreciation expense / Cr accumulated depreciation, for every active asset.
+  A month can be run only once it has ended. Months that were missed are caught up in the
+  next run. Each month's charge is worked out so the total never goes past cost less
+  residual value, and the last month takes any rounding difference.
+- Residual value and useful life per asset, reviewed manually (changing them is not yet
+  supported in the app).
+- Disposal: depreciation is caught up to the month before disposal if it happens on or
+  before the 15th, otherwise including that month. Then: Dr accumulated depreciation, Dr the
+  account the proceeds went to, Cr asset account (cost), and the difference to the gain or
+  loss account the user chooses (an income or expense account).
 
 ## 12. Opening balances
 

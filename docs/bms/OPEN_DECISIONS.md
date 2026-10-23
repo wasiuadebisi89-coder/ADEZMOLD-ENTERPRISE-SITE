@@ -14,15 +14,15 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
 | 7   | Customer credit limit               | **Confirmed:** block over the limit (0 = cash only) unless a manager approves                               | Phase 5                |
 | 8   | Tax rounding                        | **Confirmed:** per line, to the minor unit                                                                  | Phase 5                |
 | 9   | Prices tax-inclusive or exclusive   | **Confirmed:** chosen per company, exclusive by default; rates entered per company, none seeded             | Phase 5                |
-| 10  | Depreciation first-month convention | Full month if available for use by the 15th                                                                 | Phase 7                |
+| 10  | Depreciation first-month convention | **Confirmed:** full month if available for use by the 15th, otherwise from the next month                   | Phase 7                |
 | 11  | Role matrix and self-approval       | As in ROLES.md; no self-approval                                                                            | Phase 1                |
 | 12  | Firebase region                     | africa-south1 (Johannesburg) if all services needed are available there, otherwise europe-west1 — to verify | Phase 1 deploy         |
 | 13  | Firebase projects / billing         | Owner creates `bms-staging` and `bms-prod` (Blaze plan needed for Functions)                                | Phase 1 deploy         |
 | 14  | Default chart of accounts template  | **Confirmed:** trading chart in CHART_OF_ACCOUNTS.md                                                        | Phase 2                |
 | 15  | Sign-in methods                     | Email/password + verification; Google sign-in later                                                         | Phase 1                |
 | 16  | Supplier payment approval           | **Confirmed:** none; anyone with `purchasing.payment.post` pays directly (Accountant, Manager, Admin)       | Phase 4                |
-| 17  | Return and refund approvals         | Sales officers' returns and refunds wait for a manager; managers, accountants and admins post directly      | Phase 6                |
-| 18  | Time limit on returns               | None; the approver applies any shop policy                                                                  | Phase 6                |
+| 17  | Return and refund approvals         | **Confirmed:** sales officers' returns and refunds wait for a manager; others post directly                 | Phase 6                |
+| 18  | Time limit on returns               | **Confirmed:** none; the approver applies any shop policy                                                   | Phase 6                |
 
 ## Confirmed decisions
 
@@ -45,3 +45,10 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
   - #9: each company chooses whether sale prices include tax; new companies start with prices
     before tax. No tax rate is preset. Nigeria's standard VAT rate is entered by the company
     or its accountant, because some goods are exempt or zero-rated.
+- 2026-10-23: the owner accepted the recommendations for Phases 6 and 7:
+  - #17: sales officers raise returns and refunds for a manager to approve; Managers post
+    returns directly, and Accountants, Managers and Admins post refunds directly.
+  - #18: returns have no time limit; whoever approves applies any shop policy.
+  - #10: depreciation is charged for a full month when an asset is available for use on or
+    before the 15th, and starts the next month otherwise. The same rule applies on disposal:
+    an asset disposed of on or before the 15th is not charged for that month.
