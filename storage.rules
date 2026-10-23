@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Attachments live at companies/{companyId}/attachments/{attachmentId}/{fileName}.
+// An upload is allowed only when the server has created a pending attachment record for
+// that uploader; downloads need active membership. Everything else is denied.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function memberPath(companyId) {
+      return /databases/(default)/documents/companies/$(companyId)/members/$(request.auth.uid);
+    }
+
+    function isActiveMember(companyId) {
+      return request.auth != null
+        && firestore.exists(memberPath(companyId))
+        && firestore.get(memberPath(companyId)).data.status == 'active';
+    }
+
+    function attachment(companyId, attachmentId) {
+      return firestore.get(/databases/(default)/documents/companies/$(companyId)/attachments/$(attachmentId));
+    }
+
+    function allowedType() {
+      return request.resource.contentType.matches('image/(png|jpeg|webp)')
+        || request.resource.contentType == 'application/pdf'
+        || request.resource.contentType == 'text/csv';
+    }
+
+    match /companies/{companyId}/attachments/{attachmentId}/{fileName} {
+      allow read: if isActiveMember(companyId);
+      allow create: if isActiveMember(companyId)
+        && request.resource.size <= 10 * 1024 * 1024
+        && allowedType()
+        && firestore.exists(/databases/(default)/documents/companies/$(companyId)/attachments/$(attachmentId))
+        && attachment(companyId, attachmentId).data.status == 'pending'
+        && attachment(companyId, attachmentId).data.uploadedBy == request.auth.uid
+        && attachment(companyId, attachmentId).data.fileName == fileName;
+      allow update, delete: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

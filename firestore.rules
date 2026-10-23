@@ -1,0 +1,117 @@
+rules_version = '2';
+
+// Deny by default. Clients may read company data according to their membership and
+// permissions; every write to company data goes through server commands
+// (docs/bms/adr/0002-commands-only-writes.md). The Admin SDK bypasses these rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberDoc(companyId) {
+      return get(/databases/$(database)/documents/companies/$(companyId)/members/$(request.auth.uid));
+    }
+
+    function isActiveMember(companyId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/companies/$(companyId)/members/$(request.auth.uid))
+        && memberDoc(companyId).data.status == 'active';
+    }
+
+    function can(companyId, permission) {
+      return isActiveMember(companyId)
+        && memberDoc(companyId).data.permissions.hasAny([permission]);
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      // Users may keep their own display preferences; nothing security-relevant.
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource == null ? {} : resource.data)
+             .affectedKeys().hasOnly(['displayName', 'preferences'])
+        && (!('displayName' in request.resource.data)
+             || (request.resource.data.displayName is string
+                 && request.resource.data.displayName.size() <= 120))
+        && (!('preferences' in request.resource.data)
+             || request.resource.data.preferences is map);
+      allow delete: if false;
+
+      match /memberships/{companyId} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow write: if false;
+      }
+      match /{rest=**} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+
+    match /invitations/{invitationId} {
+      allow read: if can(resource.data.companyId, 'company.members.invite');
+      allow write: if false;
+    }
+
+    match /companies/{companyId} {
+      allow read: if isActiveMember(companyId);
+      allow write: if false;
+
+      match /members/{uid} {
+        allow read: if (signedIn() && request.auth.uid == uid)
+          || can(companyId, 'company.members.read');
+        allow write: if false;
+      }
+
+      match /roles/{roleId} {
+        allow read: if isActiveMember(companyId);
+        allow write: if false;
+      }
+
+      match /branches/{branchId} {
+        allow read: if isActiveMember(companyId);
+        allow write: if false;
+      }
+
+      match /settings/{docId} {
+        allow read: if isActiveMember(companyId);
+        allow write: if false;
+      }
+
+      match /fiscalYears/{fyId} {
+        allow read: if can(companyId, 'settings.periods.read');
+        allow write: if false;
+      }
+
+      match /periods/{periodId} {
+        allow read: if can(companyId, 'settings.periods.read');
+        allow write: if false;
+      }
+
+      match /approvalRequests/{requestId} {
+        allow read: if can(companyId, 'approvals.read')
+          || (isActiveMember(companyId) && resource.data.requestedBy == request.auth.uid);
+        allow write: if false;
+      }
+
+      match /auditLogs/{entryId} {
+        allow read: if can(companyId, 'company.audit.read');
+        allow write: if false;
+      }
+
+      match /attachments/{attachmentId} {
+        allow read: if isActiveMember(companyId);
+        allow write: if false;
+      }
+
+      // Idempotency records and anything not listed above: server only.
+      match /{rest=**} {
+        allow read, write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
