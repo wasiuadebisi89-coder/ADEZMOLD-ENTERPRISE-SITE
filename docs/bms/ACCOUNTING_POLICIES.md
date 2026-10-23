@@ -45,14 +45,24 @@ other frameworks.
 
 - Perpetual inventory system.
 - Costing method per company, chosen before the first stock posting and then locked
-  (DECISION 5: proposed default **weighted average (perpetual, moving)**; FIFO available).
-- Negative stock not allowed by default (`allowNegativeStock=false`).
+  (DECISION 5, **confirmed**: moving weighted average by default; FIFO available).
+- Cost is tracked per product and location. Weighted average re-averages on every addition;
+  FIFO issues the oldest layer first. Values are rounded to the minor unit per movement, and
+  an issue that empties a location takes its exact remaining value.
+- Negative stock is not allowed. A posting that would take any line below zero is refused
+  and the request stays pending.
 - Inventory is measured at cost; cost includes purchase price net of trade discounts plus
   **eligible** landed costs (§6). Recoverable taxes are excluded from cost.
 - Write-downs to net realisable value: manual adjustment with approval (not automated).
-- Stock adjustments and count variances post to an "Inventory adjustments" expense account
-  and require approval above a configured threshold (DECISION 6: proposed — all
-  adjustments require approval initially).
+- Stock adjustments and count variances post to 5200 Inventory adjustments against 1300
+  Inventory. Every adjustment, count and opening-stock entry needs approval by a second
+  person with the approve permission (DECISION 6, **confirmed**). It is posted on the date
+  it is approved, not the date it was raised.
+- Found stock (an increase with no cost entered) is valued at the current average cost of
+  that product and location; if there is no stock to average from, a cost must be entered.
+- Stock counts record the system quantity when the count is entered; the posted difference
+  is counted minus that snapshot.
+- Opening stock is valued at the cost entered and credited to 3300 Opening balance equity.
 
 ## 5. Purchases
 

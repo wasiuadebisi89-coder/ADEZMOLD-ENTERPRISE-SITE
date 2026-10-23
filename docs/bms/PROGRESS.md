@@ -105,3 +105,43 @@ Scroll containers are now positioned so the page never scrolls sideways.
 **Next**: owner review of the chart of accounts (OPEN_DECISIONS #14), then Phase 3
 (catalogue, inventory, costing, adjustments), which needs decisions #5 (costing method) and
 #6 (adjustment approvals).
+
+## 2026-10-23 — Phase 2 merged; Phase 3 inventory implemented (pending CI)
+
+Owner merged Phase 2 (CI green), confirmed OPEN_DECISIONS #14 (trading chart), #5 (moving
+weighted average, FIFO optional) and #6 (every stock adjustment approved by a second person),
+and asked to proceed with Phase 3.
+
+**Built**
+
+- `packages/domain`: quantities in milli-units, unit costs in minor units × 10⁴, the unit
+  list, quantity and cost parsing, weighted-average receive/issue, FIFO issue across layers.
+- Commands (32 in total): `location.create/update`, `category.create/update`,
+  `product.create/update`, `stockAdjustment.create`, `stockAdjustment.decide`;
+  `company.updateSettings` now sets the costing method until it is locked.
+- Stock adjustments of three kinds (adjustment `ADJ`, count `CNT`, opening stock `OST`). On
+  approval, one transaction writes stock balances, movements, cost layers, the journal
+  (through the same posting engine as Phase 2, origin `system`), the costing-method lock and
+  the audit entry.
+- Rules: products and categories readable with `inventory.products.read`; locations by any
+  member; balances, movements and adjustments with stock access; cost layers server-only;
+  no client writes. Indexes for layers, movements and balances.
+- Web: products with on-hand and value, product dialog and categories, stock card per
+  product, adjustments list, new adjustment form, approve/reject, costing method in Settings.
+
+**Verified (run locally on 2026-10-23, Node 22.22.0, firebase-tools 15.34.1)**
+
+| Check                                          | Result                                        |
+| ---------------------------------------------- | --------------------------------------------- |
+| `pnpm format:check`, `pnpm lint`               | clean                                         |
+| `pnpm typecheck` (all 5 packages)              | clean                                         |
+| `pnpm test:unit`                               | 93 passed                                     |
+| `pnpm test:emulator` (rules + integration)     | 134 passed (75 rules, 59 integration; 29 new) |
+| `pnpm test:e2e` (Playwright, desktop + mobile) | 10 passed                                     |
+
+CI runs on the Phase 3 pull request.
+
+**Acceptance coverage (PHASE3_ACCEPTANCE.md)**: I1–I8 covered by automated tests.
+
+**Next**: Phase 4 (suppliers, purchases, goods received, supplier invoices and payments,
+supplier returns, landed costs).
