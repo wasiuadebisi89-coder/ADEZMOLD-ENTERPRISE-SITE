@@ -44,6 +44,7 @@ const SERIES: Record<JournalOrigin, { id: string; prefix: string }> = {
   opening_balance: { id: 'journal.opening', prefix: 'OB' },
   reversal: { id: 'journal.reversal', prefix: 'RV' },
   system: { id: 'journal.system', prefix: 'SJ' },
+  closing: { id: 'journal.closing', prefix: 'YE' },
 };
 
 export function ledgerErrorToCommand(e: unknown): never {

@@ -227,3 +227,19 @@ other frameworks.
   journal or the relevant document), then ticked.
 - The first reconciliation of an account starts from zero, so it includes every entry up to
   the first statement, opening balance included.
+
+## 14. Year-end close
+
+- Once a financial year has ended and every month in it is closed or soft-closed, someone with
+  `settings.periods.close` (Accountants, Admins) closes the year. One journal (`YE-…`, origin
+  "Year-end close"), dated the year's last day, reverses each income and expense account's
+  balance for the year and credits the net profit (or debits the loss) to the Retained
+  earnings account.
+- The posting rules still apply: the last month must not be fully closed, and posting to a
+  soft-closed month needs `settings.periods.postSoftClosed`; a date beyond the backdating
+  window needs an approved request.
+- If anything is posted to the year afterwards, closing it again posts a further journal for
+  just that amount. A closing journal cannot be reversed.
+- Profit and loss reports leave closing journals out, so a closed year still shows its
+  result. The balance sheet shows closed profit in retained earnings and only unclosed profit
+  on its own line.

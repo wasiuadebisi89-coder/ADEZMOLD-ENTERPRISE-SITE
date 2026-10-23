@@ -24,6 +24,7 @@ import {
   post,
   readSeries,
   readSystemAccounts,
+  recordSettlement,
   settleableOutstanding,
 } from '../lib/documents.js';
 import { denied, failedPrecondition, invalid, notFound } from '../lib/errors.js';
@@ -228,6 +229,19 @@ async function prepareCreditNote(
         returnedMinor: toStorable(fromStorable(invoice.returnedMinor ?? 0) + total),
         status: settled(outstanding - applied),
       });
+      if (note.customerId) {
+        recordSettlement(tx, companyId, ctx, {
+          ledger: 'receivable',
+          invoiceId: note.invoiceId,
+          partyId: note.customerId,
+          date: postingDate,
+          kind: 'credit',
+          amount: applied,
+          sourceType: 'creditNote',
+          sourceId: noteId,
+          journalId,
+        });
+      }
       if (customer) {
         tx.update(refs.customer(note.customerId!), {
           balanceMinor: toStorable(fromStorable(customer.balanceMinor) - applied),

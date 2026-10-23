@@ -4,7 +4,7 @@
  * returns settle what is owed. Every posting goes through the posting engine in the same
  * transaction as the stock and document changes.
  */
-import type { Transaction } from 'firebase-admin/firestore';
+import type { Timestamp, Transaction } from 'firebase-admin/firestore';
 import {
   PurchasingError,
   addDays,
@@ -30,8 +30,10 @@ import {
   post,
   readSeries,
   readSystemAccounts,
+  recordSettlement,
   settleableOutstanding,
   type PlannedAllocation,
+  type SettlementSource,
 } from '../lib/documents.js';
 import {
   CommandError,
@@ -789,8 +791,10 @@ function applyAllocations(
   companyId: string,
   planned: readonly PlannedAllocation[],
   invoices: Map<string, PurchaseInvoiceDoc>,
+  source: SettlementSource & { now: Timestamp },
 ) {
   const refs = companyRefs(companyId);
+  const { now, ...from } = source;
   for (const a of planned) {
     const inv = invoices.get(a.invoiceId)!;
     const paid = fromStorable(inv.paidMinor) + a.amountMinor;
@@ -799,6 +803,19 @@ function applyAllocations(
       paidMinor: toStorable(paid),
       status: left === 0n ? 'paid' : 'open',
     });
+    recordSettlement(
+      tx,
+      companyId,
+      { now },
+      {
+        ...from,
+        ledger: 'payable',
+        invoiceId: a.invoiceId,
+        partyId: inv.supplierId,
+        kind: 'allocation',
+        amount: a.amountMinor,
+      },
+    );
   }
 }
 
@@ -865,7 +882,13 @@ export const postSupplierPayment = defineCommand({
     );
     series.commit();
     const { journalId } = write();
-    applyAllocations(tx, input.companyId, planned, invoices);
+    applyAllocations(tx, input.companyId, planned, invoices, {
+      date: input.postingDate,
+      sourceType: 'supplierPayment',
+      sourceId: ref.id,
+      journalId,
+      now,
+    });
     const doc: SupplierPaymentDoc = {
       number: series.number,
       supplierId: input.supplierId,
@@ -964,7 +987,13 @@ export const allocateSupplierPayment = defineCommand({
       },
     );
     const { journalId } = write();
-    applyAllocations(tx, input.companyId, planned, invoices);
+    applyAllocations(tx, input.companyId, planned, invoices, {
+      date: postingDate,
+      sourceType: 'supplierPayment',
+      sourceId: input.paymentId,
+      journalId,
+      now,
+    });
     tx.update(refs.supplierPayment(input.paymentId), {
       allocatedMinor: toStorable(fromStorable(payment.allocatedMinor) + total),
       allocations: [
@@ -1211,6 +1240,22 @@ export const postSupplierReturn = defineCommand({
         creditedMinor: toStorable(credited),
         status: left === 0n ? 'paid' : 'open',
       });
+      recordSettlement(
+        tx,
+        input.companyId,
+        { now },
+        {
+          ledger: 'payable',
+          invoiceId: id,
+          partyId: inv.supplierId,
+          date: input.postingDate,
+          kind: 'credit',
+          amount: credit,
+          sourceType: 'supplierReturn',
+          sourceId: ref.id,
+          journalId,
+        },
+      );
       payableCredit += credit;
     }
     if (payableCredit > 0n) {

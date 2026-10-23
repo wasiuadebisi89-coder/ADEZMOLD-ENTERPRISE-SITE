@@ -157,6 +157,13 @@ export const createFiscalYearInput = scoped.extend({
   startYear: z.number().int().min(2000).max(2100),
 });
 
+/** Closes a financial year's income and expenses into retained earnings. */
+export const closeFiscalYearInput = scoped.extend({
+  fiscalYearId: z.string().regex(/^FY\d{4}-(0[1-9]|1[0-2])$/, 'Invalid financial year'),
+  branchId: docId,
+  backdateApprovalId: docId.optional(),
+});
+
 export const APPROVAL_ACTIONS = [
   'period.reopen',
   'ledger.backdate',
@@ -743,6 +750,7 @@ export const COMMAND_SCHEMAS = {
   'member.setStatus': setMemberStatusInput,
   'period.setStatus': setPeriodStatusInput,
   'fiscalYear.create': createFiscalYearInput,
+  'fiscalYear.close': closeFiscalYearInput,
   'approval.request': requestApprovalInput,
   'approval.decide': decideApprovalInput,
   'chart.applyTemplate': applyChartTemplateInput,

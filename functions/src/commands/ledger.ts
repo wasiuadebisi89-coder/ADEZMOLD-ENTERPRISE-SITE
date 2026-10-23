@@ -250,7 +250,9 @@ export const reverseJournal = defineCommand({
         'not_reversible',
         original.origin === 'reversal'
           ? 'A reversal cannot itself be reversed. Post a new journal instead'
-          : 'This journal belongs to another module. Reverse it from its source document',
+          : original.origin === 'closing'
+            ? 'A year-end close cannot be reversed. Post any correction to the year and close it again'
+            : 'This journal belongs to another module. Reverse it from its source document',
       );
     }
     if (input.postingDate < original.postingDate) {

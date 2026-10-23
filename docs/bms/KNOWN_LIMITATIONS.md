@@ -129,17 +129,15 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
 
 ## Phase 7
 
-- **No year-end close journal yet.** Profit stays in the income and expense accounts; the
-  balance sheet shows it as "Profit to date not yet closed to retained earnings", and the
-  profit and loss covers whatever dates are chosen. Closing a year into retained earnings
-  comes with period-end work later.
 - **Reports are worked out in the browser** from server-side sums per account (one query per
   account with postings). This is fine for a small business's chart; very large charts or
   many users running reports at once will need stored balances.
-- **Ageing is as at today only**, from unpaid invoices. It does not include advances or unused
-  credits, and cannot be run for a past date.
-- **Stock valuation is now**, not at a past date, and at cost only (no net realisable value
-  write-down).
+- **Ageing does not include advances or unused credits.** Ageing at a past date relies on
+  settlement records, which start with this release; there is no older data to rebuild.
+- **Stock valuation is at cost only** (no net realisable value write-down). At a past date it
+  sums each product's stock movements, one query per product.
+- **The year-end close needs the months closed first** and posts on the branch chosen first in
+  the list. It cannot be reversed; corrections are posted to the year and the year closed again.
 - **Statements are not split by branch** and have no comparative period, export or print
   layout yet.
 - **Fixed assets:** straight line only; the useful life and residual value cannot be changed

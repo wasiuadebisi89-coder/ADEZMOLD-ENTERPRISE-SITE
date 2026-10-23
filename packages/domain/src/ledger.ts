@@ -98,7 +98,8 @@ export interface JournalLine {
 }
 
 /** Who is posting. Manual and opening-balance journals may not touch control accounts. */
-export type JournalOrigin = 'manual' | 'opening_balance' | 'reversal' | 'system';
+/** `closing` is the year-end journal that moves income and expenses into retained earnings. */
+export type JournalOrigin = 'manual' | 'opening_balance' | 'reversal' | 'system' | 'closing';
 
 export const MAX_JOURNAL_LINES = 200;
 

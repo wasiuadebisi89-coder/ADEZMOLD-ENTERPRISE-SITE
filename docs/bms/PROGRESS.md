@@ -305,3 +305,28 @@ CI runs on the Phase 7 pull request.
 
 **Next**: Phase 8 (security review, load and concurrency tests, monitoring, backups, recovery
 drill, deployment), which needs DECISIONS 12 and 13 (Firebase region and projects).
+
+## Year-end close and past-date reports (2026-10-23)
+
+The owner asked for the year-end close journal and for ageing and stock reports at a past
+date before Phase 8.
+
+**Built**
+
+- `fiscalYear.close` (58 commands): one `YE-…` journal dated the year's last day moving income
+  and expenses into retained earnings, once the year has ended and its months are closed or
+  soft-closed; repeatable for later postings; not reversible. New journal origin `closing`.
+  Profit and loss leaves closing journals out.
+- Settlement records written whenever a receipt, supplier payment or credit settles an
+  invoice, readable by readers of that side. Ageing and stock valuation take an "As at" date;
+  each still checks itself against its ledger account at that date.
+- Periods page: year-end close for the selected year.
+
+**Verified (run locally on 2026-10-23)**
+
+| Check                                          | Result              |
+| ---------------------------------------------- | ------------------- |
+| `pnpm format:check`, `pnpm lint`, `typecheck`  | clean               |
+| `pnpm test:unit`                               | 136 passed (3 new)  |
+| `pnpm test:emulator` (rules + integration)     | 272 passed (11 new) |
+| `pnpm test:e2e` (Playwright, desktop + mobile) | 23 passed           |
