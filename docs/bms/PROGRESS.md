@@ -266,3 +266,42 @@ CI runs on the Phase 6 pull request.
 
 **Next**: Phase 7 (reports, financial statements, fixed assets), which needs DECISION 10
 (depreciation first-month convention).
+
+## Phase 7 — reports, financial statements and fixed assets (2026-10-23)
+
+Owner merged Phase 6 (PR #7), accepted the recommendations for DECISIONS 10, 17 and 18, and
+asked to continue.
+
+**Built**
+
+- `packages/domain`: straight-line monthly depreciation on running totals (DECISION 10: full
+  month if in use by the 15th, the same rule ending at disposal), catch-up of missed months,
+  assets brought in at cut-over; profit and loss, balance sheet with unclosed profit, ageing
+  buckets and financial year start.
+- Commands (57 in total): `fixedAsset.create` (bought, or brought in at cut-over),
+  `depreciation.run` (one branch, one journal, up to the end of a month that has ended),
+  `fixedAsset.dispose` (catch-up, removal of cost and depreciation, gain or loss).
+- Rules: `fixedAssets` and `depreciationRuns` readable with `assets.read`; no client writes.
+- Web: Fixed assets (register, run depreciation, past runs, register against the ledger), add
+  asset, asset page with disposal; Reports with profit and loss, balance sheet, receivables
+  and payables ageing and stock valuation, each checked against its ledger account.
+
+**Verified (run locally on 2026-10-23, Node 22.22.0, firebase-tools 15.34.1)**
+
+| Check                                          | Result              |
+| ---------------------------------------------- | ------------------- |
+| `pnpm format:check`, `pnpm lint`               | clean               |
+| `pnpm typecheck` (all 5 packages)              | clean               |
+| `pnpm build`                                   | succeeds            |
+| `pnpm test:unit`                               | 133 passed (16 new) |
+| `pnpm test:emulator` (rules + integration)     | 261 passed (17 new) |
+| `pnpm test:e2e` (Playwright, desktop + mobile) | 23 passed (3 new)   |
+
+CI runs on the Phase 7 pull request.
+
+**Acceptance coverage (PHASE7_ACCEPTANCE.md)**: F1–F6 covered by automated tests.
+
+**Decisions**: 10, 17 and 18 confirmed by the owner on 2026-10-23.
+
+**Next**: Phase 8 (security review, load and concurrency tests, monitoring, backups, recovery
+drill, deployment), which needs DECISIONS 12 and 13 (Firebase region and projects).

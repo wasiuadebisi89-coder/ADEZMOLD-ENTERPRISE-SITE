@@ -126,3 +126,26 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
   A reconciliation cannot be undone, and entries posted to an already reconciled date are
   picked up by the next one.
 - **Lists show the latest 100 returns and refunds.**
+
+## Phase 7
+
+- **No year-end close journal yet.** Profit stays in the income and expense accounts; the
+  balance sheet shows it as "Profit to date not yet closed to retained earnings", and the
+  profit and loss covers whatever dates are chosen. Closing a year into retained earnings
+  comes with period-end work later.
+- **Reports are worked out in the browser** from server-side sums per account (one query per
+  account with postings). This is fine for a small business's chart; very large charts or
+  many users running reports at once will need stored balances.
+- **Ageing is as at today only**, from unpaid invoices. It does not include advances or unused
+  credits, and cannot be run for a past date.
+- **Stock valuation is now**, not at a past date, and at cost only (no net realisable value
+  write-down).
+- **Statements are not split by branch** and have no comparative period, export or print
+  layout yet.
+- **Fixed assets:** straight line only; the useful life and residual value cannot be changed
+  after the asset is registered; no revaluation, impairment, partial disposal or asset
+  categories. Asset purchases are posted against cash, bank or a general liability or equity
+  account, not through supplier invoices. A depreciation run covers one branch and at most
+  400 assets. A disposal cannot be dated before months already charged.
+- **Fixed asset accounts are not control accounts**, so a manual journal can still post to
+  them. The register page compares itself with the ledger and shows any difference.

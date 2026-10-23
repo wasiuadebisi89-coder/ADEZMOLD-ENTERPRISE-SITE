@@ -54,6 +54,10 @@ const NewCreditNote = lazy(() => import('./routes/company/NewCreditNote'));
 const CreditNoteDetail = lazy(() => import('./routes/company/CreditNoteDetail'));
 const CustomerRefundDetail = lazy(() => import('./routes/company/CustomerRefundDetail'));
 const BankReconciliation = lazy(() => import('./routes/company/BankReconciliation'));
+const Reports = lazy(() => import('./routes/company/Reports'));
+const FixedAssets = lazy(() => import('./routes/company/FixedAssets'));
+const NewFixedAsset = lazy(() => import('./routes/company/NewFixedAsset'));
+const FixedAssetDetail = lazy(() => import('./routes/company/FixedAssetDetail'));
 const NotFound = lazy(() => import('./routes/NotFound'));
 
 function Home() {
@@ -161,6 +165,10 @@ const router = createBrowserRouter([
       { path: 'sales/returns/:creditNoteId', element: <CreditNoteDetail /> },
       { path: 'sales/refunds/:refundId', element: <CustomerRefundDetail /> },
       { path: 'bank-reconciliation', element: <BankReconciliation /> },
+      { path: 'reports', element: <Reports /> },
+      { path: 'fixed-assets', element: <FixedAssets /> },
+      { path: 'fixed-assets/new', element: <NewFixedAsset /> },
+      { path: 'fixed-assets/:assetId', element: <FixedAssetDetail /> },
       { path: 'purchases', element: <Purchases /> },
       { path: 'purchases/receipts/new', element: <NewGoodsReceipt /> },
       { path: 'purchases/receipts/:receiptId', element: <GoodsReceiptDetail /> },

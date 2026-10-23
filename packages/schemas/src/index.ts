@@ -9,6 +9,7 @@ import {
   ACCOUNT_TYPES,
   CHART_TEMPLATES,
   MAX_JOURNAL_LINES,
+  MAX_LIFE_MONTHS,
   PERMISSIONS,
   SUPPORTED_CURRENCY_CODES,
   UNIT_CODES,
@@ -662,6 +663,62 @@ export const completeBankReconciliationInput = scoped.extend({
   entryIds: z.array(z.string().regex(/^[A-Za-z0-9_-]{1,80}$/, 'Invalid id')).max(400),
 });
 
+// --- Fixed assets (Phase 7) -----------------------------------------------------------------
+
+export const month = periodId;
+
+const assetCommon = {
+  name: trimmed(2, 120),
+  branchId: docId,
+  assetAccountId: docId,
+  accumulatedAccountId: docId,
+  expenseAccountId: docId,
+  cost: amount,
+  residual: amount,
+  usefulLifeMonths: z.number().int().min(1).max(MAX_LIFE_MONTHS),
+  availableForUseDate: isoDate,
+  reference: optionalText(60),
+};
+
+/**
+ * Registers a fixed asset. A purchase posts its cost against the account it was paid from; an
+ * opening asset is brought in at cut-over with the depreciation charged before.
+ */
+export const createFixedAssetInput = z.discriminatedUnion('acquisition', [
+  scoped.extend({
+    acquisition: z.literal('purchase'),
+    ...assetCommon,
+    acquiredDate: isoDate,
+    creditAccountId: docId,
+    backdateApprovalId: docId.optional(),
+  }),
+  scoped.extend({
+    acquisition: z.literal('opening'),
+    ...assetCommon,
+    asAtDate: isoDate,
+    accumulatedToDate: amount,
+    monthsDepreciated: z.number().int().min(0).max(MAX_LIFE_MONTHS),
+    backdateApprovalId: docId.optional(),
+  }),
+]);
+
+/** Charges depreciation on every active asset through the month given. */
+export const runDepreciationInput = scoped.extend({
+  branchId: docId,
+  month,
+  backdateApprovalId: docId.optional(),
+});
+
+export const disposeFixedAssetInput = scoped.extend({
+  assetId: docId,
+  disposalDate: isoDate,
+  proceeds: amount,
+  proceedsAccountId: docId.optional(),
+  gainLossAccountId: docId,
+  reason: trimmed(3, 500),
+  backdateApprovalId: docId.optional(),
+});
+
 // --- Platform and session ------------------------------------------------------------------
 
 export const platformSupportReadInput = base.extend({
@@ -724,6 +781,9 @@ export const COMMAND_SCHEMAS = {
   'customerRefund.create': createCustomerRefundInput,
   'customerRefund.decide': decideCustomerRefundInput,
   'bankReconciliation.complete': completeBankReconciliationInput,
+  'fixedAsset.create': createFixedAssetInput,
+  'fixedAsset.dispose': disposeFixedAssetInput,
+  'depreciation.run': runDepreciationInput,
   'platform.supportRead': platformSupportReadInput,
   'session.revokeAll': revokeSessionsInput,
 } as const;

@@ -253,6 +253,17 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Fixed assets: the register and depreciation runs, posted only by server commands.
+      match /fixedAssets/{assetId} {
+        allow read: if can(companyId, 'assets.read');
+        allow write: if false;
+      }
+
+      match /depreciationRuns/{runId} {
+        allow read: if can(companyId, 'assets.read');
+        allow write: if false;
+      }
+
       match /attachments/{attachmentId} {
         allow read: if isActiveMember(companyId);
         allow write: if false;

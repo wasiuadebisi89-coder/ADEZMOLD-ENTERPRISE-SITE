@@ -1,5 +1,7 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
+  Armchair,
+  BarChart3,
   BookOpen,
   Building,
   CheckSquare,
@@ -56,6 +58,13 @@ const NAV: NavItem[] = [
     icon: Scale,
     permission: 'reports.financial.read',
   },
+  {
+    to: 'reports',
+    label: 'Reports',
+    icon: BarChart3,
+    permission: ['reports.financial.read', 'reports.stock.read', 'sales.read', 'purchasing.read'],
+  },
+  { to: 'fixed-assets', label: 'Fixed assets', icon: Armchair, permission: 'assets.read' },
   {
     to: 'bank-reconciliation',
     label: 'Bank reconciliation',

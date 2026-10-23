@@ -76,18 +76,29 @@ Green in CI on PR #6 and merged.
 
 ## Phase 6 — Returns, refunds and bank reconciliation
 
-- [~] Returns against a sale line, never more than sold; goods back at their sold cost, to the store or to quarantine if damaged
-- [~] Credit notes reversing revenue and tax, settling the sale first and keeping the rest as customer credit, or paying a walk-in customer back at once
-- [~] Customer credit applied to other invoices; refunds from unused receipts and credit notes
-- [~] Sales officers' returns and refunds wait for a manager; no self-approval; waiting items on the Approvals page
-- [~] Bank reconciliation of cash and bank accounts against statements, each entry cleared once
-- [~] Screens for all of the above
+- [x] Returns against a sale line, never more than sold; goods back at their sold cost, to the store or to quarantine if damaged
+- [x] Credit notes reversing revenue and tax, settling the sale first and keeping the rest as customer credit, or paying a walk-in customer back at once
+- [x] Customer credit applied to other invoices; refunds from unused receipts and credit notes
+- [x] Sales officers' returns and refunds wait for a manager; no self-approval; waiting items on the Approvals page
+- [x] Bank reconciliation of cash and bank accounts against statements, each entry cleared once
+- [x] Screens for all of the above
 - [ ] Supplier refunds and debit notes, statement import, return time limits (later)
 
-`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 6 pull request.
+Green in CI on PR #7 and merged.
 
-## Phases 7–9
+## Phase 7 — Reports, financial statements and fixed assets
 
-- [ ] 7 Reports, financial statements, fixed assets
+- [~] Fixed asset register: assets bought now or brought in at cut-over with depreciation to date
+- [~] Monthly straight-line depreciation by branch, full month if in use by the 15th (DECISION 10), missed months caught up, never beyond cost less residual
+- [~] Disposal with catch-up depreciation, proceeds and gain or loss
+- [~] Register compared with the ledger
+- [~] Profit and loss for any dates; balance sheet as at any date with unclosed profit and a balance check
+- [~] Receivables and payables ageing, and stock valuation, each checked against its control account
+- [ ] Year-end close journal, comparatives, branch statements, export and print (later)
+
+`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 7 pull request.
+
+## Phases 8–9
+
 - [ ] 8 Security review, load/concurrency tests, monitoring, backups, recovery drill, deploy
 - [ ] 9 Services and production modules
