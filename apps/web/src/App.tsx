@@ -42,6 +42,14 @@ const NewSupplierPayment = lazy(() => import('./routes/company/NewSupplierPaymen
 const SupplierPaymentDetail = lazy(() => import('./routes/company/SupplierPaymentDetail'));
 const NewSupplierReturn = lazy(() => import('./routes/company/NewSupplierReturn'));
 const SupplierReturnDetail = lazy(() => import('./routes/company/SupplierReturnDetail'));
+const TaxCodes = lazy(() => import('./routes/company/TaxCodes'));
+const Customers = lazy(() => import('./routes/company/Customers'));
+const CustomerDetail = lazy(() => import('./routes/company/CustomerDetail'));
+const Sales = lazy(() => import('./routes/company/Sales'));
+const NewSale = lazy(() => import('./routes/company/NewSale'));
+const SalesInvoiceDetail = lazy(() => import('./routes/company/SalesInvoiceDetail'));
+const NewCustomerReceipt = lazy(() => import('./routes/company/NewCustomerReceipt'));
+const CustomerReceiptDetail = lazy(() => import('./routes/company/CustomerReceiptDetail'));
 const NotFound = lazy(() => import('./routes/NotFound'));
 
 function Home() {
@@ -137,6 +145,14 @@ const router = createBrowserRouter([
       { path: 'stock-adjustments/:adjustmentId', element: <StockAdjustmentDetail /> },
       { path: 'suppliers', element: <Suppliers /> },
       { path: 'suppliers/:supplierId', element: <SupplierDetail /> },
+      { path: 'tax-codes', element: <TaxCodes /> },
+      { path: 'customers', element: <Customers /> },
+      { path: 'customers/:customerId', element: <CustomerDetail /> },
+      { path: 'sales', element: <Sales /> },
+      { path: 'sales/new', element: <NewSale /> },
+      { path: 'sales/invoices/:invoiceId', element: <SalesInvoiceDetail /> },
+      { path: 'sales/receipts/new', element: <NewCustomerReceipt /> },
+      { path: 'sales/receipts/:receiptId', element: <CustomerReceiptDetail /> },
       { path: 'purchases', element: <Purchases /> },
       { path: 'purchases/receipts/new', element: <NewGoodsReceipt /> },
       { path: 'purchases/receipts/:receiptId', element: <GoodsReceiptDetail /> },

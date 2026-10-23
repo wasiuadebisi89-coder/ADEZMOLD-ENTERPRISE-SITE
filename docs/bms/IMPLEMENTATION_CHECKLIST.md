@@ -48,20 +48,33 @@ Green in CI on PR #4 and merged.
 
 ## Phase 4 — Suppliers and purchasing
 
-- [~] Suppliers with payment terms, balances and advances; supplier opening balances
-- [~] Goods receipts into stock against GRNI
-- [~] Supplier invoices matched to receipts, with price differences split between stock and cost of sales; expense lines; entered input tax
-- [~] Landed costs spread over a receipt by value or quantity
-- [~] Supplier payments with allocation, advances and later application
-- [~] Returns to suppliers, before or after invoicing
-- [~] Screens for all of the above; one shared stock engine for every stock movement
+- [x] Suppliers with payment terms, balances and advances; supplier opening balances
+- [x] Goods receipts into stock against GRNI
+- [x] Supplier invoices matched to receipts, with price differences split between stock and cost of sales; expense lines; entered input tax
+- [x] Landed costs spread over a receipt by value or quantity
+- [x] Supplier payments with allocation, advances and later application
+- [x] Returns to suppliers, before or after invoicing
+- [x] Screens for all of the above; one shared stock engine for every stock movement
 - [ ] Purchase orders, supplier refunds, debit notes, weight-based landed costs (later)
 
-`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 4 pull request.
+Green in CI on PR #5 and merged.
 
-## Phases 5–9
+## Phase 5 — Customers and sales
 
-- [ ] 5 Customers, POS, cash/credit sales, receipts, allocations
+- [~] Tax codes per company, no rate preset; prices including or excluding tax by company setting; tax per line
+- [~] Customers with payment terms, credit limits, balances and advances; customer opening balances
+- [~] Sales at the till and on credit in one document, with part payment, change, walk-in customers and stock taken out at cost
+- [~] Credit limits enforced, with a manager's single-use approval or the override permission
+- [~] Price changes and discounts limited to `sales.priceOverride`
+- [~] Customer receipts with allocation, advances and later application
+- [~] Stock availability (quantities only) for sales staff; sales officers see only their own sales
+- [~] Screens for all of the above, and credit requests on the Approvals page
+- [ ] Sales returns, credit notes and refunds (Phase 6); receipts printing to thermal printers, barcode scanning, shifts and cash-up (later)
+
+`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 5 pull request.
+
+## Phases 6–9
+
 - [ ] 6 Sales returns, credit notes, refunds, approvals, reconciliations
 - [ ] 7 Reports, financial statements, fixed assets
 - [ ] 8 Security review, load/concurrency tests, monitoring, backups, recovery drill, deploy

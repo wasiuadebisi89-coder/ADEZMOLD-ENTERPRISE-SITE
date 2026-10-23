@@ -1,103 +1,19 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { toDecimalString } from '@bms/domain';
 import { BackdateNotice, useBackdate, useToday } from '../../components/BackdateNotice';
 import { Button } from '../../components/ui/button';
 import { Alert, Card, PageHeader, Spinner } from '../../components/ui/feedback';
 import { Field, Input, Select } from '../../components/ui/form';
 import { useCompany } from '../../lib/company';
+import {
+  AllocationTable,
+  allocationInput,
+  allocationTotal,
+} from '../../components/AllocationTable';
 import { money, tryParseMoney, useAccounts } from '../../lib/ledger';
-import { outstanding, useOpenInvoices, useSuppliers, type InvoiceRow } from '../../lib/purchasing';
+import { outstanding, useOpenInvoices, useSuppliers } from '../../lib/purchasing';
 import { useAction } from '../../lib/useAction';
-import { formatDate } from '../../lib/utils';
 import { usePostingBranches } from './NewJournal';
-
-/** Amount typed against each open invoice, with "oldest first" filling. */
-export function AllocationTable({
-  invoices,
-  values,
-  onChange,
-  available,
-}: {
-  invoices: readonly InvoiceRow[];
-  values: Record<string, string>;
-  onChange: (values: Record<string, string>) => void;
-  available: bigint;
-}) {
-  const { company } = useCompany();
-  const currency = company?.baseCurrency ?? 'NGN';
-  const fillOldest = () => {
-    let left = available;
-    const next: Record<string, string> = {};
-    for (const inv of invoices) {
-      const due = BigInt(outstanding(inv));
-      const take = left < due ? left : due;
-      if (take <= 0n) break;
-      next[inv.id] = toDecimalString(take, currency);
-      left -= take;
-    }
-    onChange(next);
-  };
-  if (invoices.length === 0) {
-    return <p className="text-sm text-slate-500">This supplier has no unpaid invoices.</p>;
-  }
-  return (
-    <>
-      <div className="relative overflow-x-auto">
-        <table className="min-w-full text-sm" aria-label="Allocate to invoices">
-          <thead className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-2 py-2">Invoice</th>
-              <th className="px-2 py-2">Their number</th>
-              <th className="px-2 py-2">Due</th>
-              <th className="px-2 py-2 text-right">Outstanding</th>
-              <th className="w-40 px-2 py-2">Pay now</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id}>
-                <td className="px-2 py-1.5 font-mono">{inv.number}</td>
-                <td className="px-2 py-1.5">{inv.supplierInvoiceNo}</td>
-                <td className="px-2 py-1.5">{formatDate(inv.dueDate)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">
-                  {money(outstanding(inv), currency)}
-                </td>
-                <td className="px-2 py-1.5">
-                  <Input
-                    aria-label={`Pay ${inv.number}`}
-                    inputMode="decimal"
-                    value={values[inv.id] ?? ''}
-                    onChange={(e) => onChange({ ...values, [inv.id]: e.target.value })}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={fillOldest}>
-        Allocate oldest first
-      </Button>
-    </>
-  );
-}
-
-export function allocationInput(values: Record<string, string>) {
-  return Object.entries(values)
-    .filter(([, v]) => v.trim() !== '' && Number(v.replace(/,/g, '')) !== 0)
-    .map(([invoiceId, amount]) => ({ invoiceId, amount }));
-}
-
-export function allocationTotal(values: Record<string, string>, currency: string) {
-  let total = 0n;
-  for (const v of Object.values(values)) {
-    const parsed = tryParseMoney(v, currency);
-    if (parsed === null) return null;
-    total += parsed;
-  }
-  return total;
-}
 
 export default function NewSupplierPayment() {
   const { companyId, company } = useCompany();
@@ -241,7 +157,15 @@ export default function NewSupplierPayment() {
             <Spinner />
           ) : (
             <AllocationTable
-              invoices={invoices.data}
+              invoices={invoices.data.map((i) => ({
+                id: i.id,
+                number: i.number,
+                reference: i.supplierInvoiceNo,
+                dueDate: i.dueDate,
+                outstandingMinor: outstanding(i),
+              }))}
+              referenceLabel="Their number"
+              emptyText="This supplier has no unpaid invoices."
               values={allocations}
               onChange={setAllocations}
               available={paid ?? 0n}

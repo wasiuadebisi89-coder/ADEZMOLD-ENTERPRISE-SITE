@@ -1,7 +1,7 @@
 # BMS — Accounting policies (Phase 0)
 
 Status: **Draft for review.** Items marked **DECISION** need the owner's confirmation
-(#1 and #4 confirmed 2026-10-23);
+(#1, #4–#9, #14 and #16 confirmed 2026-10-23);
 the value shown is the proposed safe default, not a fact. No tax rate is hard-coded:
 tax codes and rates are entered per company by an authorised user.
 
@@ -109,15 +109,30 @@ other frameworks.
 
 ## 7. Sales
 
-- Revenue recognised when control passes: at POS completion for cash/walk-in sales, at
-  delivery/invoice posting for credit sales.
-- Line discounts reduce revenue (revenue is recorded net); no separate discount expense.
-- Cash sale: Dr Cash/Bank, Cr Revenue, Cr Output tax (if any); Dr COGS, Cr Inventory.
-- Credit sale: Dr AR instead of Cash. Partial payment at sale = credit sale + receipt.
-- Customer receipt: Dr Cash/Bank / Cr AR, allocated oldest-first by default or manually;
-  unallocated receipts are customer advances (liability).
-- Credit limit: warn by default; block requires `sales.creditLimit.enforce` setting
-  (DECISION 7).
+- One document, the sales invoice (`SI-…`), records every sale. Goods leave the chosen store
+  location when it is posted, and revenue is recognised then: control passes at the till for
+  walk-in sales and on delivery for credit sales, which happen together in this version.
+- Line amount = quantity × price, rounded to the minor unit. A line discount is an amount
+  off the line and reduces revenue (revenue is recorded net); there is no discount expense.
+- The price is the product's selling price. A different price or any discount needs
+  `sales.priceOverride` (Admin, Manager); both prices are kept on the line.
+- Journal: Dr the cash or bank accounts for money taken at the sale, Dr 1200 Trade
+  receivables for the rest, Cr 4100 Revenue (net), Cr 2200 Output tax; Dr 5100 Cost of goods
+  sold / Cr 1300 Inventory at the costing method's cost. Paying part at the sale is one
+  document, not a credit sale plus a receipt.
+- A walk-in sale (no customer) must be paid in full. Money received above the total is change
+  and is not recorded.
+- Credit limit (DECISION 7, **confirmed**): a sale leaving an amount on credit is refused when
+  the customer's balance, plus that amount, less their advances, would exceed their limit. A
+  limit of 0 means cash only. It is allowed when the seller holds `sales.creditLimit.override`
+  (recorded on the invoice and in the audit log), or with an approved `sales.creditOverride`
+  request by the seller for that customer, covering at least that amount, used once.
+- Due date: the sale date plus the customer's payment terms, unless one is entered.
+- Customer receipt (`CR-…`): Dr Cash/Bank / Cr AR for the amount allocated to invoices, Cr
+  2250 Customer advances for the rest. An advance can be applied to invoices later (Dr
+  Customer advances / Cr AR, dated the day it is applied).
+- Customer opening balances: each unpaid invoice from before go-live is Dr AR / Cr 3300
+  Opening balance equity, posted by someone with `ledger.journal.post`.
 
 ## 8. Returns, credit notes and refunds
 
@@ -135,16 +150,20 @@ other frameworks.
 ## 9. Rounding
 
 - Line totals rounded half-away-from-zero to minor units; document totals sum rounded
-  lines; tax computed per line (DECISION 8: per line vs per document).
+  lines; tax computed and rounded per line (DECISION 8, **confirmed**).
 - Inventory value rounding residue from WAC goes to the last movement that empties the
   balance, so value reaches exactly zero when quantity reaches zero.
 
 ## 10. Tax
 
-- Tax codes (name, rate, recoverable flag, output/input accounts) are configured per company.
-  No rate is seeded. Prices may be tax-inclusive or tax-exclusive per company
-  (DECISION 9: proposed exclusive). Companies not registered for VAT simply have no
-  tax codes.
+- Tax codes (code, name, rate) are configured per company by someone with
+  `ledger.accounts.manage`. No rate is seeded. Output tax posts to the account with the Output
+  tax role (2200). Companies not registered for VAT simply have no tax codes.
+- Prices include or exclude tax per company (DECISION 9, **confirmed**: exclusive by
+  default). Exclusive: tax = net × rate. Inclusive: tax = gross × rate ÷ (1 + rate), and net =
+  gross − tax. Each sale records which applied and the rate used on each line, so changing a
+  rate never changes posted sales.
+- Input tax on purchases is still typed from the supplier's invoice (§5).
 
 ## 11. Fixed assets
 
