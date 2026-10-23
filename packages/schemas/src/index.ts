@@ -11,6 +11,7 @@ import {
   MAX_JOURNAL_LINES,
   PERMISSIONS,
   SUPPORTED_CURRENCY_CODES,
+  UNIT_CODES,
   isIsoDate,
 } from '@bms/domain';
 
@@ -82,6 +83,7 @@ export const updateCompanySettingsInput = scoped.extend({
   baseCurrency: z.enum(SUPPORTED_CURRENCY_CODES).optional(),
   fiscalYearStartMonth: z.number().int().min(1).max(12).optional(),
   backdateWindowDays: z.number().int().min(0).max(366).optional(),
+  costingMethod: z.enum(['weighted_average', 'fifo']).optional(),
 });
 export type UpdateCompanySettingsInput = z.infer<typeof updateCompanySettingsInput>;
 
@@ -245,6 +247,94 @@ export const postOpeningBalanceInput = scoped.extend({
   backdateApprovalId: docId.optional(),
 });
 
+// --- Catalogue and inventory (Phase 3) --------------------------------------------------------
+
+/** A quantity as typed, e.g. "2.5". Parsed on the server with the product's unit. */
+export const quantity = z
+  .string()
+  .trim()
+  .min(1, 'Enter a quantity')
+  .max(20, 'Quantity is too large')
+  .regex(/^-?(\d{1,3}(,\d{3})*|\d+)(\.\d+)?$/, 'Enter a number such as 12 or 2.5');
+
+/** A unit cost as typed. Empty means "use the current average cost". */
+export const unitCost = z
+  .string()
+  .trim()
+  .max(24, 'Cost is too large')
+  .regex(/^((\d{1,3}(,\d{3})*|\d+)(\.\d+)?)?$/, 'Enter a cost such as 1250.50')
+  .optional()
+  .transform((v) => (v ? v : undefined));
+
+export const sku = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(
+    /^[A-Z0-9][A-Z0-9._-]{0,39}$/,
+    'Use up to 40 letters, digits, dots, dashes or underscores',
+  );
+
+export const createCategoryInput = scoped.extend({ name: trimmed(2, 80) });
+export const updateCategoryInput = scoped.extend({
+  categoryId: docId,
+  name: trimmed(2, 80).optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+});
+
+export const createProductInput = scoped.extend({
+  sku,
+  name: trimmed(2, 160),
+  unit: z.enum(UNIT_CODES),
+  categoryId: docId.nullable().default(null),
+  description: optionalText(500),
+  salePrice: amount.optional(),
+  reorderLevel: quantity.optional(),
+});
+export const updateProductInput = scoped.extend({
+  productId: docId,
+  name: trimmed(2, 160).optional(),
+  categoryId: docId.nullable().optional(),
+  description: z.string().trim().max(500).optional(),
+  salePrice: amount.nullable().optional(),
+  reorderLevel: quantity.nullable().optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+});
+
+export const createLocationInput = scoped.extend({
+  branchId: docId,
+  name: trimmed(2, 80),
+  type: z.enum(['store', 'quarantine']),
+});
+export const updateLocationInput = scoped.extend({
+  locationId: docId,
+  name: trimmed(2, 80).optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+});
+
+export const STOCK_ADJUSTMENT_KINDS = ['adjustment', 'count', 'opening'] as const;
+export type StockAdjustmentKind = (typeof STOCK_ADJUSTMENT_KINDS)[number];
+
+/**
+ * One request for every stock change outside purchases and sales. `quantity` means:
+ * adjustment — the change (+ found, − lost); count — the quantity counted;
+ * opening — the quantity on hand at the start (needs a unit cost).
+ */
+export const createStockAdjustmentInput = scoped.extend({
+  kind: z.enum(STOCK_ADJUSTMENT_KINDS),
+  locationId: docId,
+  reason: trimmed(3, 500),
+  lines: z
+    .array(z.object({ productId: docId, quantity, unitCost }))
+    .min(1, 'Add at least one product')
+    .max(200, 'Use at most 200 lines'),
+});
+export const decideStockAdjustmentInput = scoped.extend({
+  adjustmentId: docId,
+  decision: z.enum(['approved', 'rejected']),
+  reason: trimmed(3, 500),
+});
+
 // --- Platform and session ------------------------------------------------------------------
 
 export const platformSupportReadInput = base.extend({
@@ -277,6 +367,14 @@ export const COMMAND_SCHEMAS = {
   'journal.post': postJournalInput,
   'journal.reverse': reverseJournalInput,
   'openingBalance.post': postOpeningBalanceInput,
+  'category.create': createCategoryInput,
+  'category.update': updateCategoryInput,
+  'product.create': createProductInput,
+  'product.update': updateProductInput,
+  'location.create': createLocationInput,
+  'location.update': updateLocationInput,
+  'stockAdjustment.create': createStockAdjustmentInput,
+  'stockAdjustment.decide': decideStockAdjustmentInput,
   'platform.supportRead': platformSupportReadInput,
   'session.revokeAll': revokeSessionsInput,
 } as const;

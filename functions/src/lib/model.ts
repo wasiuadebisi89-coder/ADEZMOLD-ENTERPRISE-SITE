@@ -6,6 +6,7 @@ import type {
   BranchScope,
   JournalOrigin,
   PeriodStatus,
+  UnitCode,
   Permission,
   SystemRoleId,
 } from '@bms/domain';
@@ -175,6 +176,8 @@ export interface JournalDoc {
   reversedByJournalId: string | null;
   reversalReason: string | null;
   backdateApprovalId: string | null;
+  /** The module document that produced a system journal. */
+  source: { type: string; id: string; number: string } | null;
   postedAt: Timestamp;
   postedBy: string;
 }
@@ -192,6 +195,119 @@ export interface LedgerEntryDoc {
   credit: number;
   memo: string | null;
   postedAt: Timestamp;
+}
+
+// --- Catalogue and inventory (DATA_MODEL.md §5) ---------------------------------------------
+
+export interface CategoryDoc {
+  name: string;
+  status: 'active' | 'inactive';
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface ProductDoc {
+  sku: string;
+  name: string;
+  unit: UnitCode;
+  categoryId: string | null;
+  description: string;
+  /** Minor units; used by sales from Phase 5. */
+  salePrice: number | null;
+  reorderLevelMilli: number | null;
+  status: 'active' | 'inactive';
+  /** Set by the first stock movement; the unit is fixed from then on. */
+  hasMovements: boolean;
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface LocationDoc {
+  branchId: string;
+  name: string;
+  type: 'store' | 'quarantine';
+  status: 'active' | 'inactive';
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface StockBalanceDoc {
+  productId: string;
+  locationId: string;
+  branchId: string;
+  qtyMilli: number;
+  valueMinor: number;
+  /** FIFO: sequence for the next cost layer at this product and location. */
+  nextLayerSeq: number;
+  updatedAt: Timestamp;
+}
+
+export interface CostLayerDoc {
+  productId: string;
+  locationId: string;
+  seq: number;
+  open: boolean;
+  qtyReceived: number;
+  qtyRemaining: number;
+  valueRemaining: number;
+  receivedDate: string;
+  sourceId: string;
+}
+
+export interface StockMovementDoc {
+  productId: string;
+  locationId: string;
+  branchId: string;
+  /** Signed: positive into stock, negative out. */
+  qtyMilli: number;
+  valueMinor: number;
+  movementType: 'adjustment' | 'count' | 'opening';
+  postingDate: string;
+  sourceType: 'stockAdjustment';
+  sourceId: string;
+  sourceNumber: string;
+  journalId: string | null;
+  balanceQtyMilli: number;
+  balanceValueMinor: number;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
+export interface StockAdjustmentLineDoc {
+  lineNo: number;
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  /** As entered: the change, the counted quantity, or the opening quantity. */
+  enteredMilli: number;
+  /** Count only: the quantity on hand when the count was recorded. */
+  expectedMilli: number | null;
+  deltaMilli: number;
+  unitCostScaled: number | null;
+  /** Filled in when posted. */
+  valueMinor: number | null;
+}
+
+export interface StockAdjustmentDoc {
+  number: string;
+  kind: 'adjustment' | 'count' | 'opening';
+  locationId: string;
+  branchId: string;
+  reason: string;
+  lines: StockAdjustmentLineDoc[];
+  status: 'pending' | 'posted' | 'rejected';
+  createdAt: Timestamp;
+  createdBy: string;
+  decidedAt: Timestamp | null;
+  decidedBy: string | null;
+  decisionReason: string | null;
+  postingDate: string | null;
+  journalId: string | null;
+  /** Net change in stock value when posted, minor units. */
+  valueMinor: number | null;
 }
 
 export interface NumberSeriesDoc {
@@ -232,6 +348,19 @@ export function companyRefs(companyId: string) {
     ledgerEntries: company.collection('ledgerEntries'),
     numberSeries: (id: string) => company.collection('numberSeries').doc(id),
     ledgerSettings: company.collection('settings').doc('ledger'),
+    category: (id: string) => company.collection('categories').doc(id),
+    categories: company.collection('categories'),
+    product: (id: string) => company.collection('products').doc(id),
+    products: company.collection('products'),
+    location: (id: string) => company.collection('locations').doc(id),
+    locations: company.collection('locations'),
+    stockBalance: (productId: string, locationId: string) =>
+      company.collection('stockBalances').doc(`${productId}__${locationId}`),
+    stockBalances: company.collection('stockBalances'),
+    costLayers: company.collection('costLayers'),
+    stockMovements: company.collection('stockMovements'),
+    stockAdjustment: (id: string) => company.collection('stockAdjustments').doc(id),
+    stockAdjustments: company.collection('stockAdjustments'),
     auditLogs: company.collection('auditLogs'),
   };
 }

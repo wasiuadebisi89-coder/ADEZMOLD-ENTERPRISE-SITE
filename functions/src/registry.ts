@@ -3,6 +3,16 @@ import type { AnyCommand } from './lib/command.js';
 import { createBranch, updateBranch } from './commands/branch.js';
 import { createCompany, updateCompanySettings } from './commands/company.js';
 import {
+  createCategory,
+  createLocation,
+  createProduct,
+  createStockAdjustment,
+  decideStockAdjustment,
+  updateCategory,
+  updateLocation,
+  updateProduct,
+} from './commands/inventory.js';
+import {
   applyChartTemplate,
   createAccount,
   postJournal,
@@ -50,6 +60,14 @@ export const COMMANDS: Record<CommandName, AnyCommand> = {
   'journal.post': postJournal,
   'journal.reverse': reverseJournal,
   'openingBalance.post': postOpeningBalance,
+  'category.create': createCategory,
+  'category.update': updateCategory,
+  'product.create': createProduct,
+  'product.update': updateProduct,
+  'location.create': createLocation,
+  'location.update': updateLocation,
+  'stockAdjustment.create': createStockAdjustment,
+  'stockAdjustment.decide': decideStockAdjustment,
   'platform.supportRead': platformSupportRead,
   'session.revokeAll': revokeAllSessions,
 };

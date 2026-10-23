@@ -87,6 +87,7 @@ export interface PostingRequest {
   lines: JournalLine[];
   backdateApprovalId?: string | undefined;
   reversesJournalId?: string | undefined;
+  source?: { type: string; id: string; number: string } | undefined;
 }
 
 export interface PreparedPosting {
@@ -254,6 +255,7 @@ export function writePosting(
     reversedByJournalId: null,
     reversalReason: null,
     backdateApprovalId: prepared.approvalToUse,
+    source: request.source ?? null,
     postedAt: ctx.now,
     postedBy: ctx.caller.uid,
   };

@@ -89,6 +89,16 @@ beforeEach(async () => {
         credit: 0,
       });
       await setDoc(doc(db, `companies/${companyId}/numberSeries/journal.manual`), { next: 2 });
+      await setDoc(doc(db, `companies/${companyId}/products/p1`), { sku: 'CEM', name: 'Cement' });
+      await setDoc(doc(db, `companies/${companyId}/locations/HQ-store`), { branchId: 'HQ' });
+      await setDoc(doc(db, `companies/${companyId}/stockBalances/p1__HQ-store`), {
+        productId: 'p1',
+        qtyMilli: 1000,
+        valueMinor: 500,
+      });
+      await setDoc(doc(db, `companies/${companyId}/stockMovements/m1`), { productId: 'p1' });
+      await setDoc(doc(db, `companies/${companyId}/stockAdjustments/a1`), { status: 'pending' });
+      await setDoc(doc(db, `companies/${companyId}/costLayers/l1`), { productId: 'p1' });
       for (const m of members) await setDoc(doc(db, `companies/${companyId}/members/${m.uid}`), m);
     }
     await setDoc(doc(db, `users/${ADMIN_A}`), {
@@ -119,6 +129,11 @@ const COMPANY_PATHS = [
   'companies/A/accounts/acc1',
   'companies/A/journals/j1',
   'companies/A/ledgerEntries/j1_1',
+  'companies/A/products/p1',
+  'companies/A/locations/HQ-store',
+  'companies/A/stockBalances/p1__HQ-store',
+  'companies/A/stockMovements/m1',
+  'companies/A/stockAdjustments/a1',
 ];
 
 describe('C1 unauthenticated access', () => {
@@ -159,6 +174,11 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/ledgerEntries/j2_1', { accountId: 'acc1', debit: 1, credit: 0 }],
     ['companies/A/numberSeries/journal.manual', { next: 1 }],
     ['companies/A/settings/ledger', { openingBalanceJournalId: null }],
+    ['companies/A/products/p2', { sku: 'X', name: 'X' }],
+    ['companies/A/stockBalances/p1__HQ-store', { qtyMilli: 999999, valueMinor: 1 }],
+    ['companies/A/stockMovements/m2', { productId: 'p1', qtyMilli: 1 }],
+    ['companies/A/stockAdjustments/a1', { status: 'posted' }],
+    ['companies/A/costLayers/l2', { productId: 'p1' }],
     ['companies/NEW', { legalName: 'Self-made' }],
     ['invitations/inv2', { companyId: 'A' }],
   ];
@@ -201,6 +221,23 @@ describe('ledger records (Phase 2)', () => {
   });
   it('number series are server-only', async () => {
     await assertFails(getDoc(doc(db(ADMIN_A), 'companies/A/numberSeries/journal.manual')));
+  });
+});
+
+describe('inventory records (Phase 3)', () => {
+  it('sales officers see products but not stock values, movements or adjustments', async () => {
+    await assertSucceeds(getDoc(doc(db(SALES_A), 'companies/A/products/p1')));
+    for (const path of [
+      'companies/A/stockBalances/p1__HQ-store',
+      'companies/A/stockMovements/m1',
+      'companies/A/stockAdjustments/a1',
+    ]) {
+      await assertFails(getDoc(doc(db(SALES_A), path)));
+      await assertSucceeds(getDoc(doc(db(AUDITOR_A), path)));
+    }
+  });
+  it('cost layers are server-only', async () => {
+    await assertFails(getDoc(doc(db(ADMIN_A), 'companies/A/costLayers/l1')));
   });
 });
 
