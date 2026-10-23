@@ -18,7 +18,7 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
 | 11  | Role matrix and self-approval       | As in ROLES.md; no self-approval                                                                            | Phase 1                |
 | 12  | Firebase region                     | africa-south1 (Johannesburg) if all services needed are available there, otherwise europe-west1 — to verify | Phase 1 deploy         |
 | 13  | Firebase projects / billing         | Owner creates `bms-staging` and `bms-prod` (Blaze plan needed for Functions)                                | Phase 1 deploy         |
-| 14  | Default chart of accounts template  | A trading-company template drafted in Phase 2 for your review                                               | Phase 2                |
+| 14  | Default chart of accounts template  | Drafted: see CHART_OF_ACCOUNTS.md, for your review                                                          | Phase 2                |
 | 15  | Sign-in methods                     | Email/password + verification; Google sign-in later                                                         | Phase 1                |
 
 ## Confirmed decisions

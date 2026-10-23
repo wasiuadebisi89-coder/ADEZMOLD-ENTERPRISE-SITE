@@ -1,10 +1,12 @@
 import {
+  businessDate,
   assertNoOverlap,
   assertPeriodTransition,
   isReopen,
   planFiscalYear,
   PeriodError,
   type PeriodStatus,
+  type Permission,
 } from '@bms/domain';
 import { defineCommand } from '../lib/command.js';
 import { CommandError, conflict, denied, failedPrecondition, notFound } from '../lib/errors.js';
@@ -70,7 +72,7 @@ export const setPeriodStatus = defineCommand({
         );
       }
       approvalId = input.approvalRequestId;
-      tx.update(approvalRef, { status: 'used', usedAt: now });
+      tx.update(approvalRef, { status: 'used', usedAt: now, usedFor: input.periodId });
     }
 
     tx.update(refs.period(input.periodId), {
@@ -153,24 +155,39 @@ export const createFiscalYear = defineCommand({
 
 export const requestApproval = defineCommand({
   name: 'approval.request',
-  access: { kind: 'company', permission: 'settings.periods.reopen.request' },
+  access: {
+    kind: 'company',
+    permission: (input) =>
+      input.action === 'ledger.backdate'
+        ? 'ledger.backdate.request'
+        : 'settings.periods.reopen.request',
+  },
   async handler({ tx, caller, input, now }) {
     const refs = companyRefs(input.companyId);
-    const period = (await tx.get(refs.period(input.target.periodId))).data() as
-      PeriodDoc | undefined;
-    if (!period) throw notFound('period_not_found', 'Period not found');
-    if (period.status !== 'closed')
-      throw failedPrecondition('period_not_closed', 'Only closed periods need a reopen approval');
-    const pending = await tx.get(
-      refs.approvals
+    let pendingQuery;
+    if (input.action === 'period.reopen') {
+      const period = (await tx.get(refs.period(input.target.periodId))).data() as
+        PeriodDoc | undefined;
+      if (!period) throw notFound('period_not_found', 'Period not found');
+      if (period.status !== 'closed')
+        throw failedPrecondition('period_not_closed', 'Only closed periods need a reopen approval');
+      pendingQuery = refs.approvals
         .where('action', '==', input.action)
-        .where('target.periodId', '==', input.target.periodId)
-        .where('status', 'in', ['pending', 'approved']),
-    );
-    if (!pending.empty)
-      throw conflict('approval_exists', 'A request for this period is already open');
+        .where('target.periodId', '==', input.target.periodId);
+    } else {
+      const company = (await tx.get(refs.company)).data() as CompanyDoc;
+      if (input.target.postingDate >= businessDate(now.toDate(), company.timeZone)) {
+        throw failedPrecondition('not_backdated', 'Only past dates need a backdating approval');
+      }
+      pendingQuery = refs.approvals
+        .where('action', '==', input.action)
+        .where('target.postingDate', '==', input.target.postingDate)
+        .where('requestedBy', '==', caller.uid);
+    }
+    const pending = await tx.get(pendingQuery.where('status', 'in', ['pending', 'approved']));
+    if (!pending.empty) throw conflict('approval_exists', 'A request for this is already open');
     const ref = refs.approvals.doc();
-    const doc: ApprovalRequestDoc = {
+    const doc = {
       action: input.action,
       target: input.target,
       reason: input.reason,
@@ -181,7 +198,8 @@ export const requestApproval = defineCommand({
       decidedAt: null,
       decisionReason: null,
       usedAt: null,
-    };
+      usedFor: null,
+    } as ApprovalRequestDoc;
     tx.set(ref, doc);
     return {
       result: { approvalRequestId: ref.id },
@@ -196,13 +214,22 @@ export const requestApproval = defineCommand({
   },
 });
 
+/** Permission needed to decide each kind of request; checked once the request is read. */
+const APPROVE_PERMISSION: Record<ApprovalRequestDoc['action'], Permission> = {
+  'period.reopen': 'settings.periods.reopen.approve',
+  'ledger.backdate': 'ledger.backdate.approve',
+};
+
 export const decideApproval = defineCommand({
   name: 'approval.decide',
-  access: { kind: 'company', permission: 'settings.periods.reopen.approve' },
-  async handler({ tx, caller, input, now }) {
+  access: { kind: 'company', permission: 'approvals.read' },
+  async handler({ tx, caller, input, now, company }) {
     const ref = companyRefs(input.companyId).approval(input.approvalRequestId);
     const approval = (await tx.get(ref)).data() as ApprovalRequestDoc | undefined;
     if (!approval) throw notFound('approval_not_found', 'Approval request not found');
+    if (!company!.permissions.has(APPROVE_PERMISSION[approval.action])) {
+      throw denied('missing_permission');
+    }
     if (approval.status !== 'pending')
       throw failedPrecondition('approval_not_pending', 'This request has already been decided');
     if (approval.requestedBy === caller.uid) {
@@ -221,7 +248,7 @@ export const decideApproval = defineCommand({
         entityType: 'approvalRequest',
         entityId: input.approvalRequestId,
         before: { status: 'pending' },
-        after: { status: input.decision },
+        after: { status: input.decision, action: approval.action },
         reason: input.reason,
       },
     };

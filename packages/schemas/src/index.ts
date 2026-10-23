@@ -3,7 +3,16 @@
  * use the same schemas as the authoritative check (docs/bms/ARCHITECTURE.md §5).
  */
 import { z } from 'zod';
-import { PERMISSIONS, SUPPORTED_CURRENCY_CODES, isIsoDate } from '@bms/domain';
+import {
+  ACCOUNT_CODE,
+  ACCOUNT_SUBTYPES,
+  ACCOUNT_TYPES,
+  CHART_TEMPLATES,
+  MAX_JOURNAL_LINES,
+  PERMISSIONS,
+  SUPPORTED_CURRENCY_CODES,
+  isIsoDate,
+} from '@bms/domain';
 
 const trimmed = (min: number, max: number) =>
   z
@@ -143,15 +152,97 @@ export const createFiscalYearInput = scoped.extend({
   startYear: z.number().int().min(2000).max(2100),
 });
 
-export const requestApprovalInput = scoped.extend({
-  action: z.enum(['period.reopen']),
-  target: z.object({ periodId }),
-  reason: trimmed(3, 500),
-});
+export const APPROVAL_ACTIONS = ['period.reopen', 'ledger.backdate'] as const;
+export type ApprovalAction = (typeof APPROVAL_ACTIONS)[number];
+
+export const requestApprovalInput = z.discriminatedUnion('action', [
+  scoped.extend({
+    action: z.literal('period.reopen'),
+    target: z.object({ periodId }),
+    reason: trimmed(3, 500),
+  }),
+  scoped.extend({
+    action: z.literal('ledger.backdate'),
+    target: z.object({ postingDate: isoDate }),
+    reason: trimmed(3, 500),
+  }),
+]);
 export const decideApprovalInput = scoped.extend({
   approvalRequestId: docId,
   decision: z.enum(['approved', 'rejected']),
   reason: trimmed(3, 500),
+});
+
+// --- Ledger -------------------------------------------------------------------------------
+
+export const accountCode = z
+  .string()
+  .trim()
+  .regex(ACCOUNT_CODE, 'Use digits, optionally with one dot or dash, e.g. 1110 or 1110.01');
+
+export const applyChartTemplateInput = scoped.extend({
+  templateId: z.enum(Object.keys(CHART_TEMPLATES) as [string, ...string[]]),
+});
+export const createAccountInput = scoped.extend({
+  code: accountCode,
+  name: trimmed(2, 120),
+  type: z.enum(ACCOUNT_TYPES),
+  subtype: z.enum(ACCOUNT_SUBTYPES).default('general'),
+  parentId: docId.nullable().default(null),
+  isPostable: z.boolean().default(true),
+});
+export const updateAccountInput = scoped.extend({
+  accountId: docId,
+  name: trimmed(2, 120).optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+  parentId: docId.nullable().optional(),
+});
+
+/**
+ * A money amount as typed by the user, e.g. "1,250.50". Empty means zero. The server parses it
+ * with the company's currency, which also rejects too many decimal places.
+ */
+export const amount = z
+  .string()
+  .trim()
+  .max(24, 'Amount is too large')
+  .regex(/^(\d{1,3}(,\d{3})*|\d*)(\.\d*)?$/, 'Enter an amount such as 1250.50')
+  .transform((v) => (v === '' || v === '.' ? '0' : v));
+
+export const journalLineInput = z.object({
+  accountId: docId,
+  debit: amount,
+  credit: amount,
+  memo: optionalText(200),
+});
+const journalLines = z
+  .array(journalLineInput)
+  .min(2, 'A journal needs at least two lines')
+  .max(MAX_JOURNAL_LINES, `A journal can have at most ${MAX_JOURNAL_LINES} lines`);
+
+export const postJournalInput = scoped.extend({
+  branchId: docId,
+  postingDate: isoDate,
+  memo: trimmed(3, 300),
+  reference: optionalText(60),
+  lines: journalLines,
+  backdateApprovalId: docId.optional(),
+});
+export const reverseJournalInput = scoped.extend({
+  journalId: docId,
+  postingDate: isoDate,
+  reason: trimmed(3, 500),
+  backdateApprovalId: docId.optional(),
+});
+export const postOpeningBalanceInput = scoped.extend({
+  branchId: docId,
+  asAtDate: isoDate,
+  memo: optionalText(300),
+  lines: z
+    .array(journalLineInput)
+    .min(1, 'Enter at least one balance')
+    .max(MAX_JOURNAL_LINES - 1, `Enter at most ${MAX_JOURNAL_LINES - 1} balances`),
+  backdateApprovalId: docId.optional(),
 });
 
 // --- Platform and session ------------------------------------------------------------------
@@ -180,6 +271,12 @@ export const COMMAND_SCHEMAS = {
   'fiscalYear.create': createFiscalYearInput,
   'approval.request': requestApprovalInput,
   'approval.decide': decideApprovalInput,
+  'chart.applyTemplate': applyChartTemplateInput,
+  'account.create': createAccountInput,
+  'account.update': updateAccountInput,
+  'journal.post': postJournalInput,
+  'journal.reverse': reverseJournalInput,
+  'openingBalance.post': postOpeningBalanceInput,
   'platform.supportRead': platformSupportReadInput,
   'session.revokeAll': revokeSessionsInput,
 } as const;

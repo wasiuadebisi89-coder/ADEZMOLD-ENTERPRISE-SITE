@@ -1,4 +1,4 @@
-import { SYSTEM_ROLES, businessDate, fiscalYearForDate } from '@bms/domain';
+import { SYSTEM_ROLES, TRADING_TEMPLATE, businessDate, fiscalYearForDate } from '@bms/domain';
 import { defineCommand } from '../lib/command.js';
 import { failedPrecondition } from '../lib/errors.js';
 import { db } from '../lib/firebase.js';
@@ -12,8 +12,9 @@ import {
   type RoleDoc,
   type SettingsDoc,
 } from '../lib/model.js';
+import { seedChart } from './ledger.js';
 
-export const DEFAULT_BACKDATE_WINDOW_DAYS = 3; // OPEN_DECISIONS #4 proposed default
+export const DEFAULT_BACKDATE_WINDOW_DAYS = 3; // OPEN_DECISIONS #4, confirmed 2026-10-23
 
 export const createCompany = defineCommand({
   name: 'company.create',
@@ -95,6 +96,9 @@ export const createCompany = defineCommand({
       };
       tx.set(refs.period(p.id), period);
     }
+
+    // OPEN_DECISIONS #14: the trading template is a draft for review; companies can adapt it.
+    seedChart(tx, companyId, TRADING_TEMPLATE, { now, uid: caller.uid });
 
     const adminRole = SYSTEM_ROLES.find((r) => r.id === 'company_admin')!;
     const member: MemberDoc = {

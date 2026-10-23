@@ -19,7 +19,7 @@ export interface RoleRow {
   system: boolean;
   permissions: string[];
 }
-interface BranchRow {
+export interface BranchRow {
   id: string;
   code: string;
   name: string;

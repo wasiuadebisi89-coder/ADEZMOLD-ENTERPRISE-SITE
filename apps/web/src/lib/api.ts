@@ -10,6 +10,8 @@ export class ApiError extends Error {
     message: string,
     public readonly reason: string,
     public readonly fields: Record<string, string> = {},
+    /** 1-based journal line the server rejected, when it names one. */
+    public readonly lineNo?: number,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -36,12 +38,15 @@ export async function runCommand<R = Record<string, unknown>, N extends CommandN
   } catch (e) {
     if (e instanceof FirebaseError) {
       const details = (
-        e as FirebaseError & { details?: { reason?: string; fields?: Record<string, string> } }
+        e as FirebaseError & {
+          details?: { reason?: string; fields?: Record<string, string>; lineNo?: number };
+        }
       ).details;
       throw new ApiError(
         e.message.replace(/\s*\[\d+\]$/, ''),
         details?.reason ?? e.code,
         details?.fields ?? {},
+        typeof details?.lineNo === 'number' ? details.lineNo : undefined,
       );
     }
     throw new ApiError(

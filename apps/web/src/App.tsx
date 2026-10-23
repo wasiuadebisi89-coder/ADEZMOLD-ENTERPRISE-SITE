@@ -19,6 +19,13 @@ const Branches = lazy(() => import('./routes/company/Branches'));
 const Periods = lazy(() => import('./routes/company/Periods'));
 const Settings = lazy(() => import('./routes/company/Settings'));
 const AuditLog = lazy(() => import('./routes/company/AuditLog'));
+const Accounts = lazy(() => import('./routes/company/Accounts'));
+const Journals = lazy(() => import('./routes/company/Journals'));
+const NewJournal = lazy(() => import('./routes/company/NewJournal'));
+const JournalDetail = lazy(() => import('./routes/company/JournalDetail'));
+const OpeningBalances = lazy(() => import('./routes/company/OpeningBalances'));
+const TrialBalance = lazy(() => import('./routes/company/TrialBalance'));
+const Approvals = lazy(() => import('./routes/company/Approvals'));
 const NotFound = lazy(() => import('./routes/NotFound'));
 
 function Home() {
@@ -100,6 +107,13 @@ const router = createBrowserRouter([
       { path: 'periods', element: <Periods /> },
       { path: 'settings', element: <Settings /> },
       { path: 'audit', element: <AuditLog /> },
+      { path: 'accounts', element: <Accounts /> },
+      { path: 'journals', element: <Journals /> },
+      { path: 'journals/new', element: <NewJournal /> },
+      { path: 'journals/:journalId', element: <JournalDetail /> },
+      { path: 'opening-balances', element: <OpeningBalances /> },
+      { path: 'trial-balance', element: <TrialBalance /> },
+      { path: 'approvals', element: <Approvals /> },
     ],
   },
   { path: '*', element: <NotFound /> },

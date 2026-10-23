@@ -99,6 +99,24 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      match /accounts/{accountId} {
+        allow read: if can(companyId, 'ledger.accounts.read');
+        allow write: if false;
+      }
+
+      // Journals and ledger entries are read by bookkeepers and by financial report readers.
+      match /journals/{journalId} {
+        allow read: if can(companyId, 'ledger.journal.read')
+          || can(companyId, 'reports.financial.read');
+        allow write: if false;
+      }
+
+      match /ledgerEntries/{entryId} {
+        allow read: if can(companyId, 'ledger.journal.read')
+          || can(companyId, 'reports.financial.read');
+        allow write: if false;
+      }
+
       match /attachments/{attachmentId} {
         allow read: if isActiveMember(companyId);
         allow write: if false;

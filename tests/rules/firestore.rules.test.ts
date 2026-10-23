@@ -5,7 +5,19 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, getDocs, collection, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getAggregateFromServer,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  sum,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { roleTemplate } from '@bms/domain';
 
@@ -67,6 +79,16 @@ beforeEach(async () => {
       await setDoc(doc(db, `companies/${companyId}/periods/2026-10`), { status: 'open' });
       await setDoc(doc(db, `companies/${companyId}/auditLogs/log1`), { action: 'company.create' });
       await setDoc(doc(db, `companies/${companyId}/commands/key1`), { name: 'company.create' });
+      await setDoc(doc(db, `companies/${companyId}/accounts/acc1`), { code: '1110', name: 'Cash' });
+      await setDoc(doc(db, `companies/${companyId}/journals/j1`), { number: 'JV-000001' });
+      await setDoc(doc(db, `companies/${companyId}/ledgerEntries/j1_1`), {
+        journalId: 'j1',
+        accountId: 'acc1',
+        postingDate: '2026-10-01',
+        debit: 100,
+        credit: 0,
+      });
+      await setDoc(doc(db, `companies/${companyId}/numberSeries/journal.manual`), { next: 2 });
       for (const m of members) await setDoc(doc(db, `companies/${companyId}/members/${m.uid}`), m);
     }
     await setDoc(doc(db, `users/${ADMIN_A}`), {
@@ -94,6 +116,9 @@ const COMPANY_PATHS = [
   'companies/A/periods/2026-10',
   'companies/A/auditLogs/log1',
   'companies/A/members/admin-a',
+  'companies/A/accounts/acc1',
+  'companies/A/journals/j1',
+  'companies/A/ledgerEntries/j1_1',
 ];
 
 describe('C1 unauthenticated access', () => {
@@ -129,6 +154,11 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/periods/2026-10', { status: 'open' }],
     ['companies/A/branches/X', { name: 'X' }],
     ['companies/A/commands/key2', { name: 'x' }],
+    ['companies/A/accounts/acc2', { code: '9999', name: 'Suspense' }],
+    ['companies/A/journals/j2', { number: 'JV-000002', totalDebit: 1, totalCredit: 1 }],
+    ['companies/A/ledgerEntries/j2_1', { accountId: 'acc1', debit: 1, credit: 0 }],
+    ['companies/A/numberSeries/journal.manual', { next: 1 }],
+    ['companies/A/settings/ledger', { openingBalanceJournalId: null }],
     ['companies/NEW', { legalName: 'Self-made' }],
     ['invitations/inv2', { companyId: 'A' }],
   ];
@@ -141,6 +171,36 @@ describe('C3 no client writes to company data', () => {
   });
   it('idempotency records are not readable', async () => {
     await assertFails(getDoc(doc(db(ADMIN_A), 'companies/A/commands/key1')));
+  });
+});
+
+describe('ledger records (Phase 2)', () => {
+  it('posted journals and ledger entries cannot be edited or deleted from a client', async () => {
+    await assertFails(updateDoc(doc(db(ADMIN_A), 'companies/A/journals/j1'), { status: 'x' }));
+    await assertFails(deleteDoc(doc(db(ADMIN_A), 'companies/A/journals/j1')));
+    await assertFails(updateDoc(doc(db(ADMIN_A), 'companies/A/ledgerEntries/j1_1'), { debit: 1 }));
+    await assertFails(deleteDoc(doc(db(ADMIN_A), 'companies/A/ledgerEntries/j1_1')));
+    await assertFails(updateDoc(doc(db(ADMIN_A), 'companies/A/accounts/acc1'), { name: 'x' }));
+  });
+  it('sales officers cannot read the ledger; auditors can', async () => {
+    for (const path of [
+      'companies/A/accounts/acc1',
+      'companies/A/journals/j1',
+      'companies/A/ledgerEntries/j1_1',
+    ]) {
+      await assertFails(getDoc(doc(db(SALES_A), path)));
+      await assertSucceeds(getDoc(doc(db(AUDITOR_A), path)));
+    }
+  });
+  it('balance aggregation follows the same rules', async () => {
+    const entries = (uid: string) =>
+      query(collection(db(uid), 'companies/A/ledgerEntries'), where('accountId', '==', 'acc1'));
+    await assertSucceeds(getAggregateFromServer(entries(AUDITOR_A), { d: sum('debit') }));
+    await assertFails(getAggregateFromServer(entries(SALES_A), { d: sum('debit') }));
+    await assertFails(getAggregateFromServer(entries(ADMIN_B), { d: sum('debit') }));
+  });
+  it('number series are server-only', async () => {
+    await assertFails(getDoc(doc(db(ADMIN_A), 'companies/A/numberSeries/journal.manual')));
   });
 });
 

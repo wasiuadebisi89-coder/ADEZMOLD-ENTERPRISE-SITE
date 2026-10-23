@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 /** Scrolls horizontally inside its card on small screens instead of overflowing the page. */
 export function Table({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="min-w-full divide-y divide-slate-200 text-sm" aria-label={label}>
         {children}
       </table>

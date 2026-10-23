@@ -10,7 +10,7 @@ Legend: [ ] not started · [~] in progress · [x] done and verified in CI
 - [x] Accounting policies draft with open decisions
 - [x] Default role matrix
 - [x] Phase 1 acceptance tests
-- [~] Owner review of Phase 0 and open decisions (repo and site move approved 2026-10-23; policy defaults still to confirm)
+- [x] Owner review of Phase 0 (approved and merged 2026-10-23; decisions #1 and #4 confirmed, others still on defaults)
 
 ## Phase 1 — Shell, auth, tenancy, roles, settings, periods, CI
 
@@ -24,15 +24,17 @@ Legend: [ ] not started · [~] in progress · [x] done and verified in CI
 - [x] Rules tests (C1–C4, C6, C7, G2), integration tests (A, B, C5, D, E, F, G), unit tests (E1, E2, F4, F5, H)
 - [x] Web: auth screens, company list/switcher, responsive shell, users, roles, branches, periods, settings, audit log
 - [x] Playwright end-to-end + axe accessibility checks
-- [~] GitHub Actions CI and gitleaks (workflow written; first run happens on the PR)
+- [x] GitHub Actions CI and gitleaks (green on PR #2, merged 2026-10-23)
 - [x] PROGRESS.md updated with test evidence
 
 ## Phase 2 — Ledger
 
-- [ ] Chart of accounts + template, account mappings
-- [ ] Posting engine (journal + ledger entries), reversals, manual journals
-- [ ] Opening-balance batch workflow (durable, chunked)
-- [ ] Period close snapshots, trial balance foundation
+- [~] Chart of accounts + trading template (draft for review, CHART_OF_ACCOUNTS.md); role lookup by account subtype instead of a separate mappings document
+- [~] Posting engine (journal + ledger entries), reversals, manual journals, backdating approvals
+- [~] General-ledger opening balances (one journal). Durable, chunked batches arrive with the subledgers that need them (Phases 3–5)
+- [~] Trial balance from ledger-entry sums. Period-close snapshots deferred (KNOWN_LIMITATIONS.md)
+
+`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 2 pull request.
 
 ## Phases 3–9
 
