@@ -3,6 +3,14 @@ import type { AnyCommand } from './lib/command.js';
 import { createBranch, updateBranch } from './commands/branch.js';
 import { createCompany, updateCompanySettings } from './commands/company.js';
 import {
+  applyChartTemplate,
+  createAccount,
+  postJournal,
+  postOpeningBalance,
+  reverseJournal,
+  updateAccount,
+} from './commands/ledger.js';
+import {
   acceptInvitation,
   createInvitation,
   revokeInvitation,
@@ -36,6 +44,12 @@ export const COMMANDS: Record<CommandName, AnyCommand> = {
   'fiscalYear.create': createFiscalYear,
   'approval.request': requestApproval,
   'approval.decide': decideApproval,
+  'chart.applyTemplate': applyChartTemplate,
+  'account.create': createAccount,
+  'account.update': updateAccount,
+  'journal.post': postJournal,
+  'journal.reverse': reverseJournal,
+  'openingBalance.post': postOpeningBalance,
   'platform.supportRead': platformSupportRead,
   'session.revokeAll': revokeAllSessions,
 };
