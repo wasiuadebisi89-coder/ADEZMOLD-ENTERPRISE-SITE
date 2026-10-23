@@ -335,6 +335,158 @@ export const decideStockAdjustmentInput = scoped.extend({
   reason: trimmed(3, 500),
 });
 
+// --- Suppliers and purchasing (Phase 4) -----------------------------------------------------
+
+export const supplierCode = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(
+    /^[A-Z0-9][A-Z0-9._-]{0,19}$/,
+    'Use up to 20 letters, digits, dots, dashes or underscores',
+  );
+
+const supplierDetails = {
+  name: trimmed(2, 160),
+  contactName: optionalText(120),
+  phone: optionalText(40),
+  email: z
+    .string()
+    .trim()
+    .max(254)
+    .refine((v) => v === '' || z.email().safeParse(v).success, 'Enter a valid email')
+    .optional()
+    .transform((v) => (v ? v.toLowerCase() : undefined)),
+  address: optionalText(300),
+  taxId: optionalText(40),
+  paymentTermsDays: z.number().int().min(0).max(365),
+};
+
+export const createSupplierInput = scoped.extend({ code: supplierCode, ...supplierDetails });
+export const updateSupplierInput = scoped.extend({
+  supplierId: docId,
+  ...(Object.fromEntries(Object.entries(supplierDetails).map(([k, v]) => [k, v.optional()])) as {
+    [K in keyof typeof supplierDetails]: z.ZodOptional<(typeof supplierDetails)[K]>;
+  }),
+  status: z.enum(['active', 'inactive']).optional(),
+});
+
+const MAX_DOCUMENT_LINES = 200;
+const documentLines = <T extends z.ZodType>(line: T) =>
+  z
+    .array(line)
+    .min(1, 'Add at least one line')
+    .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`);
+
+/** A cost the user must enter (receipts need one; empty is not allowed). */
+export const requiredUnitCost = z
+  .string()
+  .trim()
+  .min(1, 'Enter a unit cost')
+  .max(24, 'Cost is too large')
+  .regex(/^(\d{1,3}(,\d{3})*|\d+)(\.\d+)?$/, 'Enter a cost such as 1250.50');
+
+export const postGoodsReceiptInput = scoped.extend({
+  supplierId: docId,
+  locationId: docId,
+  postingDate: isoDate,
+  reference: optionalText(60),
+  memo: optionalText(300),
+  lines: documentLines(z.object({ productId: docId, quantity, unitCost: requiredUnitCost })),
+  backdateApprovalId: docId.optional(),
+});
+
+export const LANDED_COST_BASES = ['value', 'quantity'] as const;
+
+export const purchaseInvoiceLineInput = z.discriminatedUnion('kind', [
+  /** Goods already received: clears GRNI; any price difference goes to stock or cost of sales. */
+  z.object({
+    kind: z.literal('receipt'),
+    goodsReceiptId: docId,
+    lineNo: z.number().int().min(1),
+    quantity,
+    amount,
+  }),
+  /** Services and other costs: debits the chosen account. */
+  z.object({
+    kind: z.literal('expense'),
+    accountId: docId,
+    description: trimmed(2, 200),
+    amount,
+  }),
+  /** A capitalisable charge (freight in, duty) spread over a receipt's lines. */
+  z.object({
+    kind: z.literal('landed'),
+    goodsReceiptId: docId,
+    description: trimmed(2, 200),
+    basis: z.enum(LANDED_COST_BASES),
+    amount,
+  }),
+]);
+export type PurchaseInvoiceLineInput = z.infer<typeof purchaseInvoiceLineInput>;
+
+export const postPurchaseInvoiceInput = scoped.extend({
+  supplierId: docId,
+  branchId: docId,
+  invoiceDate: isoDate,
+  dueDate: isoDate.optional(),
+  supplierInvoiceNo: trimmed(1, 60),
+  memo: optionalText(300),
+  lines: documentLines(purchaseInvoiceLineInput),
+  /** Recoverable input tax shown on the supplier's invoice, if any. Not computed. */
+  inputTax: amount.optional(),
+  backdateApprovalId: docId.optional(),
+});
+
+export const postSupplierOpeningBalanceInput = scoped.extend({
+  supplierId: docId,
+  branchId: docId,
+  asAtDate: isoDate,
+  dueDate: isoDate.optional(),
+  supplierInvoiceNo: trimmed(1, 60),
+  amount,
+  backdateApprovalId: docId.optional(),
+});
+
+const allocationsInput = z
+  .array(z.object({ invoiceId: docId, amount }))
+  .max(100, 'Use at most 100 allocations');
+
+export const postSupplierPaymentInput = scoped.extend({
+  supplierId: docId,
+  branchId: docId,
+  postingDate: isoDate,
+  paymentAccountId: docId,
+  amount,
+  reference: optionalText(60),
+  memo: optionalText(300),
+  allocations: allocationsInput.default([]),
+  backdateApprovalId: docId.optional(),
+});
+
+/** Applies the unallocated part of an earlier payment (a supplier advance) to invoices. */
+export const allocateSupplierPaymentInput = scoped.extend({
+  paymentId: docId,
+  allocations: allocationsInput.min(1, 'Choose at least one invoice'),
+});
+
+export const postSupplierReturnInput = scoped.extend({
+  supplierId: docId,
+  locationId: docId,
+  postingDate: isoDate,
+  reason: trimmed(3, 500),
+  lines: documentLines(
+    z.object({
+      goodsReceiptId: docId,
+      lineNo: z.number().int().min(1),
+      quantity,
+      /** Set when the goods were invoiced: the credit reduces what is owed on that invoice. */
+      invoiceId: docId.optional(),
+    }),
+  ),
+  backdateApprovalId: docId.optional(),
+});
+
 // --- Platform and session ------------------------------------------------------------------
 
 export const platformSupportReadInput = base.extend({
@@ -375,6 +527,14 @@ export const COMMAND_SCHEMAS = {
   'location.update': updateLocationInput,
   'stockAdjustment.create': createStockAdjustmentInput,
   'stockAdjustment.decide': decideStockAdjustmentInput,
+  'supplier.create': createSupplierInput,
+  'supplier.update': updateSupplierInput,
+  'goodsReceipt.post': postGoodsReceiptInput,
+  'purchaseInvoice.post': postPurchaseInvoiceInput,
+  'supplierOpeningBalance.post': postSupplierOpeningBalanceInput,
+  'supplierPayment.post': postSupplierPaymentInput,
+  'supplierPayment.allocate': allocateSupplierPaymentInput,
+  'supplierReturn.post': postSupplierReturnInput,
   'platform.supportRead': platformSupportReadInput,
   'session.revokeAll': revokeSessionsInput,
 } as const;

@@ -1,64 +1,34 @@
 import {
-  InventoryError,
-  MoneyError,
   branchAllowed,
   businessDate,
   defaultIncreaseCost,
   fromStorable,
-  issueFifo,
-  issueWeightedAverage,
   parseMoney,
   parseQuantity,
   parseUnitCost,
-  receive,
   toStorable,
   valueAt,
-  type CostLayer,
   type JournalLine,
   type StockBalance,
   type UnitCode,
 } from '@bms/domain';
 import type { Timestamp, Transaction } from 'firebase-admin/firestore';
 import { defineCommand } from '../lib/command.js';
-import {
-  CommandError,
-  conflict,
-  denied,
-  failedPrecondition,
-  invalid,
-  notFound,
-} from '../lib/errors.js';
+import { conflict, denied, failedPrecondition, invalid, notFound } from '../lib/errors.js';
 import {
   companyRefs,
-  type AccountDoc,
   type CategoryDoc,
   type CompanyDoc,
-  type CostLayerDoc,
   type LocationDoc,
   type NumberSeriesDoc,
   type ProductDoc,
   type StockAdjustmentDoc,
   type StockAdjustmentLineDoc,
   type StockBalanceDoc,
-  type StockMovementDoc,
 } from '../lib/model.js';
+import { readSystemAccounts } from '../lib/documents.js';
 import { preparePosting, writePosting } from '../lib/posting.js';
-
-function inventoryError(e: unknown, lineNo?: number): never {
-  if (e instanceof InventoryError || e instanceof MoneyError) {
-    const code = e instanceof InventoryError ? e.code : 'invalid_amount';
-    const message = lineNo ? `Line ${lineNo}: ${e.message}` : e.message;
-    throw new CommandError(
-      code === 'insufficient_stock' || code === 'cost_required' || code === 'corrupt_balance'
-        ? 'failed-precondition'
-        : 'invalid-argument',
-      code,
-      message,
-      lineNo ? { lineNo } : undefined,
-    );
-  }
-  throw e;
-}
+import { StockBook, inventoryError } from '../lib/stock.js';
 
 // --- Locations -------------------------------------------------------------------------------
 
@@ -452,15 +422,6 @@ export const createStockAdjustment = defineCommand({
   },
 });
 
-interface PlannedMovement {
-  line: StockAdjustmentLineDoc;
-  before: StockBalance;
-  after: StockBalance;
-  valueMinor: bigint;
-  /** FIFO layers to write back (existing layers changed, plus a new one for receipts). */
-  layers: { id: string | null; layer: CostLayer }[];
-}
-
 export const decideStockAdjustment = defineCommand({
   name: 'stockAdjustment.decide',
   access: { kind: 'company', permission: 'inventory.products.read' },
@@ -511,74 +472,40 @@ export const decideStockAdjustment = defineCommand({
 
     // --- Reads ----------------------------------------------------------------------------
     const productIds = adj.lines.map((l) => l.productId);
-    const [companySnap, locationSnap, ...rest] = await tx.getAll(
+    const [companySnap, locationSnap, ...productSnaps] = await tx.getAll(
       refs.company,
       refs.location(adj.locationId),
       ...productIds.map((id) => refs.product(id)),
-      ...productIds.map((id) => refs.stockBalance(id, adj.locationId)),
     );
     const companyDoc = companySnap!.data() as CompanyDoc;
     const location = locationSnap!.data() as LocationDoc | undefined;
     if (!location || location.status !== 'active') {
       throw failedPrecondition('location_inactive', 'The location is no longer active');
     }
-    const products = rest
-      .slice(0, productIds.length)
-      .map((s) => s.data() as ProductDoc | undefined);
-    const balanceDocs = rest
-      .slice(productIds.length)
-      .map((s) => s.data() as StockBalanceDoc | undefined);
-    const fifo = companyDoc.costingMethod === 'fifo';
-
-    const layerSnaps = fifo
-      ? await Promise.all(
-          productIds.map((id) =>
-            tx.get(
-              refs.costLayers
-                .where('productId', '==', id)
-                .where('locationId', '==', adj.locationId)
-                .where('open', '==', true)
-                .orderBy('seq'),
-            ),
-          ),
-        )
-      : [];
-
+    const products = productSnaps.map((s) => s.data() as ProductDoc | undefined);
+    const book = await StockBook.read(
+      tx,
+      input.companyId,
+      companyDoc.costingMethod === 'fifo',
+      productIds.map((productId) => ({
+        productId,
+        locationId: adj.locationId,
+        branchId: adj.branchId,
+      })),
+    );
     const counterSubtype = adj.kind === 'opening' ? 'openingBalanceEquity' : 'inventoryAdjustment';
-    const [inventoryAccounts, counterAccounts] = await Promise.all([
-      tx.get(
-        refs.accounts.where('subtype', '==', 'inventory').where('status', '==', 'active').limit(2),
-      ),
-      tx.get(
-        refs.accounts
-          .where('subtype', '==', counterSubtype)
-          .where('status', '==', 'active')
-          .limit(2),
-      ),
-    ]);
-    if (inventoryAccounts.size !== 1 || counterAccounts.size !== 1) {
-      throw failedPrecondition(
-        'accounts_missing',
-        `The chart needs exactly one active Inventory account and one active ${
-          counterSubtype === 'openingBalanceEquity'
-            ? 'Opening balance equity'
-            : 'Inventory adjustments'
-        } account`,
-      );
-    }
-    const inventoryAccountId = inventoryAccounts.docs[0]!.id;
-    const counterAccountId = counterAccounts.docs[0]!.id;
-    const inventoryAccount = inventoryAccounts.docs[0]!.data() as AccountDoc;
-    if (!inventoryAccount.isControl) {
-      throw failedPrecondition(
-        'accounts_missing',
-        'The inventory account must be a control account',
-      );
-    }
+    const accounts = await readSystemAccounts(
+      tx,
+      input.companyId,
+      ['inventory', counterSubtype],
+      ['inventory'],
+    );
+    const inventoryAccountId = accounts.inventory;
+    const counterAccountId = accounts[counterSubtype];
 
     // --- Plan -----------------------------------------------------------------------------
     const postingDate = businessDate(now.toDate(), companyDoc.timeZone);
-    const planned: PlannedMovement[] = [];
+    const valueByLine = new Map<number, bigint>();
     adj.lines.forEach((line, i) => {
       const lineNo = line.lineNo;
       const product = products[i];
@@ -588,8 +515,7 @@ export const decideStockAdjustment = defineCommand({
           `Line ${lineNo}: the product is no longer active`,
         );
       }
-      const balanceDoc = balanceDocs[i];
-      if (adj.kind === 'opening' && balanceDoc) {
+      if (adj.kind === 'opening' && book.hasRecord(line.productId, adj.locationId)) {
         throw failedPrecondition(
           'opening_after_movements',
           `Line ${lineNo}: ${product.sku} already has stock movements at this location`,
@@ -597,63 +523,32 @@ export const decideStockAdjustment = defineCommand({
       }
       const delta = fromStorable(line.deltaMilli);
       if (delta === 0n) return;
-      const before = balanceOf(balanceDoc);
-      const layers: CostLayer[] = fifo
-        ? layerSnaps[i]!.docs.map((d) => {
-            const l = d.data() as CostLayerDoc;
-            return {
-              id: d.id,
-              qtyRemaining: fromStorable(l.qtyRemaining),
-              valueRemaining: fromStorable(l.valueRemaining),
-            };
-          })
-        : [];
       try {
         if (delta > 0n) {
+          const before = book.balance(line.productId, adj.locationId);
           const cost =
             line.unitCostScaled !== null
               ? fromStorable(line.unitCostScaled)
               : defaultIncreaseCost(before);
           const value = valueAt(delta, cost);
-          planned.push({
-            line,
-            before,
-            after: receive(before, { qtyMilli: delta, valueMinor: value }),
-            valueMinor: value,
-            layers: fifo
-              ? [{ id: null, layer: { id: '', qtyRemaining: delta, valueRemaining: value } }]
-              : [],
+          book.receive(line.productId, adj.locationId, delta, value, adj.kind, {
+            id: input.adjustmentId,
+            lineNo: null,
+            date: postingDate,
           });
+          valueByLine.set(lineNo, value);
         } else {
-          const issue = fifo
-            ? issueFifo(before, layers, -delta)
-            : issueWeightedAverage(before, -delta);
-          planned.push({
-            line,
-            before,
-            after: issue.balance,
-            valueMinor: -issue.valueMinor,
-            layers: (issue.layers ?? [])
-              .map((l, j) => ({
-                id: l.id,
-                layer: l,
-                changed: l.qtyRemaining !== layers[j]!.qtyRemaining,
-              }))
-              .filter((x) => x.changed)
-              .map(({ id, layer }) => ({ id, layer })),
-          });
+          const value = book.issue(line.productId, adj.locationId, -delta, adj.kind);
+          valueByLine.set(lineNo, -value);
         }
       } catch (e) {
         inventoryError(e, lineNo);
       }
     });
 
-    const increase = planned
-      .filter((p) => p.valueMinor > 0n)
-      .reduce((s, p) => s + p.valueMinor, 0n);
-    const decrease = planned
-      .filter((p) => p.valueMinor < 0n)
-      .reduce((s, p) => s - p.valueMinor, 0n);
+    const values = [...valueByLine.values()];
+    const increase = values.filter((v) => v > 0n).reduce((s, v) => s + v, 0n);
+    const decrease = values.filter((v) => v < 0n).reduce((s, v) => s - v, 0n);
     const journalLines: JournalLine[] = [];
     if (increase > 0n) {
       journalLines.push(
@@ -688,69 +583,25 @@ export const decideStockAdjustment = defineCommand({
     const journalId = prepared
       ? writePosting(tx, { companyId: input.companyId, caller, now }, prepared).journalId
       : null;
-
-    for (const p of planned) {
-      const { line } = p;
-      const balanceRef = refs.stockBalance(line.productId, adj.locationId);
-      const existing = balanceDocs[adj.lines.indexOf(line)];
-      let nextSeq = existing?.nextLayerSeq ?? 1;
-      for (const { id, layer } of p.layers) {
-        if (id) {
-          tx.update(refs.costLayers.doc(id), {
-            qtyRemaining: toStorable(layer.qtyRemaining),
-            valueRemaining: toStorable(layer.valueRemaining),
-            open: layer.qtyRemaining > 0n,
-          });
-        } else {
-          tx.set(refs.costLayers.doc(), {
-            productId: line.productId,
-            locationId: adj.locationId,
-            seq: nextSeq++,
-            open: true,
-            qtyReceived: toStorable(layer.qtyRemaining),
-            qtyRemaining: toStorable(layer.qtyRemaining),
-            valueRemaining: toStorable(layer.valueRemaining),
-            receivedDate: postingDate,
-            sourceId: input.adjustmentId,
-          } satisfies CostLayerDoc);
-        }
-      }
-      tx.set(balanceRef, {
-        productId: line.productId,
-        locationId: adj.locationId,
-        branchId: adj.branchId,
-        qtyMilli: toStorable(p.after.qtyMilli),
-        valueMinor: toStorable(p.after.valueMinor),
-        nextLayerSeq: nextSeq,
-        updatedAt: now,
-      } satisfies StockBalanceDoc);
-      tx.set(refs.stockMovements.doc(), {
-        productId: line.productId,
-        locationId: adj.locationId,
-        branchId: adj.branchId,
-        qtyMilli: line.deltaMilli,
-        valueMinor: toStorable(p.valueMinor),
-        movementType: adj.kind,
-        postingDate,
-        sourceType: 'stockAdjustment',
-        sourceId: input.adjustmentId,
-        sourceNumber: adj.number,
-        journalId,
-        balanceQtyMilli: toStorable(p.after.qtyMilli),
-        balanceValueMinor: toStorable(p.after.valueMinor),
-        postedAt: now,
-        postedBy: caller.uid,
-      } satisfies StockMovementDoc);
-      if (!products[adj.lines.indexOf(line)]!.hasMovements) {
+    const moved = book.write(tx, {
+      postingDate,
+      sourceType: 'stockAdjustment',
+      sourceId: input.adjustmentId,
+      sourceNumber: adj.number,
+      journalId,
+      now,
+      uid: caller.uid,
+    });
+    adj.lines.forEach((line, i) => {
+      if (moved.has(line.productId) && !products[i]!.hasMovements) {
+        products[i]!.hasMovements = true;
         tx.update(refs.product(line.productId), { hasMovements: true });
       }
-    }
-
-    if (planned.length && !companyDoc.locks.costingMethod) {
+    });
+    if (book.hasMovements && !companyDoc.locks.costingMethod) {
       tx.update(refs.company, { 'locks.costingMethod': true });
     }
 
-    const valueByLine = new Map(planned.map((p) => [p.line.lineNo, p.valueMinor]));
     const net = increase - decrease;
     tx.update(adjRef, {
       status: 'posted',

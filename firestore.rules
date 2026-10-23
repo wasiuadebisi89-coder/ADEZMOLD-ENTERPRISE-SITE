@@ -151,6 +151,32 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Purchasing: suppliers and their documents. Invoice-number keys stay server-only.
+      match /suppliers/{supplierId} {
+        allow read: if can(companyId, 'purchasing.read');
+        allow write: if false;
+      }
+
+      match /goodsReceipts/{receiptId} {
+        allow read: if can(companyId, 'purchasing.read');
+        allow write: if false;
+      }
+
+      match /purchaseInvoices/{invoiceId} {
+        allow read: if can(companyId, 'purchasing.read');
+        allow write: if false;
+      }
+
+      match /supplierPayments/{paymentId} {
+        allow read: if can(companyId, 'purchasing.read');
+        allow write: if false;
+      }
+
+      match /supplierReturns/{returnId} {
+        allow read: if can(companyId, 'purchasing.read');
+        allow write: if false;
+      }
+
       match /attachments/{attachmentId} {
         allow read: if isActiveMember(companyId);
         allow write: if false;

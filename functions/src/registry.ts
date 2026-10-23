@@ -33,6 +33,16 @@ import {
   requestApproval,
   setPeriodStatus,
 } from './commands/period.js';
+import {
+  allocateSupplierPayment,
+  createSupplier,
+  postGoodsReceipt,
+  postPurchaseInvoice,
+  postSupplierOpeningBalance,
+  postSupplierPayment,
+  postSupplierReturn,
+  updateSupplier,
+} from './commands/purchasing.js';
 import { platformSupportRead, revokeAllSessions } from './commands/platform.js';
 import { createRole, deleteRole, updateRole } from './commands/role.js';
 
@@ -68,6 +78,14 @@ export const COMMANDS: Record<CommandName, AnyCommand> = {
   'location.update': updateLocation,
   'stockAdjustment.create': createStockAdjustment,
   'stockAdjustment.decide': decideStockAdjustment,
+  'supplier.create': createSupplier,
+  'supplier.update': updateSupplier,
+  'goodsReceipt.post': postGoodsReceipt,
+  'purchaseInvoice.post': postPurchaseInvoice,
+  'supplierOpeningBalance.post': postSupplierOpeningBalance,
+  'supplierPayment.post': postSupplierPayment,
+  'supplierPayment.allocate': allocateSupplierPayment,
+  'supplierReturn.post': postSupplierReturn,
   'platform.supportRead': platformSupportRead,
   'session.revokeAll': revokeAllSessions,
 };
