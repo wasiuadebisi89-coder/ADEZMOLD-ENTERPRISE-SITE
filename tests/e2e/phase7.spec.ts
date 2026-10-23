@@ -139,6 +139,8 @@ test('F2 ageing and stock reports agree with their ledger accounts', async ({ pa
   await expect(page.getByText('No stock on hand')).toBeVisible();
   await expect(page.getByText('It agrees with the stock records.')).toBeVisible();
   await page.getByRole('tab', { name: 'Receivables ageing' }).click();
+  // Wait for the ageing tab to replace the stock tab before using its date picker.
+  await expect(page.getByRole('table', { name: 'Customer ageing' })).toContainText('SHOP Stores');
   await page.getByLabel('As at').fill(yesterday);
   await page.getByRole('button', { name: 'Show report' }).click();
   await expect(page.getByText('Nothing outstanding')).toBeVisible();
