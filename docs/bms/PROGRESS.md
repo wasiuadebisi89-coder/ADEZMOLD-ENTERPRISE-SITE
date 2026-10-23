@@ -56,3 +56,52 @@ periods), so screens now wait for the server's first answer.
 
 **Next**: owner review of Phase 1 and the open policy decisions, then Phase 2 (chart of
 accounts, posting engine, journals, opening balances).
+
+## 2026-10-23 — Phase 1 merged; Phase 2 ledger implemented (pending review)
+
+Owner merged Phase 0 and Phase 1 (all four CI jobs green) and confirmed OPEN_DECISIONS #1
+(IFRS for SMEs) and #4 (3-day backdating window), then asked to proceed with Phase 2.
+
+**Built**
+
+- `packages/domain`: ledger rules (`assertValidJournal`, `reverseLines`,
+  `openingBalanceDifference`, `trialBalance`), account types and roles, control-account rule,
+  and the draft trading chart of accounts (CHART_OF_ACCOUNTS.md).
+- Posting engine (`functions/src/lib/posting.ts`): one path for every journal. It checks
+  branch scope, accounts, balance, period status, the backdating window and approvals, then
+  writes the journal, its ledger entries, the number series, first-posting locks (currency,
+  financial-year start) and consumes the approval, all in the command's transaction.
+- Commands (24 in total): `chart.applyTemplate`, `account.create`, `account.update`,
+  `journal.post`, `journal.reverse`, `openingBalance.post`; `approval.request` and
+  `approval.decide` now also handle `ledger.backdate`.
+- New companies get the trading chart automatically.
+- Rules: accounts readable with `ledger.accounts.read`; journals and ledger entries with
+  `ledger.journal.read` or `reports.financial.read`; number series server-only; no client
+  writes. Indexes for balance sums and backdating requests.
+- Web: chart of accounts (tree, add, edit, deactivate), journals list, new journal with live
+  totals and out-of-balance warning, journal detail with reversal, opening balances with the
+  equity difference shown, trial balance as at any date, approvals page for backdating and
+  reopen requests.
+
+**Verified (run locally on 2026-10-23, Node 22.22.0, firebase-tools 15.34.1)**
+
+| Check                                          | Result                                        |
+| ---------------------------------------------- | --------------------------------------------- |
+| `pnpm format:check`, `pnpm lint`               | clean                                         |
+| `pnpm typecheck` (all 5 packages)              | clean                                         |
+| `pnpm build`                                   | succeeds                                      |
+| `pnpm test:unit`                               | 81 passed                                     |
+| `pnpm test:emulator` (rules + integration)     | 105 passed (58 rules, 47 integration; 34 new) |
+| `pnpm test:e2e` (Playwright, desktop + mobile) | 8 passed                                      |
+
+CI runs on the Phase 2 pull request.
+
+**Acceptance coverage (PHASE2_ACCEPTANCE.md)**: L1–L6 covered by automated tests.
+
+**Bug found by tests and fixed**: on a phone, the journal-lines table pushed the page 158 px
+wider than the screen, because its screen-reader-only header escaped the scroll container.
+Scroll containers are now positioned so the page never scrolls sideways.
+
+**Next**: owner review of the chart of accounts (OPEN_DECISIONS #14), then Phase 3
+(catalogue, inventory, costing, adjustments), which needs decisions #5 (costing method) and
+#6 (adjustment approvals).

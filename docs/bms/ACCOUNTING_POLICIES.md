@@ -1,10 +1,11 @@
 # BMS — Accounting policies (Phase 0)
 
-Status: **Draft for review.** Items marked **DECISION** need the owner's confirmation;
+Status: **Draft for review.** Items marked **DECISION** need the owner's confirmation
+(#1 and #4 confirmed 2026-10-23);
 the value shown is the proposed safe default, not a fact. No tax rate is hard-coded:
 tax codes and rates are entered per company by an authorised user.
 
-Reference framework (DECISION 1): proposed **IFRS for SMEs** principles, configurable per
+Reference framework (DECISION 1, **confirmed**): **IFRS for SMEs** principles, configurable per
 company. The software records policy choices per company so it can serve businesses on
 other frameworks.
 
@@ -22,7 +23,8 @@ other frameworks.
   - `closed`: no postings. Reopening requires `settings.periods.reopen` **and** an approved
     approval request with a reason; it is audited.
 - Backdating: postings with a date earlier than today minus `backdateWindowDays`
-  (DECISION 4: proposed **3 days**) require approval. Future-dated postings beyond today are
+  (DECISION 4, **confirmed: 3 days**) require approval: a `ledger.backdate` request for
+  that date, raised by the person posting and approved by someone else; it is used once. Future-dated postings beyond today are
   rejected.
 - Year-end close transfers income and expense balances to retained earnings via a system
   journal (Phase 7).
@@ -34,7 +36,10 @@ other frameworks.
   (mirror journal dated in an open period, linked both ways) and, if needed, a new
   correcting entry.
 - Control accounts (AR, AP, inventory, GRNI) accept postings only from their subledger
-  modules, never from manual journals.
+  modules, never from manual journals or the general opening-balance journal.
+- Reversals are dated on or after the original, in an open period. Only manual and opening
+  journals are reversed from the ledger; module postings are reversed through their source
+  document. A reversal cannot itself be reversed (post a new journal instead).
 
 ## 4. Inventory
 
@@ -124,6 +129,9 @@ other frameworks.
 
 ## 12. Opening balances
 
+- Phase 2 builds the general-ledger part: one opening journal per company (reversible, then
+  re-enterable), with the difference posted to the account whose role is opening balance
+  equity.
 - Opening-balance batch at a cut-over date: GL balances, AR and AP per open invoice, stock
   quantities and costs per product/location, fixed assets with accumulated depreciation.
 - Batch must balance; any difference must be explicitly posted to an "Opening balance

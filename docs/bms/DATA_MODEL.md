@@ -60,27 +60,41 @@ lives in `packages/domain/permissions.ts`; roles store subsets. System role temp
 (Company Admin, Manager, Sales Officer, Store Officer, Accountant, Auditor) are seeded at
 company creation and can be copied and customised, not deleted.
 
-## 4. Ledger (Phase 2)
+## 4. Ledger (Phase 2, as built)
 
 ```
   accounts/{accountId}               ★ code, name, type (asset|liability|equity|income|expense),
-                                       subtype (cash|bank|receivable|payable|inventory|
-                                       grni|tax|fixedAsset|accumDepreciation|cogs|...),
-                                       parentId, isPostable, isControl, status, currency
-  accountMappings/{transactionType}  ★ map of role → accountId (e.g. sale.revenue, sale.ar)
-  journals/{journalId}               ★ number, postingDate, periodId, sourceType, sourceId,
-                                       sourceNumber, memo, lines[] (embedded, ≤200),
-                                       totalDebit, totalCredit, status (posted|reversed),
-                                       reversesJournalId?, reversedByJournalId?, batchId?
-  ledgerEntries/{entryId}            ★ journalId, lineNo, accountId, postingDate, periodId,
-                                       debit, credit, branchId, partyId?, productId?,
-                                       sourceType, sourceId, batchStatus
-  periodBalances/{periodId_accountId}★ snapshot written at period close
-  openingBalanceBatches/{batchId}    ★ status, asAtDate, lines, chunk progress
+                                       subtype (role: cash|bank|receivable|payable|inventory|
+                                       grni|inputTax|outputTax|retainedEarnings|
+                                       openingBalanceEquity|revenue|cogs|...), parentId,
+                                       isPostable (false = heading), isControl (derived from
+                                       subtype), status, hasPostings, template {id, version}
+  journals/{journalId}               ★ number, postingDate, periodId, branchId,
+                                       origin (manual|opening_balance|reversal|system),
+                                       currency, memo, reference, lines[] (embedded, ≤200, with
+                                       accountCode/accountName snapshots), totalDebit,
+                                       totalCredit, status (posted|reversed),
+                                       reversesJournalId, reversedByJournalId, reversalReason,
+                                       backdateApprovalId, postedAt, postedBy
+  ledgerEntries/{journalId}_{lineNo} ★ journalId, journalNumber, lineNo, accountId,
+                                       postingDate, periodId, branchId, origin, debit, credit,
+                                       memo, postedAt
+  numberSeries/{seriesId}            ★ prefix, next (journal.manual JV, journal.opening OB,
+                                       journal.reversal RV, journal.system SJ)
+  settings/ledger                    ★ openingBalanceJournalId
+  approvalRequests/{id}              ★ action period.reopen {periodId} |
+                                       ledger.backdate {postingDate}; usedFor
+  periodBalances/{periodId_accountId}★ snapshot written at period close (not built yet)
 ```
 
+Posting services find special accounts by role (`subtype`), so there is no separate
+account-mappings document; the roles that must be unique (retained earnings, opening balance
+equity) are enforced on account creation. Only the link fields of a posted journal
+(`status`, `reversedByJournalId`, `reversalReason`) ever change.
+
 Invariant (tested): for every journal `Σdebit = Σcredit > 0`; every line has exactly one of
-debit/credit > 0; account is postable, active, same company.
+debit/credit > 0; account is postable, active, same company; control accounts only from
+their module.
 
 ## 5. Catalogue and inventory (Phase 3)
 
@@ -128,7 +142,7 @@ Posted documents are immutable; corrections are reversals or new documents.
 
 ## 8. Indexes (initial)
 
-`ledgerEntries`: (accountId, postingDate), (partyId, postingDate), (sourceType, sourceId).
+`ledgerEntries`: (accountId, postingDate), (journalId, lineNo); later (partyId, postingDate).
 `stockMovements`: (productId, locationId, postingDate). `journals`: (postingDate),
 (sourceType, sourceId). `auditLogs`: (entityType, entityId, at), (actorUid, at).
 Defined in `firestore.indexes.json` and reviewed each phase.
