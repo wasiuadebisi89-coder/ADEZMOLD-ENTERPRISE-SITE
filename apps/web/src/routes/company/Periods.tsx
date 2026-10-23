@@ -196,8 +196,9 @@ export default function Periods() {
   const canRequest = can('settings.periods.reopen.request');
   const canApprove = can('settings.periods.reopen.approve');
   const rows = [...periods.data].sort((a, b) => a.id.localeCompare(b.id));
+  // Backdating requests share the collection; they are listed on the Approvals page.
   const openApprovals = approvals.data.filter(
-    (a) => a.status === 'pending' || a.status === 'approved',
+    (a) => a.action === 'period.reopen' && (a.status === 'pending' || a.status === 'approved'),
   );
   const approvalFor = (periodId: string) =>
     openApprovals.find((a) => a.target.periodId === periodId);

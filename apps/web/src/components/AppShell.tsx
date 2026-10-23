@@ -1,6 +1,10 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
+  BookOpen,
   Building,
+  CheckSquare,
+  ListTree,
+  Scale,
   CalendarRange,
   ChevronsUpDown,
   History,
@@ -29,6 +33,20 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: '', label: 'Overview', icon: LayoutDashboard },
+  {
+    to: 'accounts',
+    label: 'Chart of accounts',
+    icon: ListTree,
+    permission: 'ledger.accounts.read',
+  },
+  { to: 'journals', label: 'Journals', icon: BookOpen, permission: 'ledger.journal.read' },
+  {
+    to: 'trial-balance',
+    label: 'Trial balance',
+    icon: Scale,
+    permission: 'reports.financial.read',
+  },
+  { to: 'approvals', label: 'Approvals', icon: CheckSquare, permission: 'approvals.read' },
   { to: 'members', label: 'Users', icon: Users, permission: 'company.members.read' },
   { to: 'roles', label: 'Roles', icon: ShieldCheck, permission: 'company.members.read' },
   { to: 'branches', label: 'Branches', icon: Building },
