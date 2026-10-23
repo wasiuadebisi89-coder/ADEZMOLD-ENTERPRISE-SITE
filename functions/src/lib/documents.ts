@@ -1,8 +1,24 @@
-/** Helpers shared by module documents: number series and accounts looked up by role. */
-import type { Transaction } from 'firebase-admin/firestore';
-import type { AccountSubtype } from '@bms/domain';
-import { failedPrecondition } from './errors.js';
+/**
+ * Helpers shared by module documents: number series, accounts looked up by role, parsing typed
+ * amounts and quantities, building journals, and allocating payments to open documents.
+ */
+import type { Timestamp, Transaction } from 'firebase-admin/firestore';
+import {
+  MoneyError,
+  PurchasingError,
+  assertAllocations,
+  fromStorable,
+  parseMoney,
+  parseQuantity,
+  type AccountSubtype,
+  type JournalLine,
+  type UnitCode,
+} from '@bms/domain';
+import type { Caller, CompanyContext } from './command.js';
+import { CommandError, failedPrecondition, invalid } from './errors.js';
 import { companyRefs, type AccountDoc, type NumberSeriesDoc } from './model.js';
+import { preparePosting, writePosting, type PostingRequest } from './posting.js';
+import { inventoryError } from './stock.js';
 
 /** Reads the next number of a document series. Call `commit` once all reads are done. */
 export async function readSeries(
@@ -33,6 +49,10 @@ const ROLE_NAMES: Partial<Record<AccountSubtype, string>> = {
   purchasePriceVariance: 'Purchase price variance',
   inventoryAdjustment: 'Inventory adjustments',
   openingBalanceEquity: 'Opening balance equity',
+  receivable: 'Trade receivables',
+  revenue: 'Sales revenue',
+  outputTax: 'Output tax payable',
+  customerAdvance: 'Customer advances',
 };
 
 /**
@@ -69,3 +89,106 @@ export async function readSystemAccounts<S extends AccountSubtype>(
   });
   return result;
 }
+
+/** Parses a typed amount with the company currency; errors name the line when given. */
+export function money(input: string, currency: string, lineNo?: number): bigint {
+  try {
+    return parseMoney(input, currency);
+  } catch (e) {
+    if (e instanceof MoneyError) {
+      throw invalid('amount_invalid', lineNo ? `Line ${lineNo}: ${e.message}` : e.message, {
+        ...(lineNo ? { lineNo } : {}),
+      });
+    }
+    throw e;
+  }
+}
+
+export function positiveQuantity(input: string, unit: UnitCode, lineNo: number): bigint {
+  let qty: bigint;
+  try {
+    qty = parseQuantity(input, unit);
+  } catch (e) {
+    return inventoryError(e, lineNo);
+  }
+  if (qty <= 0n) {
+    throw invalid('invalid_quantity', `Line ${lineNo}: enter a quantity above zero`, { lineNo });
+  }
+  return qty;
+}
+
+/** Nets signed amounts (+ debit, − credit) per account into journal lines, debits first. */
+export function journalFrom(
+  entries: readonly { accountId: string; amount: bigint }[],
+): JournalLine[] {
+  const net = new Map<string, bigint>();
+  for (const e of entries) net.set(e.accountId, (net.get(e.accountId) ?? 0n) + e.amount);
+  const lines: JournalLine[] = [];
+  for (const [accountId, amount] of net) {
+    if (amount > 0n) lines.push({ accountId, debit: amount, credit: 0n });
+  }
+  for (const [accountId, amount] of net) {
+    if (amount < 0n) lines.push({ accountId, debit: 0n, credit: -amount });
+  }
+  return lines;
+}
+
+/** Validates a posting (all reads) and returns the function that writes it. */
+export async function post(
+  tx: Transaction,
+  ctx: { company: CompanyContext; caller: Caller; now: Timestamp },
+  request: PostingRequest,
+) {
+  const prepared = await preparePosting(tx, ctx, request);
+  return () =>
+    writePosting(
+      tx,
+      { companyId: ctx.company.companyId, caller: ctx.caller, now: ctx.now },
+      prepared,
+    );
+}
+
+export const companyTarget = (companyId: string) => ({ scope: 'company' as const, companyId });
+
+/** An invoice that payments settle: purchase or sales. */
+export interface Settleable {
+  number: string;
+  totalMinor: number;
+  paidMinor: number;
+  creditedMinor: number;
+}
+
+export function settleableOutstanding(doc: Settleable): bigint {
+  return (
+    fromStorable(doc.totalMinor) - fromStorable(doc.paidMinor) - fromStorable(doc.creditedMinor)
+  );
+}
+
+/** Checks requested allocations against what each invoice still owes and what is available. */
+export function planAllocations(
+  available: bigint,
+  requested: readonly { invoiceId: string; amount: string }[],
+  invoices: ReadonlyMap<string, Settleable>,
+  currency: string,
+) {
+  const planned = requested.map((a, i) => ({
+    invoiceId: a.invoiceId,
+    amountMinor: money(a.amount, currency, i + 1),
+    outstandingMinor: settleableOutstanding(invoices.get(a.invoiceId)!),
+    label: invoices.get(a.invoiceId)!.number,
+  }));
+  try {
+    return { planned, total: assertAllocations(available, planned) };
+  } catch (e) {
+    if (e instanceof PurchasingError) {
+      throw new CommandError(
+        e.code === 'over_allocated' ? 'failed-precondition' : 'invalid-argument',
+        e.code,
+        e.message,
+      );
+    }
+    throw e;
+  }
+}
+
+export type PlannedAllocation = ReturnType<typeof planAllocations>['planned'][number];

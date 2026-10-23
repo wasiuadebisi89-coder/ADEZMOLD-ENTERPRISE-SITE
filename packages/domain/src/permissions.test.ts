@@ -59,6 +59,10 @@ describe('system role templates (E2)', () => {
     expect(has('sales_officer', 'sales.refund.approve')).toBe(false);
     expect(has('store_officer', 'inventory.adjustment.approve')).toBe(false);
     expect(has('manager', 'inventory.adjustment.approve')).toBe(true);
+    expect(has('manager', 'sales.creditLimit.override')).toBe(true);
+    expect(has('sales_officer', 'sales.creditLimit.override')).toBe(false);
+    expect(has('sales_officer', 'sales.customers.manage')).toBe(false);
+    expect(has('accountant', 'sales.customers.manage')).toBe(true);
   });
 });
 

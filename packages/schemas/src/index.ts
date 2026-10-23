@@ -84,6 +84,8 @@ export const updateCompanySettingsInput = scoped.extend({
   fiscalYearStartMonth: z.number().int().min(1).max(12).optional(),
   backdateWindowDays: z.number().int().min(0).max(366).optional(),
   costingMethod: z.enum(['weighted_average', 'fifo']).optional(),
+  /** DECISION 9: whether sale prices include tax. Applies to sales posted afterwards. */
+  pricesIncludeTax: z.boolean().optional(),
 });
 export type UpdateCompanySettingsInput = z.infer<typeof updateCompanySettingsInput>;
 
@@ -154,7 +156,11 @@ export const createFiscalYearInput = scoped.extend({
   startYear: z.number().int().min(2000).max(2100),
 });
 
-export const APPROVAL_ACTIONS = ['period.reopen', 'ledger.backdate'] as const;
+export const APPROVAL_ACTIONS = [
+  'period.reopen',
+  'ledger.backdate',
+  'sales.creditOverride',
+] as const;
 export type ApprovalAction = (typeof APPROVAL_ACTIONS)[number];
 
 export const requestApprovalInput = z.discriminatedUnion('action', [
@@ -166,6 +172,19 @@ export const requestApprovalInput = z.discriminatedUnion('action', [
   scoped.extend({
     action: z.literal('ledger.backdate'),
     target: z.object({ postingDate: isoDate }),
+    reason: trimmed(3, 500),
+  }),
+  /** A sale that takes a customer over their credit limit; the amount is what goes on credit. */
+  scoped.extend({
+    action: z.literal('sales.creditOverride'),
+    target: z.object({
+      customerId: docId,
+      amount: z
+        .string()
+        .trim()
+        .max(24)
+        .regex(/^(\d{1,3}(,\d{3})*|\d+)(\.\d+)?$/, 'Enter an amount such as 1250.50'),
+    }),
     reason: trimmed(3, 500),
   }),
 ]);
@@ -487,6 +506,100 @@ export const postSupplierReturnInput = scoped.extend({
   backdateApprovalId: docId.optional(),
 });
 
+// --- Customers and sales (Phase 5) ---------------------------------------------------------
+
+export const customerCode = supplierCode;
+
+const customerDetails = {
+  ...supplierDetails,
+  /** DECISION 7: 0 means cash only. Sales beyond it need an override. */
+  creditLimit: amount,
+};
+
+export const createCustomerInput = scoped.extend({ code: customerCode, ...customerDetails });
+export const updateCustomerInput = scoped.extend({
+  customerId: docId,
+  ...(Object.fromEntries(Object.entries(customerDetails).map(([k, v]) => [k, v.optional()])) as {
+    [K in keyof typeof customerDetails]: z.ZodOptional<(typeof customerDetails)[K]>;
+  }),
+  status: z.enum(['active', 'inactive']).optional(),
+});
+
+export const taxCode = supplierCode;
+/** A percentage as typed, e.g. "7.5". No rate is preset (DECISION 9). */
+export const ratePercent = z
+  .string()
+  .trim()
+  .regex(/^\d{1,4}(\.\d{1,2})?$/, 'Enter a rate such as 7.5, with up to two decimals');
+
+export const createTaxCodeInput = scoped.extend({
+  code: taxCode,
+  name: trimmed(2, 80),
+  rate: ratePercent,
+});
+export const updateTaxCodeInput = scoped.extend({
+  taxCodeId: docId,
+  name: trimmed(2, 80).optional(),
+  rate: ratePercent.optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+});
+
+export const salesLineInput = z.object({
+  productId: docId,
+  quantity,
+  /** Leave out to sell at the product's price. A different price needs sales.priceOverride. */
+  unitPrice: amount.optional(),
+  /** An amount off the line. Needs sales.priceOverride. */
+  discount: amount.optional(),
+  taxCodeId: docId.optional(),
+});
+
+export const postSalesInvoiceInput = scoped.extend({
+  /** Leave out for a walk-in customer, who must pay in full. */
+  customerId: docId.optional(),
+  locationId: docId,
+  postingDate: isoDate,
+  dueDate: isoDate.optional(),
+  reference: optionalText(60),
+  memo: optionalText(300),
+  lines: documentLines(salesLineInput),
+  /** Money taken at the sale. Whatever is left is owed by the customer. */
+  payments: z
+    .array(z.object({ accountId: docId, amount }))
+    .max(5, 'Use at most 5 payments')
+    .default([]),
+  creditApprovalId: docId.optional(),
+  backdateApprovalId: docId.optional(),
+});
+
+export const postCustomerOpeningBalanceInput = scoped.extend({
+  customerId: docId,
+  branchId: docId,
+  asAtDate: isoDate,
+  dueDate: isoDate.optional(),
+  reference: trimmed(1, 60),
+  amount,
+  backdateApprovalId: docId.optional(),
+});
+
+export const postCustomerReceiptInput = scoped.extend({
+  customerId: docId,
+  branchId: docId,
+  postingDate: isoDate,
+  depositAccountId: docId,
+  amount,
+  reference: optionalText(60),
+  memo: optionalText(300),
+  allocations: allocationsInput.default([]),
+  backdateApprovalId: docId.optional(),
+});
+
+/** Applies the unallocated part of an earlier receipt (a customer advance) to invoices. */
+export const allocateCustomerReceiptInput = scoped.extend({
+  receiptId: docId,
+  allocations: allocationsInput.min(1, 'Choose at least one invoice'),
+});
+
 // --- Platform and session ------------------------------------------------------------------
 
 export const platformSupportReadInput = base.extend({
@@ -535,6 +648,14 @@ export const COMMAND_SCHEMAS = {
   'supplierPayment.post': postSupplierPaymentInput,
   'supplierPayment.allocate': allocateSupplierPaymentInput,
   'supplierReturn.post': postSupplierReturnInput,
+  'taxCode.create': createTaxCodeInput,
+  'taxCode.update': updateTaxCodeInput,
+  'customer.create': createCustomerInput,
+  'customer.update': updateCustomerInput,
+  'salesInvoice.post': postSalesInvoiceInput,
+  'customerOpeningBalance.post': postCustomerOpeningBalanceInput,
+  'customerReceipt.post': postCustomerReceiptInput,
+  'customerReceipt.allocate': allocateCustomerReceiptInput,
   'platform.supportRead': platformSupportReadInput,
   'session.revokeAll': revokeSessionsInput,
 } as const;

@@ -45,8 +45,8 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
 
 ## Phase 3
 
-- **Sales officers cannot see stock quantities.** Stock levels need `reports.stock.read`;
-  an availability view for the sales screen comes with POS in Phase 5.
+- **Sales officers cannot see stock values.** Since Phase 5 they see quantities on the sale
+  screen through `stockAvailability`; values still need `reports.stock.read`.
 - **No transfers between locations yet.** Moving stock to quarantine or another branch is
   done today as a decrease at one location and an increase at the other.
 - **Adjustments are dated on approval.** The posting date is the approver's business date;
@@ -66,7 +66,7 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
   three-way match against an order.
 - **Supplier payments need no second approval** (OPEN_DECISIONS #16). The
   `purchasing.payment.approve` permission exists for when an approval step is wanted.
-- **Input tax is typed, not computed.** No tax codes or rates exist yet (OPEN_DECISIONS #9).
+- **Input tax is typed, not computed.** Tax codes exist since Phase 5 but apply to sales only.
 - **A supplier return credit cannot exceed what is still owed on its invoice.** Refunds from
   suppliers and debit balances on a supplier come later.
 - **Landed costs spread by value or quantity only**, over a single receipt per charge line.
@@ -79,3 +79,29 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
   return; a wrong invoice amount with a manual journal or, later, a debit note.
 - **Weighted average "on hand"** for price differences is an approximation: the smaller of
   the invoiced quantity and the quantity now at the location (ACCOUNTING_POLICIES §5).
+
+## Phase 5
+
+- **No sales returns, credit notes or refunds yet** (Phase 6). A sale posted in error cannot
+  be undone until then: receivables and inventory are control accounts, so manual journals
+  cannot touch them.
+- **One revenue account.** Every sale credits the account with the Revenue role; revenue by
+  product line needs per-category accounts (CHART_OF_ACCOUNTS question 1). Branch is on every
+  ledger line, so revenue by branch already works.
+- **One tax code per line, sales only.** No compound taxes, withholding tax, exempt/zero-rated
+  reporting or tax returns yet; input tax on purchases is still typed.
+- **Number series** (SI, CR) and the system journal series are single counter documents,
+  about one write per second each. That suits a few tills; busy multi-till shops will need
+  sharded or per-branch series before go-live.
+- **No till sessions.** There is no opening float, cash-up, receipt printer or barcode
+  scanner support; the sale page prints with the browser.
+- **The sale screen loses an unsaved cart on reload**, including while waiting for a credit
+  approval. The approval itself is kept and can be used once the cart is re-entered.
+- **Sales officers allocate receipts only to invoices they recorded**, because they read only
+  their own sales. Anything else stays as an advance for an accountant to apply.
+- **A product without a selling price** can be sold only by someone with
+  `sales.priceOverride`.
+- **Lists show the latest 100 documents.** Customer statements, ageing and sales reports come
+  with Phase 7.
+- **Changing a tax rate or the "prices include tax" setting** affects sales posted afterwards
+  only; there is no effective date.

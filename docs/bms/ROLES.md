@@ -18,6 +18,8 @@ customise templates. Platform Super Admin is not a company role.
 | Suppliers                   | W             | W       | —              | R              | W            | R       |
 | Purchases, goods receipts   | P             | P       | —              | W (receipts P) | P            | R       |
 | Supplier payments           | A             | P       | —              | —              | P            | R       |
+| Customers, credit limits    | W             | W       | —              | —              | W            | R       |
+| Credit limit override       | A             | A       | request        | —              | —            | R       |
 | Sales / POS                 | P             | P       | P (own branch) | —              | R            | R       |
 | Customer receipts           | P             | P       | P              | —              | P            | R       |
 | Sales returns               | P             | P       | W (approval)   | receive goods  | R            | R       |

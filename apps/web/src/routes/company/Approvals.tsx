@@ -9,6 +9,7 @@ import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useCollection } from '../../lib/firestore-hooks';
+import { money } from '../../lib/ledger';
 import { useAction } from '../../lib/useAction';
 import { formatDate, formatDateTime } from '../../lib/utils';
 
@@ -21,17 +22,27 @@ export type ApprovalRow = {
 } & (
   | { action: 'period.reopen'; target: { periodId: string } }
   | { action: 'ledger.backdate'; target: { postingDate: string } }
+  | {
+      action: 'sales.creditOverride';
+      target: { customerId: string; customerName: string; amountMinor: number };
+    }
 );
 
 const APPROVE: Record<ApprovalRow['action'], Permission> = {
   'period.reopen': 'settings.periods.reopen.approve',
   'ledger.backdate': 'ledger.backdate.approve',
+  'sales.creditOverride': 'sales.creditLimit.override',
 };
 
-export function describeApproval(a: ApprovalRow): string {
-  return a.action === 'period.reopen'
-    ? `Reopen period ${a.target.periodId}`
-    : `Post on ${formatDate(a.target.postingDate)}`;
+export function describeApproval(a: ApprovalRow, currency = 'NGN'): string {
+  switch (a.action) {
+    case 'period.reopen':
+      return `Reopen period ${a.target.periodId}`;
+    case 'ledger.backdate':
+      return `Post on ${formatDate(a.target.postingDate)}`;
+    case 'sales.creditOverride':
+      return `Sell ${money(a.target.amountMinor, currency)} on credit to ${a.target.customerName}, over their limit`;
+  }
 }
 
 /** Open requests: all of them for approvers, otherwise the member's own. */
@@ -60,7 +71,7 @@ function DecideDialog({
   decision: 'approved' | 'rejected';
   onClose: () => void;
 }) {
-  const { companyId } = useCompany();
+  const { companyId, company } = useCompany();
   const action = useAction();
   const [reason, setReason] = useState('');
   const submit = async (e: React.FormEvent) => {
@@ -81,7 +92,7 @@ function DecideDialog({
     <Dialog
       open
       onOpenChange={(o) => !o && onClose()}
-      title={`${decision === 'approved' ? 'Approve' : 'Reject'}: ${describeApproval(approval)}`}
+      title={`${decision === 'approved' ? 'Approve' : 'Reject'}: ${describeApproval(approval, company?.baseCurrency)}`}
       description={`Reason given: “${approval.reason}”`}
     >
       <form onSubmit={submit} className="space-y-4">
@@ -108,7 +119,7 @@ function DecideDialog({
 }
 
 export default function Approvals() {
-  const { can, member } = useCompany();
+  const { can, member, company } = useCompany();
   const approvals = useOpenApprovals();
   const [deciding, setDeciding] = useState<{
     approval: ApprovalRow;
@@ -119,7 +130,7 @@ export default function Approvals() {
     <>
       <PageHeader
         title="Approvals"
-        description="Requests that need a second person: reopening closed periods and posting beyond the backdating window."
+        description="Requests that need a second person: reopening closed periods, posting beyond the backdating window and selling over a customer's credit limit."
       />
       {approvals.loading ? (
         <Spinner />
@@ -142,7 +153,7 @@ export default function Approvals() {
                 const mine = a.requestedBy === member?.uid;
                 return (
                   <Tr key={a.id}>
-                    <Td>{describeApproval(a)}</Td>
+                    <Td>{describeApproval(a, company?.baseCurrency)}</Td>
                     <Td className="max-w-xs truncate whitespace-normal">{a.reason}</Td>
                     <Td>{formatDateTime(a.requestedAt)}</Td>
                     <Td>
@@ -169,8 +180,10 @@ export default function Approvals() {
                       {a.status === 'pending' && mine && (
                         <span className="text-xs text-slate-500">Waiting for another approver</span>
                       )}
-                      {a.status === 'approved' && mine && a.action === 'ledger.backdate' && (
-                        <span className="text-xs text-slate-500">Ready to use for one posting</span>
+                      {a.status === 'approved' && mine && a.action !== 'period.reopen' && (
+                        <span className="text-xs text-slate-500">
+                          Ready to use for one {a.action === 'ledger.backdate' ? 'posting' : 'sale'}
+                        </span>
                       )}
                     </Td>
                   </Tr>

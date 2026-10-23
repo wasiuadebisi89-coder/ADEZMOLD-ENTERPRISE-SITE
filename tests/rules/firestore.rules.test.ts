@@ -105,6 +105,32 @@ beforeEach(async () => {
       await setDoc(doc(db, `companies/${companyId}/supplierPayments/sp1`), { number: 'SP-000001' });
       await setDoc(doc(db, `companies/${companyId}/supplierReturns/sr1`), { number: 'SR-000001' });
       await setDoc(doc(db, `companies/${companyId}/supplierInvoiceKeys/k1`), { invoiceId: 'i1' });
+      await setDoc(doc(db, `companies/${companyId}/stockAvailability/p1__HQ-store`), {
+        productId: 'p1',
+        qtyMilli: 1000,
+      });
+      await setDoc(doc(db, `companies/${companyId}/taxCodes/t1`), { code: 'VAT', rateBp: 750 });
+      await setDoc(doc(db, `companies/${companyId}/customers/c1`), { code: 'C1', name: 'Shop' });
+      await setDoc(doc(db, `companies/${companyId}/salesInvoices/si1`), {
+        number: 'SI-000001',
+        customerId: 'c1',
+        postedBy: ADMIN_A,
+      });
+      await setDoc(doc(db, `companies/${companyId}/salesInvoices/si2`), {
+        number: 'SI-000002',
+        customerId: 'c1',
+        postedBy: SALES_A,
+      });
+      await setDoc(doc(db, `companies/${companyId}/customerReceipts/cr1`), {
+        number: 'CR-000001',
+        customerId: 'c1',
+        postedBy: ADMIN_A,
+      });
+      await setDoc(doc(db, `companies/${companyId}/customerReceipts/cr2`), {
+        number: 'CR-000002',
+        customerId: 'c1',
+        postedBy: SALES_A,
+      });
       for (const m of members) await setDoc(doc(db, `companies/${companyId}/members/${m.uid}`), m);
     }
     await setDoc(doc(db, `users/${ADMIN_A}`), {
@@ -145,6 +171,11 @@ const COMPANY_PATHS = [
   'companies/A/purchaseInvoices/i1',
   'companies/A/supplierPayments/sp1',
   'companies/A/supplierReturns/sr1',
+  'companies/A/stockAvailability/p1__HQ-store',
+  'companies/A/taxCodes/t1',
+  'companies/A/customers/c1',
+  'companies/A/salesInvoices/si1',
+  'companies/A/customerReceipts/cr1',
 ];
 
 describe('C1 unauthenticated access', () => {
@@ -197,6 +228,13 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/supplierPayments/sp2', { amountMinor: 1 }],
     ['companies/A/supplierReturns/sr2', { creditMinor: 1 }],
     ['companies/A/supplierInvoiceKeys/k2', { invoiceId: 'x' }],
+    ['companies/A/stockAvailability/p1__HQ-store', { qtyMilli: 999999 }],
+    ['companies/A/taxCodes/t2', { code: 'X', rateBp: 0 }],
+    ['companies/A/customers/c1', { creditLimitMinor: 99999999 }],
+    ['companies/A/customers/c2', { code: 'C2', name: 'New' }],
+    ['companies/A/salesInvoices/si2', { paidMinor: 999 }],
+    ['companies/A/salesInvoices/si3', { number: 'SI-000003', postedBy: SALES_A }],
+    ['companies/A/customerReceipts/cr3', { amountMinor: 1, postedBy: SALES_A }],
     ['companies/NEW', { legalName: 'Self-made' }],
     ['invitations/inv2', { companyId: 'A' }],
   ];
@@ -220,12 +258,9 @@ describe('ledger records (Phase 2)', () => {
     await assertFails(deleteDoc(doc(db(ADMIN_A), 'companies/A/ledgerEntries/j1_1')));
     await assertFails(updateDoc(doc(db(ADMIN_A), 'companies/A/accounts/acc1'), { name: 'x' }));
   });
-  it('sales officers cannot read the ledger; auditors can', async () => {
-    for (const path of [
-      'companies/A/accounts/acc1',
-      'companies/A/journals/j1',
-      'companies/A/ledgerEntries/j1_1',
-    ]) {
+  it('sales officers see the chart, to choose a cash account, but not the ledger', async () => {
+    await assertSucceeds(getDoc(doc(db(SALES_A), 'companies/A/accounts/acc1')));
+    for (const path of ['companies/A/journals/j1', 'companies/A/ledgerEntries/j1_1']) {
       await assertFails(getDoc(doc(db(SALES_A), path)));
       await assertSucceeds(getDoc(doc(db(AUDITOR_A), path)));
     }
@@ -276,6 +311,34 @@ describe('purchasing records (Phase 4)', () => {
   });
   it('supplier invoice-number keys are server-only', async () => {
     await assertFails(getDoc(doc(db(ADMIN_A), 'companies/A/supplierInvoiceKeys/k1')));
+  });
+});
+
+describe('sales records (Phase 5)', () => {
+  it('sales officers see availability, tax codes and customers, not stock values', async () => {
+    for (const path of [
+      'companies/A/stockAvailability/p1__HQ-store',
+      'companies/A/taxCodes/t1',
+      'companies/A/customers/c1',
+    ]) {
+      await assertSucceeds(getDoc(doc(db(SALES_A), path)));
+      await assertSucceeds(getDoc(doc(db(AUDITOR_A), path)));
+    }
+  });
+  it('sales officers read only their own sales and receipts', async () => {
+    await assertSucceeds(getDoc(doc(db(SALES_A), 'companies/A/salesInvoices/si2')));
+    await assertSucceeds(getDoc(doc(db(SALES_A), 'companies/A/customerReceipts/cr2')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/salesInvoices/si1')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/customerReceipts/cr1')));
+    await assertSucceeds(getDoc(doc(db(AUDITOR_A), 'companies/A/salesInvoices/si1')));
+  });
+  it('a sales officer query must be limited to their own documents', async () => {
+    const invoices = collection(db(SALES_A), 'companies/A/salesInvoices');
+    await assertSucceeds(getDocs(query(invoices, where('postedBy', '==', SALES_A))));
+    await assertFails(getDocs(query(invoices, where('customerId', '==', 'c1'))));
+    await assertSucceeds(
+      getDocs(query(invoices, where('customerId', '==', 'c1'), where('postedBy', '==', SALES_A))),
+    );
   });
 });
 

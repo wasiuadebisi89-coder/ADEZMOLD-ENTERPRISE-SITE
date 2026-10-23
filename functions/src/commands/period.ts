@@ -1,5 +1,8 @@
 import {
+  MoneyError,
   businessDate,
+  parseMoney,
+  toStorable,
   assertNoOverlap,
   assertPeriodTransition,
   isReopen,
@@ -9,11 +12,19 @@ import {
   type Permission,
 } from '@bms/domain';
 import { defineCommand } from '../lib/command.js';
-import { CommandError, conflict, denied, failedPrecondition, notFound } from '../lib/errors.js';
+import {
+  CommandError,
+  conflict,
+  denied,
+  failedPrecondition,
+  invalid,
+  notFound,
+} from '../lib/errors.js';
 import {
   companyRefs,
   type ApprovalRequestDoc,
   type CompanyDoc,
+  type CustomerDoc,
   type FiscalYearDoc,
   type PeriodDoc,
 } from '../lib/model.js';
@@ -160,12 +171,42 @@ export const requestApproval = defineCommand({
     permission: (input) =>
       input.action === 'ledger.backdate'
         ? 'ledger.backdate.request'
-        : 'settings.periods.reopen.request',
+        : input.action === 'sales.creditOverride'
+          ? 'sales.invoice.post'
+          : 'settings.periods.reopen.request',
   },
   async handler({ tx, caller, input, now }) {
     const refs = companyRefs(input.companyId);
     let pendingQuery;
-    if (input.action === 'period.reopen') {
+    let target: ApprovalRequestDoc['target'] = input.target as ApprovalRequestDoc['target'];
+    if (input.action === 'sales.creditOverride') {
+      const [companySnap, customerSnap] = await tx.getAll(
+        refs.company,
+        refs.customer(input.target.customerId),
+      );
+      const customer = customerSnap!.data() as CustomerDoc | undefined;
+      if (!customer) throw notFound('customer_not_found', 'Customer not found');
+      let amountMinor: bigint;
+      try {
+        amountMinor = parseMoney(
+          input.target.amount,
+          (companySnap!.data() as CompanyDoc).baseCurrency,
+        );
+      } catch (e) {
+        if (e instanceof MoneyError) throw invalid('amount_invalid', e.message);
+        throw e;
+      }
+      if (amountMinor <= 0n) throw invalid('amount_zero', 'Enter the amount to sell on credit');
+      target = {
+        customerId: input.target.customerId,
+        customerName: customer.name,
+        amountMinor: toStorable(amountMinor),
+      };
+      pendingQuery = refs.approvals
+        .where('action', '==', input.action)
+        .where('target.customerId', '==', input.target.customerId)
+        .where('requestedBy', '==', caller.uid);
+    } else if (input.action === 'period.reopen') {
       const period = (await tx.get(refs.period(input.target.periodId))).data() as
         PeriodDoc | undefined;
       if (!period) throw notFound('period_not_found', 'Period not found');
@@ -189,7 +230,7 @@ export const requestApproval = defineCommand({
     const ref = refs.approvals.doc();
     const doc = {
       action: input.action,
-      target: input.target,
+      target,
       reason: input.reason,
       status: 'pending',
       requestedBy: caller.uid,
@@ -218,6 +259,7 @@ export const requestApproval = defineCommand({
 const APPROVE_PERMISSION: Record<ApprovalRequestDoc['action'], Permission> = {
   'period.reopen': 'settings.periods.reopen.approve',
   'ledger.backdate': 'ledger.backdate.approve',
+  'sales.creditOverride': 'sales.creditLimit.override',
 };
 
 export const decideApproval = defineCommand({

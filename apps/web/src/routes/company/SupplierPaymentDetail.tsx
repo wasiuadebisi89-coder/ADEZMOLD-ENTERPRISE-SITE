@@ -9,10 +9,14 @@ import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { money } from '../../lib/ledger';
-import { useOpenInvoices, type PaymentRow } from '../../lib/purchasing';
+import { outstanding, useOpenInvoices, type PaymentRow } from '../../lib/purchasing';
 import { useAction } from '../../lib/useAction';
 import { formatDate, formatDateTime } from '../../lib/utils';
-import { AllocationTable, allocationInput, allocationTotal } from './NewSupplierPayment';
+import {
+  AllocationTable,
+  allocationInput,
+  allocationTotal,
+} from '../../components/AllocationTable';
 
 function ApplyAdvanceDialog({ payment, onClose }: { payment: PaymentRow; onClose: () => void }) {
   const { companyId, company } = useCompany();
@@ -48,7 +52,15 @@ function ApplyAdvanceDialog({ payment, onClose }: { payment: PaymentRow; onClose
           <Spinner />
         ) : (
           <AllocationTable
-            invoices={invoices.data}
+            invoices={invoices.data.map((i) => ({
+              id: i.id,
+              number: i.number,
+              reference: i.supplierInvoiceNo,
+              dueDate: i.dueDate,
+              outstandingMinor: outstanding(i),
+            }))}
+            referenceLabel="Their number"
+            emptyText="This supplier has no unpaid invoices."
             values={values}
             onChange={setValues}
             available={available}

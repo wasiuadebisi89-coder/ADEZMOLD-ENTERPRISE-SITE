@@ -48,7 +48,8 @@ export interface MovementRow {
   valueMinor: number;
   movementType: keyof typeof MOVEMENT_LABEL;
   postingDate: string;
-  sourceType: 'stockAdjustment' | 'goodsReceipt' | 'purchaseInvoice' | 'supplierReturn';
+  sourceType:
+    'stockAdjustment' | 'goodsReceipt' | 'purchaseInvoice' | 'supplierReturn' | 'salesInvoice';
   sourceId: string;
   sourceNumber: string;
   balanceQtyMilli: number;
@@ -98,6 +99,7 @@ export const MOVEMENT_LABEL = {
   receipt: 'Goods received',
   purchase_return: 'Returned to supplier',
   cost_adjustment: 'Cost adjusted',
+  sale: 'Sold',
 } as const;
 
 /** Where a stock movement's source document lives in the app. */
@@ -113,6 +115,8 @@ export function movementSourcePath(
       return `${base}/purchases/invoices/${m.sourceId}`;
     case 'supplierReturn':
       return `${base}/purchases/returns/${m.sourceId}`;
+    case 'salesInvoice':
+      return `${base}/sales/invoices/${m.sourceId}`;
     default:
       return `${base}/stock-adjustments/${m.sourceId}`;
   }

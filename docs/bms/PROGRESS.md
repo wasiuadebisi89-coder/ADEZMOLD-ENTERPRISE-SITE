@@ -188,3 +188,41 @@ CI runs on the Phase 4 pull request.
 
 **Next**: Phase 5 (customers, POS, cash and credit sales, receipts, allocations), which needs
 decisions #7 (credit limits), #8 (tax rounding) and #9 (tax-inclusive prices and rates).
+
+## Phase 5 — customers and sales (2026-10-23)
+
+Owner merged Phase 4 (PR #5), confirmed decisions #7, #8, #9 and #16, and asked to proceed.
+
+**Built**
+
+- `packages/domain`: per-line sales maths (discounts, tax-exclusive and tax-inclusive prices,
+  rounding to the minor unit), tax rate parsing in basis points, credit-limit check.
+- Commands (48 in total): `taxCode.create/update`, `customer.create/update`,
+  `salesInvoice.post`, `customerOpeningBalance.post`, `customerReceipt.post`,
+  `customerReceipt.allocate`; new approval `sales.creditOverride`. New permissions
+  `sales.customers.manage` and `sales.creditLimit.override`. Company setting for
+  tax-inclusive prices.
+- Stock availability (quantities only) kept per product and location so the till can show it
+  without revealing stock values.
+- Rules: sales officers read only their own sales and receipts; no client writes. New indexes.
+- Web: till (walk-in by default, availability, change, part payment, credit-limit notice and
+  request), sales hub, sale page with print, customers list and page, receive payment, apply
+  an advance, tax codes, price setting.
+
+**Verified (run locally on 2026-10-23, Node 22.22.0, firebase-tools 15.34.1)**
+
+| Check                                          | Result              |
+| ---------------------------------------------- | ------------------- |
+| `pnpm format:check`, `pnpm lint`               | clean               |
+| `pnpm typecheck` (all 5 packages)              | clean               |
+| `pnpm build`                                   | succeeds            |
+| `pnpm test:unit`                               | 114 passed          |
+| `pnpm test:emulator` (rules + integration)     | 209 passed (39 new) |
+| `pnpm test:e2e` (Playwright, desktop + mobile) | 16 passed           |
+
+CI runs on the Phase 5 pull request.
+
+**Acceptance coverage (PHASE5_ACCEPTANCE.md)**: S1–S6 covered by automated tests.
+
+**Next**: Phase 6 (returns, credit notes, refunds), which also gives a way to undo a wrong
+sale.

@@ -161,11 +161,41 @@ built yet (KNOWN_LIMITATIONS.md).
 
 ★ written only by the server. Supplier balances sum to 2100 Trade payables, advances to 1350,
 and received-but-not-cleared receipt value to 2150 GRNI; an emulator test checks all three
-after a mixed run. Customers, sales, receipts, returns and refunds follow the same pattern in
-Phases 5–6. Document lines snapshot product names and SKUs, so product edits never change
+after a mixed run. Sales returns and refunds follow the same pattern in Phase 6. Document lines snapshot product names and SKUs, so product edits never change
 history. Posted documents are immutable; corrections are new documents.
 
-## 7. Fixed assets (Phase 7)
+## 7. Customers and sales (Phase 5, as built)
+
+```
+  taxCodes/{id}                      code (unique), name, rateBp (7.5% = 750), status
+  customers/{id}                     code (unique), name, contactName, phone, email, address,
+                                     taxId, paymentTermsDays, creditLimitMinor (0 = cash only),
+                                     status, ★ balanceMinor (owes), ★ advanceMinor (paid ahead)
+  salesInvoices/{id}                 ★ number SI-…, kind (invoice|opening), customerId (null =
+                                     walk-in), customerName, branchId, locationId, invoiceDate,
+                                     dueDate, pricesIncludeTax, lines[{productId, sku,
+                                     productName, unit, qtyMilli, listPriceMinor,
+                                     unitPriceMinor, discountMinor, netMinor, taxCodeId,
+                                     taxCode, taxRateBp, taxMinor, grossMinor, costMinor,
+                                     returnedQtyMilli}], netMinor, taxMinor, totalMinor,
+                                     costMinor, payments[{accountId, accountName,
+                                     amountMinor}], paidMinor, creditedMinor, status
+                                     (open|paid), creditOverride, journalId, postedBy
+  customerReceipts/{id}              ★ number CR-…, customerId, branchId, postingDate,
+                                     depositAccountId, amountMinor, allocatedMinor,
+                                     allocations[{invoiceId, invoiceNumber, amountMinor,
+                                     journalId, allocatedAt}], journalId, postedBy
+  stockAvailability/{product__loc}   ★ productId, locationId, branchId, qtyMilli — written with
+                                     every stock balance, readable by sales staff (no values)
+```
+
+Customer balances sum to 1200 Trade receivables and advances to 2250 Customer advances; an
+emulator test checks both. `paidMinor` on an invoice counts money taken at the sale and
+receipts allocated to it. Sales officers (`sales.readOwn`) read only documents with their own
+`postedBy`, so their queries filter on it. Credit-limit approvals are `approvalRequests` with
+action `sales.creditOverride` and target {customerId, customerName, amountMinor}.
+
+## 8. Fixed assets (Phase 7)
 
 ```
   assetCategories/{id}   default life, method, accounts
@@ -174,12 +204,16 @@ history. Posted documents are immutable; corrections are new documents.
   depreciationRuns/{id}  ★ periodId, status, journalId
 ```
 
-## 8. Indexes (initial)
+## 9. Indexes (initial)
 
 `ledgerEntries`: (accountId, postingDate), (journalId, lineNo); later (partyId, postingDate).
 `stockMovements`: (productId, postedAt desc). `costLayers`: (productId, locationId, open, seq).
 `stockBalances`: (locationId, qtyMilli). Purchasing documents: (supplierId, postedAt desc);
 `goodsReceipts`: (supplierId, invoiceStatus, postedAt desc); `purchaseInvoices`: (supplierId,
-status, dueDate) and (status, dueDate). `journals`: (postingDate),
+status, dueDate) and (status, dueDate). `salesInvoices` and `customerReceipts`: (customerId,
+postedAt desc), (postedBy, postedAt desc), (customerId, postedBy, postedAt desc);
+`salesInvoices`: (customerId, status, dueDate), (customerId, postedBy, status, dueDate),
+(status, dueDate). `approvalRequests`: (action, target.customerId, requestedBy, status).
+`journals`: (postingDate),
 (sourceType, sourceId). `auditLogs`: (entityType, entityId, at), (actorUid, at).
 Defined in `firestore.indexes.json` and reviewed each phase.

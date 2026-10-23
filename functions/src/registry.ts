@@ -43,6 +43,16 @@ import {
   postSupplierReturn,
   updateSupplier,
 } from './commands/purchasing.js';
+import {
+  allocateCustomerReceipt,
+  createCustomer,
+  createTaxCode,
+  postCustomerOpeningBalance,
+  postCustomerReceipt,
+  postSalesInvoice,
+  updateCustomer,
+  updateTaxCode,
+} from './commands/sales.js';
 import { platformSupportRead, revokeAllSessions } from './commands/platform.js';
 import { createRole, deleteRole, updateRole } from './commands/role.js';
 
@@ -86,6 +96,14 @@ export const COMMANDS: Record<CommandName, AnyCommand> = {
   'supplierPayment.post': postSupplierPayment,
   'supplierPayment.allocate': allocateSupplierPayment,
   'supplierReturn.post': postSupplierReturn,
+  'taxCode.create': createTaxCode,
+  'taxCode.update': updateTaxCode,
+  'customer.create': createCustomer,
+  'customer.update': updateCustomer,
+  'salesInvoice.post': postSalesInvoice,
+  'customerOpeningBalance.post': postCustomerOpeningBalance,
+  'customerReceipt.post': postCustomerReceipt,
+  'customerReceipt.allocate': allocateCustomerReceipt,
   'platform.supportRead': platformSupportRead,
   'session.revokeAll': revokeAllSessions,
 };

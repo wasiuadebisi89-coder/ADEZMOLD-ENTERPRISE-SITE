@@ -3,6 +3,7 @@ import {
   BookOpen,
   Building,
   CheckSquare,
+  Contact,
   ClipboardList,
   ListTree,
   Scale,
@@ -13,9 +14,12 @@ import {
   LogOut,
   Menu,
   Package,
+  Percent,
+  Receipt,
   Settings,
   ShieldCheck,
   ShoppingCart,
+  Store,
   Truck,
   Users,
   X,
@@ -32,7 +36,8 @@ interface NavItem {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
-  permission?: Permission;
+  /** Shown when the member has any of these. */
+  permission?: Permission | readonly Permission[];
 }
 
 const NAV: NavItem[] = [
@@ -57,6 +62,24 @@ const NAV: NavItem[] = [
     icon: ClipboardList,
     permission: 'reports.stock.read',
   },
+  {
+    to: 'sales/new',
+    label: 'New sale',
+    icon: Store,
+    permission: 'sales.invoice.post',
+  },
+  {
+    to: 'sales',
+    label: 'Sales',
+    icon: Receipt,
+    permission: ['sales.read', 'sales.readOwn'],
+  },
+  {
+    to: 'customers',
+    label: 'Customers',
+    icon: Contact,
+    permission: ['sales.read', 'sales.readOwn', 'sales.invoice.post'],
+  },
   { to: 'suppliers', label: 'Suppliers', icon: Truck, permission: 'purchasing.read' },
   { to: 'purchases', label: 'Purchases', icon: ShoppingCart, permission: 'purchasing.read' },
   { to: 'approvals', label: 'Approvals', icon: CheckSquare, permission: 'approvals.read' },
@@ -70,6 +93,7 @@ const NAV: NavItem[] = [
     permission: 'settings.periods.read',
   },
   { to: 'audit', label: 'Audit log', icon: History, permission: 'company.audit.read' },
+  { to: 'tax-codes', label: 'Tax codes', icon: Percent, permission: 'company.settings.read' },
   { to: 'settings', label: 'Settings', icon: Settings, permission: 'company.settings.read' },
 ];
 
@@ -77,11 +101,17 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
   const { companyId, can } = useCompany();
   return (
     <nav aria-label="Company" className="space-y-1">
-      {NAV.filter((item) => !item.permission || can(item.permission)).map((item) => (
+      {NAV.filter(
+        (item) =>
+          !item.permission ||
+          (typeof item.permission === 'string'
+            ? can(item.permission)
+            : item.permission.some((p) => can(p))),
+      ).map((item) => (
         <NavLink
           key={item.label}
           to={`/c/${companyId}/${item.to}`}
-          end={item.to === ''}
+          end={item.to === '' || item.to === 'sales'}
           onClick={onNavigate}
           className={({ isActive }) =>
             cn(

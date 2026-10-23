@@ -35,6 +35,7 @@ function SettingsForm({
     fiscalYearStartMonth: company.fiscalYearStartMonth,
     backdateWindowDays: settings.backdateWindowDays,
     costingMethod: company.costingMethod as 'weighted_average' | 'fifo',
+    pricesIncludeTax: settings.pricesIncludeTax,
   });
   const set = <K extends keyof typeof values>(k: K, v: (typeof values)[K]) => {
     setSaved(false);
@@ -153,6 +154,20 @@ function SettingsForm({
         >
           <option value="weighted_average">Weighted average (moving)</option>
           <option value="fifo">FIFO (first in, first out)</option>
+        </Select>
+      </Field>
+      <Field
+        label="Sale prices"
+        hint="Applies to sales posted from now on. Tax is worked out and rounded on each line."
+        error={f.pricesIncludeTax}
+      >
+        <Select
+          value={values.pricesIncludeTax ? 'inclusive' : 'exclusive'}
+          onChange={(e) => set('pricesIncludeTax', e.target.value === 'inclusive')}
+          disabled={!canEdit}
+        >
+          <option value="exclusive">Before tax (tax is added)</option>
+          <option value="inclusive">Include tax (tax is taken out)</option>
         </Select>
       </Field>
       <div className="self-end">

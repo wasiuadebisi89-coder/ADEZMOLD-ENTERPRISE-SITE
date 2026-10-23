@@ -4,31 +4,35 @@
  * returns settle what is owed. Every posting goes through the posting engine in the same
  * transaction as the stock and document changes.
  */
-import type { Timestamp, Transaction } from 'firebase-admin/firestore';
+import type { Transaction } from 'firebase-admin/firestore';
 import {
-  MoneyError,
   PurchasingError,
   addDays,
   allocateLandedCost,
-  assertAllocations,
   branchAllowed,
   businessDate,
   clearingValue,
   fromStorable,
   mulRatio,
-  parseMoney,
-  parseQuantity,
   parseUnitCost,
   splitPriceDifference,
   toDecimalString,
   toStorable,
   valueAt,
-  type JournalLine,
-  type UnitCode,
 } from '@bms/domain';
-import type { Caller, CompanyContext } from '../lib/command.js';
 import { defineCommand } from '../lib/command.js';
-import { readSeries, readSystemAccounts } from '../lib/documents.js';
+import {
+  companyTarget,
+  journalFrom,
+  money,
+  planAllocations,
+  positiveQuantity,
+  post,
+  readSeries,
+  readSystemAccounts,
+  settleableOutstanding,
+  type PlannedAllocation,
+} from '../lib/documents.js';
 import {
   CommandError,
   conflict,
@@ -53,7 +57,6 @@ import {
   type SupplierReturnDoc,
   type SupplierReturnLineDoc,
 } from '../lib/model.js';
-import { preparePosting, writePosting, type PostingRequest } from '../lib/posting.js';
 import { StockBook, inventoryError } from '../lib/stock.js';
 
 // --- Shared helpers ---------------------------------------------------------------------------
@@ -71,46 +74,6 @@ function purchasingError(e: unknown, lineNo?: number): never {
     );
   }
   return inventoryError(e, lineNo);
-}
-
-function money(input: string, currency: string, lineNo?: number): bigint {
-  try {
-    return parseMoney(input, currency);
-  } catch (e) {
-    if (e instanceof MoneyError) {
-      throw invalid('amount_invalid', lineNo ? `Line ${lineNo}: ${e.message}` : e.message, {
-        ...(lineNo ? { lineNo } : {}),
-      });
-    }
-    throw e;
-  }
-}
-
-function positiveQuantity(input: string, unit: UnitCode, lineNo: number): bigint {
-  let qty: bigint;
-  try {
-    qty = parseQuantity(input, unit);
-  } catch (e) {
-    return inventoryError(e, lineNo);
-  }
-  if (qty <= 0n) {
-    throw invalid('invalid_quantity', `Line ${lineNo}: enter a quantity above zero`, { lineNo });
-  }
-  return qty;
-}
-
-/** Nets signed amounts (+ debit, − credit) per account into journal lines, debits first. */
-function journalFrom(entries: readonly { accountId: string; amount: bigint }[]): JournalLine[] {
-  const net = new Map<string, bigint>();
-  for (const e of entries) net.set(e.accountId, (net.get(e.accountId) ?? 0n) + e.amount);
-  const lines: JournalLine[] = [];
-  for (const [accountId, amount] of net) {
-    if (amount > 0n) lines.push({ accountId, debit: amount, credit: 0n });
-  }
-  for (const [accountId, amount] of net) {
-    if (amount < 0n) lines.push({ accountId, debit: 0n, credit: -amount });
-  }
-  return lines;
 }
 
 async function readSupplier(
@@ -136,33 +99,13 @@ function invoiceKeyId(supplierId: string, supplierInvoiceNo: string): string {
   );
 }
 
-function invoiceOutstanding(inv: PurchaseInvoiceDoc): bigint {
-  return (
-    fromStorable(inv.totalMinor) - fromStorable(inv.paidMinor) - fromStorable(inv.creditedMinor)
-  );
-}
+const invoiceOutstanding = settleableOutstanding;
 
 function receiptInvoiceStatus(lines: readonly GoodsReceiptLineDoc[]) {
   const cleared = lines.filter((l) => l.clearedQtyMilli > 0).length;
   if (lines.every((l) => l.clearedQtyMilli >= l.qtyMilli)) return 'invoiced' as const;
   return cleared === 0 ? ('not_invoiced' as const) : ('partly_invoiced' as const);
 }
-
-async function post(
-  tx: Transaction,
-  ctx: { company: CompanyContext; caller: Caller; now: Timestamp },
-  request: PostingRequest,
-) {
-  const prepared = await preparePosting(tx, ctx, request);
-  return () =>
-    writePosting(
-      tx,
-      { companyId: ctx.company.companyId, caller: ctx.caller, now: ctx.now },
-      prepared,
-    );
-}
-
-const companyTarget = (companyId: string) => ({ scope: 'company' as const, companyId });
 
 // --- Suppliers --------------------------------------------------------------------------------
 
@@ -841,29 +784,10 @@ async function readInvoicesFor(
   return result;
 }
 
-function planAllocations(
-  available: bigint,
-  requested: readonly { invoiceId: string; amount: string }[],
-  invoices: Map<string, PurchaseInvoiceDoc>,
-  currency: string,
-) {
-  const planned = requested.map((a, i) => ({
-    invoiceId: a.invoiceId,
-    amountMinor: money(a.amount, currency, i + 1),
-    outstandingMinor: invoiceOutstanding(invoices.get(a.invoiceId)!),
-    label: invoices.get(a.invoiceId)!.number,
-  }));
-  try {
-    return { planned, total: assertAllocations(available, planned) };
-  } catch (e) {
-    return purchasingError(e);
-  }
-}
-
 function applyAllocations(
   tx: Transaction,
   companyId: string,
-  planned: ReturnType<typeof planAllocations>['planned'],
+  planned: readonly PlannedAllocation[],
   invoices: Map<string, PurchaseInvoiceDoc>,
 ) {
   const refs = companyRefs(companyId);
