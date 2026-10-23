@@ -1,0 +1,21 @@
+{
+  "displayName": "BMS: API server errors",
+  "documentation": {
+    "content": "The api function returned 5xx responses (crashes, timeouts or out of memory). See docs/bms/OPERATIONS.md §3.",
+    "mimeType": "text/markdown"
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "More than 5 server errors in 5 minutes",
+      "conditionThreshold": {
+        "filter": "resource.type = \"cloud_run_revision\" AND resource.labels.service_name = \"api\" AND metric.type = \"run.googleapis.com/request_count\" AND metric.labels.response_code_class = \"5xx\"",
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 5,
+        "duration": "0s",
+        "aggregations": [{ "alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_SUM" }]
+      }
+    }
+  ],
+  "alertStrategy": { "autoClose": "86400s" }
+}

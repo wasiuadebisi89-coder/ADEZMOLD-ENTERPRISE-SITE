@@ -5,3 +5,7 @@ packages:
   - tests
 # apps/site is the existing marketing site. It keeps its own npm setup and is not part of
 # the BMS workspace yet (see docs/bms/adr/0006-host-bms-in-site-repo.md).
+overrides:
+  # firebase (web) pins @grpc/grpc-js 1.9.x, which has GHSA-f596-whhp-79r4 and a low advisory.
+  # The browser bundle does not use gRPC, but the override keeps the audit clean.
+  '@grpc/grpc-js@<1.13.6': '^1.14.6'

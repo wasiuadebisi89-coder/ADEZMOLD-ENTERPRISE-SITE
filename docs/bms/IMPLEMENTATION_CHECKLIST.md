@@ -94,11 +94,22 @@ Green in CI on PR #7 and merged.
 - [~] Register compared with the ledger
 - [~] Profit and loss for any dates; balance sheet as at any date with unclosed profit and a balance check
 - [~] Receivables and payables ageing, and stock valuation, each checked against its control account
-- [ ] Year-end close journal, comparatives, branch statements, export and print (later)
+- [x] Year-end close journal; ageing and stock valuation as at a past date
+- [ ] Comparatives, branch statements, export and print (later)
 
 `[~]` = verified locally; becomes `[x]` once green in CI on the Phase 7 pull request.
 
-## Phases 8–9
+## Phase 8 — Security, load, monitoring, backups, deployment
 
-- [ ] 8 Security review, load/concurrency tests, monitoring, backups, recovery drill, deploy
-- [ ] 9 Services and production modules
+- [~] Security review and fixes (SECURITY_REVIEW.md); dependency audit clean; CSP and headers
+- [~] Per-user rate limit and instance cap
+- [~] Concurrency tests: numbering, idempotency, stock races (LOAD_TESTING.md)
+- [~] Structured command logs; alert policies, backups and PITR scripted (`ops/`)
+- [~] Deploy workflow (staging after CI, production by hand), europe-west1, no keys
+- [ ] Owner: create staging on Blaze, run `ops/setup-project.sh`, connect GitHub (DEPLOYMENT.md)
+- [ ] Owner: first deploy smoke checks, recovery drill, staging load test
+- [ ] Production project at go-live
+
+## Phase 9
+
+- [ ] Services and production modules

@@ -491,6 +491,12 @@ describe('C7 user profile', () => {
     await assertFails(
       updateDoc(doc(db(ADMIN_A), `users/${ADMIN_A}`), { displayName: 'x'.repeat(121) }),
     );
+    // Preferences are small settings, not storage.
+    await assertFails(
+      updateDoc(doc(db(ADMIN_A), `users/${ADMIN_A}`), {
+        preferences: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [`k${i}`, i])),
+      }),
+    );
   });
   it('user cannot write the memberships mirror', async () => {
     await assertFails(

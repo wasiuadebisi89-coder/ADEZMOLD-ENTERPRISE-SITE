@@ -2,9 +2,11 @@ import { logger } from 'firebase-functions/v2';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { CommandError } from './lib/errors.js';
 import { resolveCaller, runCommand } from './lib/command.js';
+import { RateLimiter } from './lib/rate-limit.js';
 import { COMMANDS } from './registry.js';
 
 const REGION = process.env.FUNCTIONS_REGION ?? 'europe-west1';
+const limiter = new RateLimiter(Number(process.env.RATE_LIMIT_PER_MINUTE ?? 300));
 
 /**
  * Single callable entry point: `{ name, input }`. Every write in the product goes through here
@@ -16,6 +18,8 @@ export const api = onCall(
     enforceAppCheck: process.env.ENFORCE_APP_CHECK === 'true',
     memory: '256MiB',
     timeoutSeconds: 60,
+    // Caps cost and, with the per-user limit, how hard one account can drive the API.
+    maxInstances: Number(process.env.MAX_INSTANCES ?? 10),
   },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Please sign in');
@@ -26,7 +30,30 @@ export const api = onCall(
       : undefined;
     if (!command)
       throw new HttpsError('not-found', 'Unknown command', { reason: 'unknown_command' });
+    if (!limiter.allow(request.auth.uid)) {
+      logger.warn('Rate limited', { event: 'command', name, uid: request.auth.uid });
+      throw new HttpsError(
+        'resource-exhausted',
+        'Too many requests. Wait a minute and try again.',
+        {
+          reason: 'rate_limited',
+        },
+      );
+    }
 
+    const started = Date.now();
+    const companyId = (body.input as { companyId?: unknown } | undefined)?.companyId;
+    // One structured line per command, for log-based metrics and alerts (docs/bms/OPERATIONS.md).
+    const log = (outcome: string, extra: Record<string, unknown> = {}) =>
+      logger.info('Command', {
+        event: 'command',
+        name,
+        uid: request.auth!.uid,
+        companyId: typeof companyId === 'string' ? companyId : undefined,
+        outcome,
+        durationMs: Date.now() - started,
+        ...extra,
+      });
     try {
       const caller = await resolveCaller({
         uid: request.auth.uid,
@@ -36,14 +63,28 @@ export const api = onCall(
         platformAdmin: request.auth.token.platformAdmin,
       });
       const headers = request.rawRequest?.headers ?? {};
-      return await runCommand(command, body.input, caller, {
+      const result = await runCommand(command, body.input, caller, {
         ip: request.rawRequest?.ip,
         userAgent: typeof headers['user-agent'] === 'string' ? headers['user-agent'] : undefined,
       });
+      log('ok');
+      return result;
     } catch (e) {
-      if (e instanceof CommandError) throw e.toHttpsError();
-      if (e instanceof HttpsError) throw e;
-      logger.error('Command failed', { name, uid: request.auth.uid, error: e });
+      if (e instanceof CommandError) {
+        log('refused', { reason: e.reason });
+        throw e.toHttpsError();
+      }
+      if (e instanceof HttpsError) {
+        log('refused', { reason: e.code });
+        throw e;
+      }
+      log('error');
+      logger.error('Command failed', {
+        event: 'command_error',
+        name,
+        uid: request.auth.uid,
+        error: e,
+      });
       throw new HttpsError('internal', 'Something went wrong. Nothing was saved.');
     }
   },

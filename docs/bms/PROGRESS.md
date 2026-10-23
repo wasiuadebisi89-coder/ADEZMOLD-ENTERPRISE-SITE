@@ -330,3 +330,37 @@ date before Phase 8.
 | `pnpm test:unit`                               | 136 passed (3 new)  |
 | `pnpm test:emulator` (rules + integration)     | 272 passed (11 new) |
 | `pnpm test:e2e` (Playwright, desktop + mobile) | 23 passed           |
+
+## 2026-10-23 — Phase 8 (security, load, monitoring, backups, deployment)
+
+DECISION 12: europe-west1. DECISION 13: the owner chose staging on Blaze with a budget alert,
+production at go-live.
+
+**Built**
+
+- Security review (SECURITY_REVIEW.md). Fixed: `@grpc/grpc-js` advisory (pnpm override),
+  Content-Security-Policy for deployed builds, Permissions-Policy and caching headers, a size
+  limit on user preferences, a per-user rate limit and an instance cap on `api`.
+- One structured log line per command; alert policies for command errors, 5xx and rate
+  limiting (`ops/alerts`).
+- `ops/setup-project.sh`: APIs, Firestore in europe-west1 with PITR and delete protection,
+  daily and weekly backups, deploy service account with Workload Identity Federation, metrics
+  and alerts.
+- `staging` / `production` aliases, per-project function settings, deploy workflow (staging
+  after CI on `main`, production by hand with approval; off until `DEPLOY_ENABLED`).
+- DEPLOYMENT.md (owner's step-by-step), OPERATIONS.md (monitoring, backups, recovery drill),
+  LOAD_TESTING.md, PHASE8_ACCEPTANCE.md.
+
+**Verified (run locally on 2026-10-23)**
+
+| Check                                          | Result                             |
+| ---------------------------------------------- | ---------------------------------- |
+| `pnpm audit --prod`                            | no known vulnerabilities           |
+| `pnpm format:check`, `pnpm lint`, `typecheck`  | clean                              |
+| `pnpm test:unit`                               | 138 passed (2 new)                 |
+| `pnpm test:emulator` (rules + integration)     | 275 passed (3 load tests, 1 rule)  |
+| `pnpm test:e2e` (Playwright, desktop + mobile) | 23 passed                          |
+| Production build in Chromium                   | sign-in renders, no CSP violations |
+
+**Not run** (needs the real projects): the setup script, the deploy workflow, alerts, backups,
+the recovery drill and a staging load test. The owner's steps are in DEPLOYMENT.md.

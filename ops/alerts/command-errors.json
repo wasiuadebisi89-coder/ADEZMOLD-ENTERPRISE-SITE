@@ -1,0 +1,21 @@
+{
+  "displayName": "BMS: unexpected command errors",
+  "documentation": {
+    "content": "A command failed with an unexpected error, so nothing was saved for that request. See docs/bms/OPERATIONS.md §3 (filter jsonPayload.event=\"command_error\").",
+    "mimeType": "text/markdown"
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "Any command error in 5 minutes",
+      "conditionThreshold": {
+        "filter": "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/bms_command_errors\"",
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "0s",
+        "aggregations": [{ "alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_SUM" }]
+      }
+    }
+  ],
+  "alertStrategy": { "autoClose": "86400s" }
+}

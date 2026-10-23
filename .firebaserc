@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "demo-bms"
+    "default": "demo-bms",
+    "staging": "adezmold-bms-staging",
+    "production": "adezmold-bms-prod"
   }
 }

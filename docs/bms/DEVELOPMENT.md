@@ -24,6 +24,9 @@ appear in the emulator log and at
 
 The `demo-bms` project id keeps the emulators offline: nothing reaches real Google services.
 
+Deploying, operations and security: [DEPLOYMENT.md](DEPLOYMENT.md),
+[OPERATIONS.md](OPERATIONS.md), [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
+
 ## Layout
 
 | Path                | What                                                     |
@@ -36,6 +39,7 @@ The `demo-bms` project id keeps the emulators offline: nothing reaches real Goog
 | `tests/rules`       | Security rules tests                                     |
 | `tests/integration` | Command tests against the emulators                      |
 | `tests/e2e`         | Playwright tests                                         |
+| `ops`               | Project setup script and alert policies                  |
 
 ## Adding a command
 
