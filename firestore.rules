@@ -117,6 +117,40 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Catalogue: anyone who works with products. Stock quantities and values reveal cost, so
+      // they need stock report access; sales staff get availability with POS in Phase 5.
+      match /products/{productId} {
+        allow read: if can(companyId, 'inventory.products.read');
+        allow write: if false;
+      }
+
+      match /categories/{categoryId} {
+        allow read: if can(companyId, 'inventory.products.read');
+        allow write: if false;
+      }
+
+      match /locations/{locationId} {
+        allow read: if isActiveMember(companyId);
+        allow write: if false;
+      }
+
+      match /stockBalances/{balanceId} {
+        allow read: if can(companyId, 'reports.stock.read');
+        allow write: if false;
+      }
+
+      match /stockMovements/{movementId} {
+        allow read: if can(companyId, 'reports.stock.read');
+        allow write: if false;
+      }
+
+      match /stockAdjustments/{adjustmentId} {
+        allow read: if can(companyId, 'reports.stock.read')
+          || can(companyId, 'inventory.adjustment.create')
+          || can(companyId, 'inventory.count.create');
+        allow write: if false;
+      }
+
       match /attachments/{attachmentId} {
         allow read: if isActiveMember(companyId);
         allow write: if false;

@@ -1,3 +1,4 @@
+import { seedLocations } from './inventory.js';
 import { defineCommand } from '../lib/command.js';
 import { conflict, failedPrecondition, notFound } from '../lib/errors.js';
 import { companyRefs, type BranchDoc } from '../lib/model.js';
@@ -20,6 +21,7 @@ export const createBranch = defineCommand({
       updatedBy: caller.uid,
     };
     tx.set(ref, branch);
+    seedLocations(tx, input.companyId, input.code, { now, uid: caller.uid });
     return {
       result: { branchId: input.code },
       audit: {

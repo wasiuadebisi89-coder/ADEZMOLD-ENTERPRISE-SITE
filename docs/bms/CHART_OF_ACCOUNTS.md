@@ -1,6 +1,6 @@
-# Trading company chart of accounts (draft for review)
+# Trading company chart of accounts
 
-Status: **Draft for the owner's review** (OPEN_DECISIONS #14). It is applied automatically to
+Status: **Confirmed by the owner on 2026-10-23** (OPEN_DECISIONS #14). It is applied automatically to
 every new company and can then be adapted: rename accounts, add accounts and headings,
 deactivate accounts you do not use. Codes, types and roles are fixed once an account exists.
 

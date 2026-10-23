@@ -23,9 +23,8 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
 
 ## Phase 2
 
-- **Chart of accounts is a draft** (OPEN_DECISIONS #14) until the owner reviews
-  CHART_OF_ACCOUNTS.md. Account code, type and role cannot be changed after creation; create a
-  new account and deactivate the old one instead.
+- **Account code, type and role cannot be changed after creation**; create a new account and
+  deactivate the old one instead.
 - **Opening balances cover general-ledger accounts only.** Customer, supplier and stock
   opening balances (and the check that they equal their control accounts) come with those
   modules, as durable chunked batches.
@@ -43,3 +42,20 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
 - **The journals list shows the latest 100.** Search, filters and paging come with reports.
 - **A single-admin company cannot backdate beyond the window**, because requests cannot be
   self-approved.
+
+## Phase 3
+
+- **Sales officers cannot see stock quantities.** Stock levels need `reports.stock.read`;
+  an availability view for the sales screen comes with POS in Phase 5.
+- **No transfers between locations yet.** Moving stock to quarantine or another branch is
+  done today as a decrease at one location and an increase at the other.
+- **Adjustments are dated on approval.** The posting date is the approver's business date;
+  backdated adjustments are not offered.
+- **One counter document per number series** (ADJ, CNT, OST), as for journals.
+- **A stock adjustment holds up to 200 lines** and posts in one transaction. Large full-store
+  counts will need durable, chunked batches.
+- **No unit conversions, product types, barcodes, tax codes or per-category accounts yet.**
+  Every product uses one unit from a fixed list, and all stock uses 1300 Inventory.
+- **No negative-stock override.** Negative stock is always refused.
+- **Self-approval is never allowed**, so a single-person company cannot post stock
+  adjustments until a second person with approval rights joins.

@@ -34,6 +34,7 @@ function SettingsForm({
     baseCurrency: company.baseCurrency,
     fiscalYearStartMonth: company.fiscalYearStartMonth,
     backdateWindowDays: settings.backdateWindowDays,
+    costingMethod: company.costingMethod as 'weighted_average' | 'fifo',
   });
   const set = <K extends keyof typeof values>(k: K, v: (typeof values)[K]) => {
     setSaved(false);
@@ -136,12 +137,28 @@ function SettingsForm({
           disabled={!canEdit}
         />
       </Field>
-      <div className="sm:col-span-2">
+      <Field
+        label="Stock costing method"
+        hint={
+          company.locks.costingMethod
+            ? 'Locked: stock has been posted.'
+            : 'Choose before the first stock posting; it is locked after that.'
+        }
+        error={f.costingMethod}
+      >
+        <Select
+          value={values.costingMethod}
+          onChange={(e) => set('costingMethod', e.target.value as 'weighted_average' | 'fifo')}
+          disabled={!canEdit || company.locks.costingMethod}
+        >
+          <option value="weighted_average">Weighted average (moving)</option>
+          <option value="fifo">FIFO (first in, first out)</option>
+        </Select>
+      </Field>
+      <div className="self-end">
         <p className="text-sm text-slate-500">
-          Stock costing:{' '}
-          <strong>{company.costingMethod === 'fifo' ? 'FIFO' : 'Weighted average'}</strong>.
           Negative stock: <strong>{settings.allowNegativeStock ? 'allowed' : 'not allowed'}</strong>
-          . These take effect when inventory is enabled.
+          .
         </p>
       </div>
       {canEdit && (

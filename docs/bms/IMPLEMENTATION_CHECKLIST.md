@@ -29,16 +29,25 @@ Legend: [ ] not started · [~] in progress · [x] done and verified in CI
 
 ## Phase 2 — Ledger
 
-- [~] Chart of accounts + trading template (draft for review, CHART_OF_ACCOUNTS.md); role lookup by account subtype instead of a separate mappings document
-- [~] Posting engine (journal + ledger entries), reversals, manual journals, backdating approvals
-- [~] General-ledger opening balances (one journal). Durable, chunked batches arrive with the subledgers that need them (Phases 3–5)
-- [~] Trial balance from ledger-entry sums. Period-close snapshots deferred (KNOWN_LIMITATIONS.md)
+- [x] Chart of accounts + trading template (confirmed, CHART_OF_ACCOUNTS.md); role lookup by account subtype instead of a separate mappings document
+- [x] Posting engine (journal + ledger entries), reversals, manual journals, backdating approvals
+- [x] General-ledger opening balances (one journal). Durable, chunked batches arrive with the subledgers that need them (Phases 3–5)
+- [x] Trial balance from ledger-entry sums. Period-close snapshots deferred (KNOWN_LIMITATIONS.md)
 
-`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 2 pull request.
+Green in CI on PR #3 and merged.
 
-## Phases 3–9
+## Phase 3 — Catalogue and inventory
 
-- [ ] 3 Catalogue, inventory, costing, adjustments
+- [~] Locations (store and quarantine per branch), categories, products
+- [~] Stock balances, movements and FIFO cost layers; moving weighted average or FIFO, locked after the first stock posting
+- [~] Stock adjustments, counts and opening stock, each approved by a second person and posted to the ledger in the same transaction
+- [~] Products, stock card and adjustment screens; costing method in Settings
+- [ ] Location transfers, unit conversions, barcodes (later phases, KNOWN_LIMITATIONS.md)
+
+`[~]` = verified locally; becomes `[x]` once green in CI on the Phase 3 pull request.
+
+## Phases 4–9
+
 - [ ] 4 Suppliers, purchases, receipts, payments, supplier returns, landed costs
 - [ ] 5 Customers, POS, cash/credit sales, receipts, allocations
 - [ ] 6 Sales returns, credit notes, refunds, approvals, reconciliations

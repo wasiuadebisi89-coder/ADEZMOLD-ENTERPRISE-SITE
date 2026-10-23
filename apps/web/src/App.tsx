@@ -26,6 +26,11 @@ const JournalDetail = lazy(() => import('./routes/company/JournalDetail'));
 const OpeningBalances = lazy(() => import('./routes/company/OpeningBalances'));
 const TrialBalance = lazy(() => import('./routes/company/TrialBalance'));
 const Approvals = lazy(() => import('./routes/company/Approvals'));
+const Products = lazy(() => import('./routes/company/Products'));
+const ProductDetail = lazy(() => import('./routes/company/ProductDetail'));
+const StockAdjustments = lazy(() => import('./routes/company/StockAdjustments'));
+const NewStockAdjustment = lazy(() => import('./routes/company/NewStockAdjustment'));
+const StockAdjustmentDetail = lazy(() => import('./routes/company/StockAdjustmentDetail'));
 const NotFound = lazy(() => import('./routes/NotFound'));
 
 function Home() {
@@ -114,6 +119,11 @@ const router = createBrowserRouter([
       { path: 'opening-balances', element: <OpeningBalances /> },
       { path: 'trial-balance', element: <TrialBalance /> },
       { path: 'approvals', element: <Approvals /> },
+      { path: 'products', element: <Products /> },
+      { path: 'products/:productId', element: <ProductDetail /> },
+      { path: 'stock-adjustments', element: <StockAdjustments /> },
+      { path: 'stock-adjustments/new', element: <NewStockAdjustment /> },
+      { path: 'stock-adjustments/:adjustmentId', element: <StockAdjustmentDetail /> },
     ],
   },
   { path: '*', element: <NotFound /> },

@@ -12,6 +12,7 @@ import {
   type RoleDoc,
   type SettingsDoc,
 } from '../lib/model.js';
+import { seedLocations } from './inventory.js';
 import { seedChart } from './ledger.js';
 
 export const DEFAULT_BACKDATE_WINDOW_DAYS = 3; // OPEN_DECISIONS #4, confirmed 2026-10-23
@@ -52,6 +53,7 @@ export const createCompany = defineCommand({
       ...meta,
     };
     tx.set(refs.branch(branchId), branch);
+    seedLocations(tx, companyId, branchId, { now, uid: caller.uid });
 
     for (const template of SYSTEM_ROLES) {
       const role: RoleDoc = {
@@ -171,7 +173,19 @@ export const updateCompanySettings = defineCommand({
       );
     }
 
+    if (
+      input.costingMethod &&
+      input.costingMethod !== company.costingMethod &&
+      company.locks.costingMethod
+    ) {
+      throw failedPrecondition(
+        'costing_method_locked',
+        'The costing method cannot change after stock has been posted',
+      );
+    }
+
     const companyPatch: Partial<CompanyDoc> = {};
+    if (input.costingMethod !== undefined) companyPatch.costingMethod = input.costingMethod;
     if (input.tradingName !== undefined) companyPatch.tradingName = input.tradingName;
     if (input.timeZone !== undefined) companyPatch.timeZone = input.timeZone;
     if (input.baseCurrency !== undefined) companyPatch.baseCurrency = input.baseCurrency;

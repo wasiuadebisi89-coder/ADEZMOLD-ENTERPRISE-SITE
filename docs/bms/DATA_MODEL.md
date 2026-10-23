@@ -6,12 +6,12 @@ commands. Every company document carries `companyId`, `createdAt`, `createdBy`,
 
 ## 1. Numeric representation
 
-| Kind                    | Stored as                                                                                                  | Example                   |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------- |
-| Money                   | integer **minor units** (`number`, asserted `Number.isSafeInteger`)                                        | ₦1,250.50 → `125050`      |
-| Quantity                | integer **milli-units** of the product's base unit (3 dp)                                                  | 2.5 kg → `2500`           |
-| Unit cost               | integer in minor units × 10⁴ (`costScaled`)                                                                | ₦12.34567/unit → `123457` |
-| Rates (tax, discount %) | integer basis points × 100 (6 dp of percent)                                                               | 7.5% → `750000`           |
+| Kind                    | Stored as                                                                                                  | Example                     |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------- |
+| Money                   | integer **minor units** (`number`, asserted `Number.isSafeInteger`)                                        | ₦1,250.50 → `125050`        |
+| Quantity                | integer **milli-units** of the product's base unit (3 dp)                                                  | 2.5 kg → `2500`             |
+| Unit cost               | integer in minor units × 10⁴ (`costScaled`)                                                                | ₦12.34567/unit → `12345670` |
+| Rates (tax, discount %) | integer basis points × 100 (6 dp of percent)                                                               | 7.5% → `750000`             |
 | Dates                   | `postingDate` as `YYYY-MM-DD` string (business date, company time zone) plus server `Timestamp`s for audit |
 
 All arithmetic in `packages/domain` uses `bigint`; values are range-checked before storage.
@@ -96,23 +96,39 @@ Invariant (tested): for every journal `Σdebit = Σcredit > 0`; every line has e
 debit/credit > 0; account is postable, active, same company; control accounts only from
 their module.
 
-## 5. Catalogue and inventory (Phase 3)
+## 5. Catalogue and inventory (Phase 3, as built)
 
 ```
-  units/{unitId}                     code, name, decimals
-  categories/{categoryId}            name, parentId, default accounts override?
-  products/{productId}               sku, name, productType, categoryId, baseUnitId,
-                                     unitConversions[{unitId, factorMilli}], salePrice,
-                                     reorderLevel, trackStock, status, taxCodeId?
-  locations/{locationId}             branchId, type (store|quarantine|...), name
-  stockBalances/{productId_locationId} ★ qtyMilli, valueMinor, avgCostScaled (WAC)
-  costLayers/{layerId}               ★ FIFO: productId, locationId, receivedAt, qtyRemaining,
-                                       costScaled, sourceRef
-  stockMovements/{movementId}        ★ productId, locationId, branchId, qtyMilli (+/-),
-                                       unitCostScaled, valueMinor, movementType, postingDate,
-                                       sourceType, sourceId, journalId
-  stockCounts/{countId}              count sheets → posted as adjustments (durable batch)
+  categories/{categoryId}            name, status
+  products/{productId}               sku (unique per company), name, unit (fixed list in
+                                     packages/domain UNITS), categoryId, description,
+                                     salePrice (minor units), reorderLevelMilli, status,
+                                     hasMovements
+  locations/{branchId-store|branchId-quarantine|id}
+                                     branchId, name, type (store|quarantine), status
+  stockBalances/{productId__locationId} ★ productId, locationId, branchId, qtyMilli,
+                                       valueMinor, nextLayerSeq
+  costLayers/{id}                    ★ FIFO only: productId, locationId, seq, open,
+                                       qtyRemainingMilli, valueRemainingMinor, source
+  stockMovements/{id}                ★ productId, locationId, branchId, qtyMilli (+/-),
+                                       valueMinor (+/-), balanceQtyMilli, balanceValueMinor,
+                                       movementType, postingDate, sourceType, sourceId,
+                                       sourceNumber, journalId, postedAt
+  stockAdjustments/{id}              kind (adjustment|count|opening), number (ADJ/CNT/OST),
+                                     locationId, branchId, reason, status
+                                     (pending|posted|rejected), lines[{lineNo, productId,
+                                     sku, productName, unit, enteredMilli, expectedMilli?,
+                                     deltaMilli, unitCostScaled?, valueMinor?}], createdBy,
+                                     decidedBy, decisionReason, postingDate, journalId,
+                                     valueMinor
 ```
+
+★ server-written only. The average cost is not stored: it is `valueMinor / qtyMilli`, so the
+balance can never drift from the value it was derived from. When an issue empties a balance
+it takes the exact remaining value, so no rounding residue is left behind. Costing method
+lives on the company (`costingMethod`) and is locked by `locks.costingMethod` at the first
+stock posting. Unit conversions, product types, tax codes and per-category accounts are not
+built yet (KNOWN_LIMITATIONS.md).
 
 ## 6. Parties and documents (Phases 4–6)
 
@@ -143,6 +159,7 @@ Posted documents are immutable; corrections are reversals or new documents.
 ## 8. Indexes (initial)
 
 `ledgerEntries`: (accountId, postingDate), (journalId, lineNo); later (partyId, postingDate).
-`stockMovements`: (productId, locationId, postingDate). `journals`: (postingDate),
+`stockMovements`: (productId, postedAt desc). `costLayers`: (productId, locationId, open, seq).
+`stockBalances`: (locationId, qtyMilli). `journals`: (postingDate),
 (sourceType, sourceId). `auditLogs`: (entityType, entityId, at), (actorUid, at).
 Defined in `firestore.indexes.json` and reviewed each phase.
