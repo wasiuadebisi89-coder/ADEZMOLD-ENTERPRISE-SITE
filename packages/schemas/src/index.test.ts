@@ -1,8 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createCompanyInput, createInvitationInput, setPeriodStatusInput } from './index.js';
 
 const base = {
-  idempotencyKey: '7f1d8f3e-2b0a-4c39-9a51-3f0d2a8b9c11',
+  idempotencyKey: randomUUID(),
   legalName: '  Adezmold Trading Ltd ',
   country: 'ng',
   baseCurrency: 'NGN',
