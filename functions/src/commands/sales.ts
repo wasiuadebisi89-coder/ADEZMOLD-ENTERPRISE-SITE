@@ -5,7 +5,7 @@
  * receipts settle invoices or are kept as advances. Every posting goes through the posting
  * engine in the same transaction as the stock and document changes.
  */
-import type { Transaction } from 'firebase-admin/firestore';
+import type { Timestamp, Transaction } from 'firebase-admin/firestore';
 import {
   SalesError,
   addDays,
@@ -18,7 +18,7 @@ import {
   toDecimalString,
   toStorable,
 } from '@bms/domain';
-import { defineCommand } from '../lib/command.js';
+import { defineCommand, type Caller, type CompanyContext } from '../lib/command.js';
 import {
   companyTarget,
   journalFrom,
@@ -46,6 +46,7 @@ import {
   type CustomerDoc,
   type CustomerReceiptDoc,
   type LocationDoc,
+  type PaymentAllocationDoc,
   type ProductDoc,
   type SalePaymentDoc,
   type SalesInvoiceDoc,
@@ -57,7 +58,7 @@ import { StockBook, inventoryError } from '../lib/stock.js';
 
 export const WALK_IN = 'Walk-in customer';
 
-function salesError(e: unknown, lineNo?: number): never {
+export function salesError(e: unknown, lineNo?: number): never {
   if (e instanceof SalesError) {
     const message = lineNo ? `Line ${lineNo}: ${e.message}` : e.message;
     throw new CommandError(
@@ -80,7 +81,7 @@ function rate(input: string): number {
   }
 }
 
-async function readCustomer(
+export async function readCustomer(
   tx: Transaction,
   companyId: string,
   customerId: string,
@@ -96,7 +97,7 @@ async function readCustomer(
 }
 
 /** Cash and bank accounts money can be received into. */
-function assertCashAccount(account: AccountDoc | undefined, what: string): AccountDoc {
+export function assertCashAccount(account: AccountDoc | undefined, what: string): AccountDoc {
   if (
     !account ||
     account.status !== 'active' ||
@@ -108,7 +109,7 @@ function assertCashAccount(account: AccountDoc | undefined, what: string): Accou
   return account;
 }
 
-const settled = (left: bigint) => (left === 0n ? ('paid' as const) : ('open' as const));
+export const settled = (left: bigint) => (left === 0n ? ('paid' as const) : ('open' as const));
 
 // --- Tax codes --------------------------------------------------------------------------------
 
@@ -655,7 +656,7 @@ export const postCustomerOpeningBalance = defineCommand({
 
 // --- Customer receipts ------------------------------------------------------------------------
 
-async function readInvoicesFor(
+export async function readInvoicesFor(
   tx: Transaction,
   companyId: string,
   customerId: string,
@@ -801,85 +802,124 @@ export const postCustomerReceipt = defineCommand({
   },
 });
 
+/**
+ * Applies money a customer holds with us (an unallocated receipt or credit note) to their
+ * invoices: Dr Customer advances / Cr Trade receivables, dated today. Returns the writes.
+ */
+export async function applyAdvance(
+  tx: Transaction,
+  ctx: { company: CompanyContext; caller: Caller; now: Timestamp },
+  source: {
+    type: 'customerReceipt' | 'creditNote';
+    id: string;
+    number: string;
+    customerId: string;
+    branchId: string;
+    availableMinor: bigint;
+  },
+  requested: readonly { invoiceId: string; amount: string }[],
+) {
+  const companyId = ctx.company.companyId;
+  const refs = companyRefs(companyId);
+  const companyDoc = (await tx.get(refs.company)).data() as CompanyDoc;
+  const customer = await readCustomer(tx, companyId, source.customerId, false);
+  const invoices = await readInvoicesFor(
+    tx,
+    companyId,
+    source.customerId,
+    requested.map((a) => a.invoiceId),
+  );
+  if (source.availableMinor <= 0n) {
+    throw failedPrecondition('nothing_to_allocate', `Nothing is left to use on ${source.number}`);
+  }
+  const { planned, total } = planAllocations(
+    source.availableMinor,
+    requested,
+    invoices,
+    companyDoc.baseCurrency,
+  );
+  const accounts = await readSystemAccounts(
+    tx,
+    companyId,
+    ['receivable', 'customerAdvance'],
+    ['receivable'],
+  );
+  const write = await post(tx, ctx, {
+    origin: 'system',
+    branchId: source.branchId,
+    postingDate: businessDate(ctx.now.toDate(), companyDoc.timeZone),
+    memo: `${source.number}: applied to invoices`,
+    reference: source.number,
+    lines: [
+      { accountId: accounts.customerAdvance, debit: total, credit: 0n },
+      { accountId: accounts.receivable, debit: 0n, credit: total },
+    ],
+    source: { type: source.type, id: source.id, number: source.number },
+  });
+  return {
+    total,
+    commit: () => {
+      const { journalId } = write();
+      applyAllocations(tx, companyId, planned, invoices);
+      tx.update(refs.customer(source.customerId), {
+        balanceMinor: toStorable(fromStorable(customer.balanceMinor) - total),
+        advanceMinor: toStorable(fromStorable(customer.advanceMinor) - total),
+      });
+      const allocations: PaymentAllocationDoc[] = planned.map((a) => ({
+        invoiceId: a.invoiceId,
+        invoiceNumber: a.label,
+        amountMinor: toStorable(a.amountMinor),
+        journalId,
+        allocatedAt: ctx.now,
+      }));
+      return { journalId, allocations };
+    },
+  };
+}
+
+/** What is left of a receipt or credit note after allocations and refunds. */
+export const unusedMinor = (totalMinor: number, allocatedMinor: number, refundedMinor = 0) =>
+  fromStorable(totalMinor) - fromStorable(allocatedMinor) - fromStorable(refundedMinor);
+
 export const allocateCustomerReceipt = defineCommand({
   name: 'customerReceipt.allocate',
   access: { kind: 'company', permission: 'sales.receipt.post' },
   async handler({ tx, caller, input, now, company }) {
     const refs = companyRefs(input.companyId);
-    const [companySnap, receiptSnap] = await tx.getAll(
-      refs.company,
-      refs.customerReceipt(input.receiptId),
-    );
-    const receipt = receiptSnap!.data() as CustomerReceiptDoc | undefined;
+    const receipt = (await tx.get(refs.customerReceipt(input.receiptId))).data() as
+      CustomerReceiptDoc | undefined;
     if (!receipt) throw notFound('receipt_not_found', 'Receipt not found');
-    const companyDoc = companySnap!.data() as CompanyDoc;
-    const customer = await readCustomer(tx, input.companyId, receipt.customerId, false);
-    const invoices = await readInvoicesFor(
-      tx,
-      input.companyId,
-      receipt.customerId,
-      input.allocations.map((a) => a.invoiceId),
-    );
-    const unallocated = fromStorable(receipt.amountMinor) - fromStorable(receipt.allocatedMinor);
-    if (unallocated <= 0n) {
-      throw failedPrecondition('nothing_to_allocate', 'This receipt is fully allocated');
-    }
-    const { planned, total } = planAllocations(
-      unallocated,
-      input.allocations,
-      invoices,
-      companyDoc.baseCurrency,
-    );
-    const accounts = await readSystemAccounts(
-      tx,
-      input.companyId,
-      ['receivable', 'customerAdvance'],
-      ['receivable'],
-    );
-    const postingDate = businessDate(now.toDate(), companyDoc.timeZone);
-    const write = await post(
+    const apply = await applyAdvance(
       tx,
       { company: company!, caller, now },
       {
-        origin: 'system',
+        type: 'customerReceipt',
+        id: input.receiptId,
+        number: receipt.number,
+        customerId: receipt.customerId,
         branchId: receipt.branchId,
-        postingDate,
-        memo: `${receipt.number}: advance applied to invoices`,
-        reference: receipt.number,
-        lines: [
-          { accountId: accounts.customerAdvance, debit: total, credit: 0n },
-          { accountId: accounts.receivable, debit: 0n, credit: total },
-        ],
-        source: { type: 'customerReceipt', id: input.receiptId, number: receipt.number },
+        availableMinor: unusedMinor(
+          receipt.amountMinor,
+          receipt.allocatedMinor,
+          receipt.refundedMinor,
+        ),
       },
+      input.allocations,
     );
-    const { journalId } = write();
-    applyAllocations(tx, input.companyId, planned, invoices);
+    const { journalId, allocations } = apply.commit();
+    const allocated = fromStorable(receipt.allocatedMinor) + apply.total;
     tx.update(refs.customerReceipt(input.receiptId), {
-      allocatedMinor: toStorable(fromStorable(receipt.allocatedMinor) + total),
-      allocations: [
-        ...receipt.allocations,
-        ...planned.map((a) => ({
-          invoiceId: a.invoiceId,
-          invoiceNumber: a.label,
-          amountMinor: toStorable(a.amountMinor),
-          journalId,
-          allocatedAt: now,
-        })),
-      ],
-    });
-    tx.update(refs.customer(receipt.customerId), {
-      balanceMinor: toStorable(fromStorable(customer.balanceMinor) - total),
-      advanceMinor: toStorable(fromStorable(customer.advanceMinor) - total),
+      allocatedMinor: toStorable(allocated),
+      allocations: [...receipt.allocations, ...allocations],
     });
     return {
-      result: { receiptId: input.receiptId, journalId, allocated: total.toString() },
+      result: { receiptId: input.receiptId, journalId, allocated: apply.total.toString() },
       audit: {
         target: companyTarget(input.companyId),
         entityType: 'customerReceipt',
         entityId: input.receiptId,
         before: { allocated: receipt.allocatedMinor },
-        after: { allocated: (fromStorable(receipt.allocatedMinor) + total).toString() },
+        after: { allocated: allocated.toString() },
       },
     };
   },

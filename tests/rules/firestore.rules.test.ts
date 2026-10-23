@@ -131,6 +131,36 @@ beforeEach(async () => {
         customerId: 'c1',
         postedBy: SALES_A,
       });
+      await setDoc(doc(db, `companies/${companyId}/creditNotes/cn1`), {
+        number: 'CN-000001',
+        customerId: 'c1',
+        createdBy: ADMIN_A,
+      });
+      await setDoc(doc(db, `companies/${companyId}/creditNotes/cn2`), {
+        number: 'CN-000002',
+        customerId: 'c1',
+        createdBy: SALES_A,
+      });
+      await setDoc(doc(db, `companies/${companyId}/customerRefunds/rf1`), {
+        number: 'RF-000001',
+        customerId: 'c1',
+        createdBy: ADMIN_A,
+      });
+      await setDoc(doc(db, `companies/${companyId}/customerRefunds/rf2`), {
+        number: 'RF-000002',
+        customerId: 'c1',
+        createdBy: SALES_A,
+      });
+      await setDoc(doc(db, `companies/${companyId}/bankStates/acc1`), {
+        reconciledBalanceMinor: 100,
+      });
+      await setDoc(doc(db, `companies/${companyId}/bankReconciliations/br1`), {
+        accountId: 'acc1',
+      });
+      await setDoc(doc(db, `companies/${companyId}/bankClearings/j1_1`), {
+        accountId: 'acc1',
+        reconciliationId: 'br1',
+      });
       for (const m of members) await setDoc(doc(db, `companies/${companyId}/members/${m.uid}`), m);
     }
     await setDoc(doc(db, `users/${ADMIN_A}`), {
@@ -176,6 +206,11 @@ const COMPANY_PATHS = [
   'companies/A/customers/c1',
   'companies/A/salesInvoices/si1',
   'companies/A/customerReceipts/cr1',
+  'companies/A/creditNotes/cn1',
+  'companies/A/customerRefunds/rf1',
+  'companies/A/bankStates/acc1',
+  'companies/A/bankReconciliations/br1',
+  'companies/A/bankClearings/j1_1',
 ];
 
 describe('C1 unauthenticated access', () => {
@@ -235,6 +270,13 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/salesInvoices/si2', { paidMinor: 999 }],
     ['companies/A/salesInvoices/si3', { number: 'SI-000003', postedBy: SALES_A }],
     ['companies/A/customerReceipts/cr3', { amountMinor: 1, postedBy: SALES_A }],
+    ['companies/A/creditNotes/cn2', { status: 'posted' }],
+    ['companies/A/creditNotes/cn3', { number: 'CN-000003', createdBy: SALES_A }],
+    ['companies/A/customerRefunds/rf2', { status: 'posted' }],
+    ['companies/A/customerRefunds/rf3', { amountMinor: 1, createdBy: SALES_A }],
+    ['companies/A/bankStates/acc1', { reconciledBalanceMinor: 0 }],
+    ['companies/A/bankReconciliations/br2', { accountId: 'acc1' }],
+    ['companies/A/bankClearings/j2_1', { accountId: 'acc1' }],
     ['companies/NEW', { legalName: 'Self-made' }],
     ['invitations/inv2', { companyId: 'A' }],
   ];
@@ -339,6 +381,29 @@ describe('sales records (Phase 5)', () => {
     await assertSucceeds(
       getDocs(query(invoices, where('customerId', '==', 'c1'), where('postedBy', '==', SALES_A))),
     );
+  });
+});
+
+describe('returns, refunds and bank reconciliation (Phase 6)', () => {
+  it('sales officers read only the returns and refunds they raised', async () => {
+    await assertSucceeds(getDoc(doc(db(SALES_A), 'companies/A/creditNotes/cn2')));
+    await assertSucceeds(getDoc(doc(db(SALES_A), 'companies/A/customerRefunds/rf2')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/creditNotes/cn1')));
+    await assertFails(getDoc(doc(db(SALES_A), 'companies/A/customerRefunds/rf1')));
+    await assertSucceeds(getDoc(doc(db(AUDITOR_A), 'companies/A/creditNotes/cn1')));
+    const notes = collection(db(SALES_A), 'companies/A/creditNotes');
+    await assertSucceeds(getDocs(query(notes, where('createdBy', '==', SALES_A))));
+    await assertFails(getDocs(query(notes, where('customerId', '==', 'c1'))));
+  });
+  it('bank reconciliations are for ledger readers, not sales officers', async () => {
+    for (const path of [
+      'companies/A/bankStates/acc1',
+      'companies/A/bankReconciliations/br1',
+      'companies/A/bankClearings/j1_1',
+    ]) {
+      await assertSucceeds(getDoc(doc(db(AUDITOR_A), path)));
+      await assertFails(getDoc(doc(db(SALES_A), path)));
+    }
   });
 });
 

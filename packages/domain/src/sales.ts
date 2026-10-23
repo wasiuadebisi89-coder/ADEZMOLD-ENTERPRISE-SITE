@@ -6,7 +6,12 @@ import { mulRatio } from './money.js';
 import { QTY_SCALE } from './inventory.js';
 
 export type SalesErrorCode =
-  'invalid_rate' | 'invalid_price' | 'invalid_discount' | 'over_paid' | 'credit_limit_exceeded';
+  | 'invalid_rate'
+  | 'invalid_price'
+  | 'invalid_discount'
+  | 'over_paid'
+  | 'credit_limit_exceeded'
+  | 'over_returned';
 
 export class SalesError extends Error {
   constructor(
@@ -111,4 +116,25 @@ export function creditCheck(
     limitMinor,
     over: onCreditMinor > 0n && exposureMinor > limitMinor,
   };
+}
+
+/**
+ * The part of a sold line's amount (net, tax or cost) that goes with a returned quantity
+ * (ACCOUNTING_POLICIES.md §8). It is worked out on the running total returned, so several
+ * partial returns add up exactly to the line once everything has come back.
+ */
+export function returnShare(
+  lineMinor: bigint,
+  alreadyMinor: bigint,
+  soldQtyMilli: bigint,
+  alreadyQtyMilli: bigint,
+  returnQtyMilli: bigint,
+): bigint {
+  if (returnQtyMilli <= 0n) {
+    throw new SalesError('over_returned', 'Enter a quantity above zero');
+  }
+  if (alreadyQtyMilli + returnQtyMilli > soldQtyMilli) {
+    throw new SalesError('over_returned', 'That is more than was sold and not yet returned');
+  }
+  return mulRatio(lineMinor, alreadyQtyMilli + returnQtyMilli, soldQtyMilli) - alreadyMinor;
 }

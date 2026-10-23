@@ -217,6 +217,42 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Returns and refunds: raised by sales staff, who see only their own.
+      function readsRaised(companyId) {
+        return can(companyId, 'sales.read')
+          || (can(companyId, 'sales.readOwn') && resource.data.createdBy == request.auth.uid);
+      }
+
+      match /creditNotes/{creditNoteId} {
+        allow read: if readsRaised(companyId);
+        allow write: if false;
+      }
+
+      match /customerRefunds/{refundId} {
+        allow read: if readsRaised(companyId);
+        allow write: if false;
+      }
+
+      // Bank reconciliation: for those who read the ledger or reconcile.
+      function readsBank(companyId) {
+        return can(companyId, 'ledger.journal.read') || can(companyId, 'ledger.bank.reconcile');
+      }
+
+      match /bankStates/{accountId} {
+        allow read: if readsBank(companyId);
+        allow write: if false;
+      }
+
+      match /bankReconciliations/{reconciliationId} {
+        allow read: if readsBank(companyId);
+        allow write: if false;
+      }
+
+      match /bankClearings/{entryId} {
+        allow read: if readsBank(companyId);
+        allow write: if false;
+      }
+
       match /attachments/{attachmentId} {
         allow read: if isActiveMember(companyId);
         allow write: if false;

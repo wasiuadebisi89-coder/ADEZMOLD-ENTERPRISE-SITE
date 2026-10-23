@@ -4,6 +4,7 @@ import {
   creditCheck,
   formatRatePercent,
   parseRatePercent,
+  returnShare,
   salesLine,
 } from './sales.js';
 
@@ -122,5 +123,23 @@ describe('credit check', () => {
     });
     expect(creditCheck(600n, 0n, 1000n, 401n).over).toBe(true);
     expect(creditCheck(600n, 100n, 1000n, 500n).over).toBe(false);
+  });
+});
+
+describe('return share', () => {
+  it('takes the share of the line for the quantity returned', () => {
+    // 3 sold for 1,000.00; one returned
+    expect(returnShare(100_000n, 0n, 3000n, 0n, 1000n)).toBe(33_333n);
+  });
+  it('adds up exactly to the line over several returns', () => {
+    const first = returnShare(100_000n, 0n, 3000n, 0n, 1000n);
+    const second = returnShare(100_000n, first, 3000n, 1000n, 1000n);
+    const third = returnShare(100_000n, first + second, 3000n, 2000n, 1000n);
+    expect([first, second, third]).toEqual([33_333n, 33_334n, 33_333n]);
+    expect(first + second + third).toBe(100_000n);
+  });
+  it('refuses more than was sold and not yet returned, and zero', () => {
+    expect(() => returnShare(100n, 0n, 2000n, 1500n, 1000n)).toThrow(SalesError);
+    expect(() => returnShare(100n, 0n, 2000n, 0n, 0n)).toThrow(SalesError);
   });
 });

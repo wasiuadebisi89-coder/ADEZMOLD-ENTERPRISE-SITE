@@ -264,9 +264,21 @@ export interface CostLayerDoc {
 }
 
 export type StockMovementType =
-  'adjustment' | 'count' | 'opening' | 'receipt' | 'purchase_return' | 'cost_adjustment' | 'sale';
+  | 'adjustment'
+  | 'count'
+  | 'opening'
+  | 'receipt'
+  | 'purchase_return'
+  | 'cost_adjustment'
+  | 'sale'
+  | 'sales_return';
 export type StockSourceType =
-  'stockAdjustment' | 'goodsReceipt' | 'purchaseInvoice' | 'supplierReturn' | 'salesInvoice';
+  | 'stockAdjustment'
+  | 'goodsReceipt'
+  | 'purchaseInvoice'
+  | 'supplierReturn'
+  | 'salesInvoice'
+  | 'creditNote';
 
 /** Quantity only, so sales staff can see what is available without seeing cost. */
 export interface StockAvailabilityDoc {
@@ -427,7 +439,10 @@ export interface PurchaseInvoiceDoc {
   totalMinor: number;
   /** Settled by payment allocations and by returns credited to this invoice. */
   paidMinor: number;
+  /** Credit notes applied to this invoice. */
   creditedMinor: number;
+  /** Everything credited for returns, including credit paid back or kept as an advance. */
+  returnedMinor?: number;
   status: 'open' | 'paid';
   journalId: string;
   postedAt: Timestamp;
@@ -550,8 +565,11 @@ export interface SalesInvoiceLineDoc {
   grossMinor: number;
   /** Cost of the goods sold at the costing method. */
   costMinor: number;
-  /** Filled in by sales returns (Phase 6). */
+  /** Running totals of what has come back on credit notes (Phase 6). */
   returnedQtyMilli: number;
+  returnedNetMinor?: number;
+  returnedTaxMinor?: number;
+  returnedCostMinor?: number;
 }
 
 export interface SalePaymentDoc {
@@ -582,7 +600,10 @@ export interface SalesInvoiceDoc {
   payments: SalePaymentDoc[];
   /** Everything settled: payments at the sale, receipts allocated, credits from returns. */
   paidMinor: number;
+  /** Credit notes applied to this invoice. */
   creditedMinor: number;
+  /** Everything credited for returns, including credit paid back or kept as an advance. */
+  returnedMinor?: number;
   status: 'open' | 'paid';
   /** How a sale over the customer's credit limit was allowed, if it was. */
   creditOverride: { by: 'permission' | 'approval'; approvalId: string | null } | null;
@@ -601,12 +622,119 @@ export interface CustomerReceiptDoc {
   depositAccountName: string;
   amountMinor: number;
   allocatedMinor: number;
+  /** Paid back to the customer on refunds (Phase 6). */
+  refundedMinor?: number;
   reference: string | null;
   memo: string | null;
   allocations: PaymentAllocationDoc[];
   journalId: string;
   postedAt: Timestamp;
   postedBy: string;
+}
+
+// --- Returns, credit notes and refunds (DATA_MODEL.md §8) -------------------------------------
+
+export interface CreditNoteLineDoc {
+  /** The sale line returned. */
+  lineNo: number;
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  qtyMilli: number;
+  condition: 'resalable' | 'damaged';
+  /** Where the goods went back: the store sold from, or a quarantine location. */
+  locationId: string;
+  /** Filled in when posted: the share of the sale line's amounts. */
+  netMinor: number | null;
+  taxMinor: number | null;
+  costMinor: number | null;
+}
+
+export interface CreditNoteDoc {
+  number: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  /** null for a walk-in sale. */
+  customerId: string | null;
+  customerName: string;
+  branchId: string;
+  reason: string;
+  lines: CreditNoteLineDoc[];
+  quarantineLocationId: string | null;
+  /** Walk-in sales only: the account the credit is paid back from. */
+  refundAccountId: string | null;
+  status: 'pending' | 'posted' | 'rejected';
+  createdAt: Timestamp;
+  createdBy: string;
+  decidedAt: Timestamp | null;
+  decidedBy: string | null;
+  decisionReason: string | null;
+  /** Filled in when posted. */
+  postingDate: string | null;
+  netMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+  costMinor: number;
+  /** Credit used against invoices: the sale itself first, later others. */
+  allocatedMinor: number;
+  /** Credit paid back: at once for walk-in sales, or on refunds. */
+  refundedMinor: number;
+  allocations: PaymentAllocationDoc[];
+  journalId: string | null;
+}
+
+export interface CustomerRefundDoc {
+  number: string;
+  customerId: string;
+  customerName: string;
+  branchId: string;
+  source: { type: 'customerReceipt' | 'creditNote'; id: string; number: string };
+  accountId: string;
+  accountName: string;
+  amountMinor: number;
+  reason: string;
+  reference: string | null;
+  status: 'pending' | 'posted' | 'rejected';
+  createdAt: Timestamp;
+  createdBy: string;
+  decidedAt: Timestamp | null;
+  decidedBy: string | null;
+  decisionReason: string | null;
+  postingDate: string | null;
+  journalId: string | null;
+}
+
+// --- Bank reconciliation (DATA_MODEL.md §9) ---------------------------------------------------
+
+/** Per cash or bank account: where the last reconciliation left off. Id = account id. */
+export interface BankStateDoc {
+  accountId: string;
+  reconciledBalanceMinor: number;
+  lastStatementDate: string;
+  lastReconciliationId: string;
+  updatedAt: Timestamp;
+}
+
+export interface BankReconciliationDoc {
+  accountId: string;
+  accountName: string;
+  statementDate: string;
+  openingBalanceMinor: number;
+  statementBalanceMinor: number;
+  entryIds: string[];
+  clearedDebitMinor: number;
+  clearedCreditMinor: number;
+  completedAt: Timestamp;
+  completedBy: string;
+}
+
+/** One per ledger entry cleared on a statement, so no entry is cleared twice. */
+export interface BankClearingDoc {
+  accountId: string;
+  reconciliationId: string;
+  statementDate: string;
+  clearedAt: Timestamp;
 }
 
 export interface NumberSeriesDoc {
@@ -681,6 +809,15 @@ export function companyRefs(companyId: string) {
     salesInvoices: company.collection('salesInvoices'),
     customerReceipt: (id: string) => company.collection('customerReceipts').doc(id),
     customerReceipts: company.collection('customerReceipts'),
+    creditNote: (id: string) => company.collection('creditNotes').doc(id),
+    creditNotes: company.collection('creditNotes'),
+    customerRefund: (id: string) => company.collection('customerRefunds').doc(id),
+    customerRefunds: company.collection('customerRefunds'),
+    bankState: (accountId: string) => company.collection('bankStates').doc(accountId),
+    bankReconciliation: (id: string) => company.collection('bankReconciliations').doc(id),
+    bankReconciliations: company.collection('bankReconciliations'),
+    bankClearing: (entryId: string) => company.collection('bankClearings').doc(entryId),
+    bankClearings: company.collection('bankClearings'),
     auditLogs: company.collection('auditLogs'),
   };
 }

@@ -600,6 +600,68 @@ export const allocateCustomerReceiptInput = scoped.extend({
   allocations: allocationsInput.min(1, 'Choose at least one invoice'),
 });
 
+// --- Returns, credit notes, refunds and bank reconciliation (Phase 6) ----------------------
+
+/**
+ * A return against a posted sale. Each line names the sale line and how many come back;
+ * resalable goods go back to the store they were sold from, damaged goods to a quarantine
+ * location. A walk-in sale's credit is paid back at once from `refundAccountId`.
+ */
+export const createCreditNoteInput = scoped.extend({
+  invoiceId: docId,
+  reason: trimmed(3, 500),
+  lines: z
+    .array(
+      z.object({
+        lineNo: z.number().int().min(1),
+        quantity,
+        condition: z.enum(['resalable', 'damaged']),
+      }),
+    )
+    .min(1, 'Choose at least one line to return')
+    .max(100),
+  quarantineLocationId: docId.optional(),
+  refundAccountId: docId.optional(),
+});
+
+export const decideDocumentInput = scoped.extend({
+  decision: z.enum(['approved', 'rejected']),
+  reason: trimmed(3, 500),
+});
+
+export const decideCreditNoteInput = decideDocumentInput.extend({ creditNoteId: docId });
+
+/** Applies a credit note's unused credit to the customer's other invoices. */
+export const allocateCreditNoteInput = scoped.extend({
+  creditNoteId: docId,
+  allocations: allocationsInput.min(1, 'Choose at least one invoice'),
+});
+
+/** Pays back money a customer holds with us: an unallocated receipt or credit note. */
+export const createCustomerRefundInput = scoped.extend({
+  source: z.object({ type: z.enum(['customerReceipt', 'creditNote']), id: docId }),
+  accountId: docId,
+  amount,
+  reason: trimmed(3, 500),
+  reference: optionalText(60),
+});
+
+export const decideCustomerRefundInput = decideDocumentInput.extend({ refundId: docId });
+
+/**
+ * Finishes a bank reconciliation: the ledger entries ticked as on the statement, which with
+ * the entries cleared before must add up to the statement's closing balance.
+ */
+export const completeBankReconciliationInput = scoped.extend({
+  accountId: docId,
+  statementDate: isoDate,
+  statementBalance: z
+    .string()
+    .trim()
+    .regex(/^-?\d+(\.\d+)?$/, 'Enter the closing balance, e.g. 1500.00 or -200'),
+  entryIds: z.array(z.string().regex(/^[A-Za-z0-9_-]{1,80}$/, 'Invalid id')).max(400),
+});
+
 // --- Platform and session ------------------------------------------------------------------
 
 export const platformSupportReadInput = base.extend({
@@ -656,6 +718,12 @@ export const COMMAND_SCHEMAS = {
   'customerOpeningBalance.post': postCustomerOpeningBalanceInput,
   'customerReceipt.post': postCustomerReceiptInput,
   'customerReceipt.allocate': allocateCustomerReceiptInput,
+  'creditNote.create': createCreditNoteInput,
+  'creditNote.decide': decideCreditNoteInput,
+  'creditNote.allocate': allocateCreditNoteInput,
+  'customerRefund.create': createCustomerRefundInput,
+  'customerRefund.decide': decideCustomerRefundInput,
+  'bankReconciliation.complete': completeBankReconciliationInput,
   'platform.supportRead': platformSupportReadInput,
   'session.revokeAll': revokeSessionsInput,
 } as const;
