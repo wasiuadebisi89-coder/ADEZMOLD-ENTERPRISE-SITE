@@ -364,3 +364,32 @@ production at go-live.
 
 **Not run** (needs the real projects): the setup script, the deploy workflow, alerts, backups,
 the recovery drill and a staging load test. The owner's steps are in DEPLOYMENT.md.
+
+## 2026-10-23 — Phase 9 (services and production)
+
+DECISIONS 19–22: the owner accepted the recommended defaults (OPEN_DECISIONS.md).
+
+**Built**
+
+- Service items (sold, quoted and credited, never stocked) earning 4200 Service revenue;
+  5400 Direct service costs in the chart.
+- Projects: a tag on sales, purchase invoices, journals and their ledger entries, with a
+  project page showing revenue, direct costs and margin.
+- Quotations (QT-…): draft, sent, accepted, declined, cancelled; one invoice from a quotation
+  at the quoted prices.
+- Bills of materials and production orders (MO-…) with a 1320 Work in progress control
+  account: issue and return materials, direct costs, completion with normal and abnormal loss,
+  cancellation with write-off.
+- Screens for all of the above; the phone menu now scrolls, since it no longer fits a screen.
+- ACCOUNTING_POLICIES.md §15–16, DATA_MODEL.md §12, PHASE9_ACCEPTANCE.md, limitations.
+
+**Verified (run locally on 2026-10-23)**
+
+| Check                                          | Result                    |
+| ---------------------------------------------- | ------------------------- |
+| `pnpm format:check`, `pnpm lint`, `typecheck`  | clean                     |
+| `pnpm test:unit`                               | 139 passed                |
+| `pnpm test:emulator` (rules + integration)     | 295 passed (12 new tests) |
+| `pnpm test:e2e` (Playwright, desktop + mobile) | 25 passed (2 new)         |
+
+Staging and production are still waiting on a billing account (Phase 8).

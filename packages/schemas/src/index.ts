@@ -807,10 +807,7 @@ export const moveProductionMaterialsInput = scoped.extend({
   orderId: docId,
   /** issue: store to the order; return: unused materials back to the store. */
   direction: z.enum(['issue', 'return']),
-  lines: z
-    .array(bomComponent)
-    .min(1, 'Add at least one line')
-    .max(50, 'Use at most 50 lines'),
+  lines: z.array(bomComponent).min(1, 'Add at least one line').max(50, 'Use at most 50 lines'),
 });
 export const addProductionCostInput = scoped.extend({
   orderId: docId,

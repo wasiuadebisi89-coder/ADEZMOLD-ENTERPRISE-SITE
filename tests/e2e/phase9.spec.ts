@@ -45,9 +45,7 @@ test('S1 a service is quoted, invoiced from the quote and shows in its project',
 
   await nav(page, 'Quotations');
   await page.getByRole('link', { name: 'New quotation' }).click();
-  await page
-    .getByLabel('Customer', { exact: true })
-    .selectOption({ label: 'SHOP · SHOP Stores' });
+  await page.getByLabel('Customer', { exact: true }).selectOption({ label: 'SHOP · SHOP Stores' });
   await page.getByLabel('Project (optional)').selectOption({ label: 'FIT-1 · Shop fit-out' });
   await page.getByLabel('Line 1 product').selectOption({ label: 'INSTALL · Installation' });
   await page.getByLabel('Line 1 quantity').fill('4');
