@@ -20,6 +20,7 @@ import { CommandError } from './errors.js';
 import {
   companyRefs,
   type CostLayerDoc,
+  type StockAvailabilityDoc,
   type StockBalanceDoc,
   type StockMovementType,
   type StockSourceType,
@@ -328,6 +329,13 @@ export class StockBook {
         nextLayerSeq: s.nextSeq,
         updatedAt: meta.now,
       } satisfies StockBalanceDoc);
+      tx.set(refs.stockAvailability(s.productId, s.locationId), {
+        productId: s.productId,
+        locationId: s.locationId,
+        branchId: s.branchId,
+        qtyMilli: toStorable(s.balance.qtyMilli),
+        updatedAt: meta.now,
+      } satisfies StockAvailabilityDoc);
     }
     for (const m of this.movements) {
       tx.set(refs.stockMovements.doc(), {

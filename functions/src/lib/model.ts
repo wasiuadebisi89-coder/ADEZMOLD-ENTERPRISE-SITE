@@ -112,7 +112,12 @@ export interface InvitationDoc {
 
 export type ApprovalTarget =
   | { action: 'period.reopen'; target: { periodId: string } }
-  | { action: 'ledger.backdate'; target: { postingDate: string } };
+  | { action: 'ledger.backdate'; target: { postingDate: string } }
+  | {
+      action: 'sales.creditOverride';
+      /** The amount the sale may leave on credit, minor units. */
+      target: { customerId: string; customerName: string; amountMinor: number };
+    };
 
 export type ApprovalRequestDoc = ApprovalTarget & {
   reason: string;
@@ -259,9 +264,18 @@ export interface CostLayerDoc {
 }
 
 export type StockMovementType =
-  'adjustment' | 'count' | 'opening' | 'receipt' | 'purchase_return' | 'cost_adjustment';
+  'adjustment' | 'count' | 'opening' | 'receipt' | 'purchase_return' | 'cost_adjustment' | 'sale';
 export type StockSourceType =
-  'stockAdjustment' | 'goodsReceipt' | 'purchaseInvoice' | 'supplierReturn';
+  'stockAdjustment' | 'goodsReceipt' | 'purchaseInvoice' | 'supplierReturn' | 'salesInvoice';
+
+/** Quantity only, so sales staff can see what is available without seeing cost. */
+export interface StockAvailabilityDoc {
+  productId: string;
+  locationId: string;
+  branchId: string;
+  qtyMilli: number;
+  updatedAt: Timestamp;
+}
 
 export interface StockMovementDoc {
   productId: string;
@@ -481,6 +495,120 @@ export interface SupplierReturnDoc {
   postedBy: string;
 }
 
+// --- Customers and sales (DATA_MODEL.md §7) ------------------------------------------------
+
+export interface TaxCodeDoc {
+  code: string;
+  name: string;
+  /** Basis points: 7.5% is 750. */
+  rateBp: number;
+  status: 'active' | 'inactive';
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface CustomerDoc {
+  code: string;
+  name: string;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  taxId: string | null;
+  paymentTermsDays: number;
+  /** Minor units; 0 means cash only (DECISION 7). */
+  creditLimitMinor: number;
+  status: 'active' | 'inactive';
+  /** Owed on posted invoices, minor units. Sums to the trade receivables account. */
+  balanceMinor: number;
+  /** Received but not yet allocated. Sums to the customer advances account. */
+  advanceMinor: number;
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface SalesInvoiceLineDoc {
+  lineNo: number;
+  productId: string;
+  sku: string;
+  productName: string;
+  unit: UnitCode;
+  qtyMilli: number;
+  /** The product's price when sold, and the price used. They differ only on an override. */
+  listPriceMinor: number | null;
+  unitPriceMinor: number;
+  discountMinor: number;
+  netMinor: number;
+  taxCodeId: string | null;
+  taxCode: string | null;
+  taxRateBp: number;
+  taxMinor: number;
+  grossMinor: number;
+  /** Cost of the goods sold at the costing method. */
+  costMinor: number;
+  /** Filled in by sales returns (Phase 6). */
+  returnedQtyMilli: number;
+}
+
+export interface SalePaymentDoc {
+  accountId: string;
+  accountName: string;
+  amountMinor: number;
+}
+
+export interface SalesInvoiceDoc {
+  number: string;
+  kind: 'invoice' | 'opening';
+  /** null for a walk-in sale. */
+  customerId: string | null;
+  customerName: string;
+  branchId: string;
+  locationId: string | null;
+  invoiceDate: string;
+  dueDate: string;
+  reference: string | null;
+  memo: string | null;
+  pricesIncludeTax: boolean;
+  lines: SalesInvoiceLineDoc[];
+  netMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+  costMinor: number;
+  /** Paid at the sale. */
+  payments: SalePaymentDoc[];
+  /** Everything settled: payments at the sale, receipts allocated, credits from returns. */
+  paidMinor: number;
+  creditedMinor: number;
+  status: 'open' | 'paid';
+  /** How a sale over the customer's credit limit was allowed, if it was. */
+  creditOverride: { by: 'permission' | 'approval'; approvalId: string | null } | null;
+  journalId: string;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
+export interface CustomerReceiptDoc {
+  number: string;
+  customerId: string;
+  customerName: string;
+  branchId: string;
+  postingDate: string;
+  depositAccountId: string;
+  depositAccountName: string;
+  amountMinor: number;
+  allocatedMinor: number;
+  reference: string | null;
+  memo: string | null;
+  allocations: PaymentAllocationDoc[];
+  journalId: string;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
 export interface NumberSeriesDoc {
   prefix: string;
   next: number;
@@ -543,6 +671,16 @@ export function companyRefs(companyId: string) {
     supplierPayments: company.collection('supplierPayments'),
     supplierReturn: (id: string) => company.collection('supplierReturns').doc(id),
     supplierReturns: company.collection('supplierReturns'),
+    stockAvailability: (productId: string, locationId: string) =>
+      company.collection('stockAvailability').doc(`${productId}__${locationId}`),
+    taxCode: (id: string) => company.collection('taxCodes').doc(id),
+    taxCodes: company.collection('taxCodes'),
+    customer: (id: string) => company.collection('customers').doc(id),
+    customers: company.collection('customers'),
+    salesInvoice: (id: string) => company.collection('salesInvoices').doc(id),
+    salesInvoices: company.collection('salesInvoices'),
+    customerReceipt: (id: string) => company.collection('customerReceipts').doc(id),
+    customerReceipts: company.collection('customerReceipts'),
     auditLogs: company.collection('auditLogs'),
   };
 }

@@ -72,7 +72,7 @@ export const createCompany = defineCommand({
       allowNegativeStock: false,
       roundingMode: 'half_away_from_zero',
       taxRounding: 'per_line',
-      pricesIncludeTax: false,
+      pricesIncludeTax: false, // OPEN_DECISIONS #9, confirmed 2026-10-23: exclusive by default
       ...meta,
     };
     tx.set(refs.settings, settings);
@@ -194,6 +194,8 @@ export const updateCompanySettings = defineCommand({
     const settingsPatch: Partial<SettingsDoc> = {};
     if (input.backdateWindowDays !== undefined)
       settingsPatch.backdateWindowDays = input.backdateWindowDays;
+    if (input.pricesIncludeTax !== undefined)
+      settingsPatch.pricesIncludeTax = input.pricesIncludeTax;
 
     let mirrorsToUpdate: string[] = [];
     if (companyPatch.tradingName && companyPatch.tradingName !== company.tradingName) {

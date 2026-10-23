@@ -99,8 +99,11 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Sales staff see the chart (no balances) to choose the cash or bank account paid into.
       match /accounts/{accountId} {
-        allow read: if can(companyId, 'ledger.accounts.read');
+        allow read: if can(companyId, 'ledger.accounts.read')
+          || can(companyId, 'sales.invoice.post')
+          || can(companyId, 'sales.receipt.post');
         allow write: if false;
       }
 
@@ -118,7 +121,7 @@ service cloud.firestore {
       }
 
       // Catalogue: anyone who works with products. Stock quantities and values reveal cost, so
-      // they need stock report access; sales staff get availability with POS in Phase 5.
+      // they need stock report access; sales staff see quantities only, in stockAvailability.
       match /products/{productId} {
         allow read: if can(companyId, 'inventory.products.read');
         allow write: if false;
@@ -136,6 +139,13 @@ service cloud.firestore {
 
       match /stockBalances/{balanceId} {
         allow read: if can(companyId, 'reports.stock.read');
+        allow write: if false;
+      }
+
+      match /stockAvailability/{availabilityId} {
+        allow read: if can(companyId, 'inventory.products.read')
+          || can(companyId, 'sales.invoice.post')
+          || can(companyId, 'reports.stock.read');
         allow write: if false;
       }
 
@@ -174,6 +184,36 @@ service cloud.firestore {
 
       match /supplierReturns/{returnId} {
         allow read: if can(companyId, 'purchasing.read');
+        allow write: if false;
+      }
+
+      // Sales: tax codes for everyone in the company; customers for anyone who sells or takes
+      // payments; documents for sales readers, or only one's own with sales.readOwn.
+      function readsSale(companyId) {
+        return can(companyId, 'sales.read')
+          || (can(companyId, 'sales.readOwn') && resource.data.postedBy == request.auth.uid);
+      }
+
+      match /taxCodes/{taxCodeId} {
+        allow read: if isActiveMember(companyId);
+        allow write: if false;
+      }
+
+      match /customers/{customerId} {
+        allow read: if can(companyId, 'sales.read')
+          || can(companyId, 'sales.readOwn')
+          || can(companyId, 'sales.invoice.post')
+          || can(companyId, 'sales.receipt.post');
+        allow write: if false;
+      }
+
+      match /salesInvoices/{invoiceId} {
+        allow read: if readsSale(companyId);
+        allow write: if false;
+      }
+
+      match /customerReceipts/{receiptId} {
+        allow read: if readsSale(companyId);
         allow write: if false;
       }
 
