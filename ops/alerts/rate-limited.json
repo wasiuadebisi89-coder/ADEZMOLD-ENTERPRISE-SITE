@@ -1,0 +1,21 @@
+{
+  "displayName": "BMS: users hitting the rate limit",
+  "documentation": {
+    "content": "More than 20 commands were refused by the per-user rate limit in 10 minutes: a stuck client or abuse. See docs/bms/OPERATIONS.md §3.",
+    "mimeType": "text/markdown"
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "Over 20 rate-limited calls in 10 minutes",
+      "conditionThreshold": {
+        "filter": "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/bms_rate_limited\"",
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 20,
+        "duration": "0s",
+        "aggregations": [{ "alignmentPeriod": "600s", "perSeriesAligner": "ALIGN_SUM" }]
+      }
+    }
+  ],
+  "alertStrategy": { "autoClose": "86400s" }
+}

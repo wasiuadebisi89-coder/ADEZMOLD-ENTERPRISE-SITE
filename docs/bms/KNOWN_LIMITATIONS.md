@@ -147,3 +147,15 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
   400 assets. A disposal cannot be dated before months already charged.
 - **Fixed asset accounts are not control accounts**, so a manual journal can still post to
   them. The register page compares itself with the ledger and shows any difference.
+
+## Phase 8
+
+- **Not deployed yet.** The deploy workflow, setup script and alerts are written but have not
+  run against a real project; the owner creates the projects (DEPLOYMENT.md). The recovery
+  drill and a staging load test wait for that.
+- **One company posts a few documents a second at most**, because each posting updates the
+  company's number series document (LOAD_TESTING.md).
+- **The rate limit is per function instance**, held in memory.
+- **Backups cover Firestore only**, for 14 weeks; Auth users and Storage files are not backed
+  up by the schedule (OPERATIONS.md §4).
+- No independent penetration test yet.

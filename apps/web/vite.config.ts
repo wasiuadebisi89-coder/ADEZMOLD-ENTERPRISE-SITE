@@ -2,9 +2,10 @@
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
+import { contentSecurityPolicy } from './csp';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), contentSecurityPolicy()],
   server: { port: 5173, strictPort: true },
   build: { sourcemap: true },
   test: {
