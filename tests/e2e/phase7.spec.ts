@@ -132,6 +132,17 @@ test('F2 ageing and stock reports agree with their ledger accounts', async ({ pa
   await expect(page.getByText('It agrees with the stock records.')).toBeVisible();
   await noA11yViolations(page);
 
+  // One location at a time: all the rice is in the store, none in quarantine.
+  const location = page.getByLabel('Location');
+  const names = await location.locator('option').allTextContents();
+  await location.selectOption({ label: names.find((n) => n.endsWith('Store'))! });
+  await expect(page.getByTestId('stock-total')).toHaveText(/4,800\.00/);
+  await expect(page.getByText(/compared with the total for all locations only/)).toBeVisible();
+  await location.selectOption({ label: names.find((n) => n.endsWith('Quarantine'))! });
+  await expect(page.getByText('No stock on hand')).toBeVisible();
+  await location.selectOption('');
+  await expect(page.getByText('It agrees with the stock records.')).toBeVisible();
+
   // Everything was posted today, so yesterday there was nothing.
   const yesterday = addDays(TODAY, -1);
   await page.getByLabel('As at').fill(yesterday);
