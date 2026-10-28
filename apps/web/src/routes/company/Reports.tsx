@@ -20,13 +20,19 @@ import {
 import { useToday } from '../../components/BackdateNotice';
 import { Button } from '../../components/ui/button';
 import { Alert, Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
-import { Field, Input } from '../../components/ui/form';
+import { Field, Input, Select } from '../../components/ui/form';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { loadMovements, withoutClosing } from '../../lib/assets';
 import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useCollection } from '../../lib/firestore-hooks';
-import { qty, useLocations, useProducts, useStockBalances } from '../../lib/inventory';
+import {
+  locationLabel,
+  qty,
+  useLocations,
+  useProducts,
+  useStockBalances,
+} from '../../lib/inventory';
 import { money, useAccounts, type AccountRow } from '../../lib/ledger';
 import { outstanding, type InvoiceRow } from '../../lib/purchasing';
 import { salesOutstanding, type SalesInvoiceRow } from '../../lib/sales';
@@ -561,13 +567,26 @@ function Ageing({ side }: { side: 'receivable' | 'payable' }) {
 const Receivables = () => <Ageing side="receivable" />;
 const Payables = () => <Ageing side="payable" />;
 
-/** Stock at a past date: every product's movements dated by then, summed on the server. */
-async function loadStockAsAt(companyId: string, productIds: readonly string[], asAt: string) {
+/**
+ * Stock at a past date: every product's movements dated by then, summed on the server, at one
+ * location or all of them.
+ */
+async function loadStockAsAt(
+  companyId: string,
+  productIds: readonly string[],
+  asAt: string,
+  locationId: string | null,
+) {
   const movements = collection(db, `companies/${companyId}/stockMovements`);
   const rows = await Promise.all(
     productIds.map(async (productId) => {
       const snap = await getAggregateFromServer(
-        query(movements, where('productId', '==', productId), where('postingDate', '<=', asAt)),
+        query(
+          movements,
+          where('productId', '==', productId),
+          ...(locationId ? [where('locationId', '==', locationId)] : []),
+          where('postingDate', '<=', asAt),
+        ),
         { qty: sum('qtyMilli'), value: sum('valueMinor') },
       );
       return [
@@ -584,16 +603,20 @@ function StockValuation() {
   const currency = company?.baseCurrency ?? 'NGN';
   const today = useToday();
   const [asAt, setAsAt] = useState(today);
+  const [locationId, setLocationId] = useState('');
   const now = asAt === today;
   const products = useProducts(companyId);
   const locations = useLocations(companyId);
   const balances = useStockBalances(companyId, undefined, now);
-  const past = useLoad(now || products.loading ? null : `stock-${asAt}`, () =>
-    loadStockAsAt(
-      companyId,
-      products.data.map((p) => p.id),
-      asAt,
-    ),
+  const past = useLoad(
+    now || products.loading ? null : `stock-${asAt}-${locationId || 'all'}`,
+    () =>
+      loadStockAsAt(
+        companyId,
+        products.data.map((p) => p.id),
+        asAt,
+        locationId || null,
+      ),
   );
   const control = useControlBalance('inventory', can('reports.financial.read'), asAt);
   let byProduct: Map<string, { qty: bigint; value: bigint }> | null = null;
@@ -601,13 +624,31 @@ function StockValuation() {
   else if (!balances.loading) {
     byProduct = new Map();
     for (const b of balances.data) {
+      if (locationId && b.locationId !== locationId) continue;
       const row = byProduct.get(b.productId) ?? { qty: 0n, value: 0n };
       row.qty += BigInt(b.qtyMilli);
       row.value += BigInt(b.valueMinor);
       byProduct.set(b.productId, row);
     }
   }
-  const picker = <AsAtPicker value={asAt} onChange={setAsAt} />;
+  const picker = (
+    <>
+      <AsAtPicker value={asAt} onChange={setAsAt} />
+      <div className="mb-4 max-w-xs">
+        <Field label="Location">
+          <Select value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+            <option value="">All locations</option>
+            {locations.data.map((l) => (
+              <option key={l.id} value={l.id}>
+                {locationLabel(l)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+    </>
+  );
+  const location = locations.data.find((l) => l.id === locationId);
   if (products.loading || locations.loading || byProduct === null) {
     return (
       <>
@@ -629,10 +670,22 @@ function StockValuation() {
     <>
       {picker}
       <p className="mb-3 text-sm text-slate-600">
-        Quantity and cost of stock on hand at the end of {formatDate(asAt)}, across{' '}
-        {locations.data.length} location{locations.data.length === 1 ? '' : 's'}.
+        Quantity and cost of stock on hand at the end of {formatDate(asAt)},{' '}
+        {location ? (
+          <>at {locationLabel(location)}.</>
+        ) : (
+          <>
+            across {locations.data.length} location{locations.data.length === 1 ? '' : 's'}.
+          </>
+        )}
       </p>
-      {control.account && control.balance !== null && (
+      {location && (
+        <p className="mb-3 text-sm text-slate-600">
+          The ledger holds one Inventory account for every location, so it is compared with the
+          total for all locations only.
+        </p>
+      )}
+      {!location && control.account && control.balance !== null && (
         <Alert tone={control.balance === total ? 'success' : 'info'} className="mb-3">
           {control.account.code} {control.account.name} in the ledger:{' '}
           {money(control.balance, currency)}.{' '}
