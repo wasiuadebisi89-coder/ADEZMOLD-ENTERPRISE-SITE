@@ -35,7 +35,9 @@ holds the Google account. Section 7 lists what to check once they have been done
 5. **Build → Firestore Database**: leave it; the setup script creates it in europe-west1.
    (If you create it in the console instead, choose **europe-west1** and **production mode**.
    The location cannot be changed later.)
-6. **Build → Storage → Get started**, location **europe-west1**, production mode.
+6. **Build → Storage → Get started**, production mode. Choose **europe-west1** under "All
+   locations". The no-cost list only offers US locations; staging (2026-10-29) uses US East,
+   which is acceptable while no files are stored, but production should use europe-west1.
 7. **Project settings → General → Your apps → Web app (</>)**, nickname `bms-web`, also set up
    Hosting. Keep the config values shown (apiKey, authDomain, projectId, storageBucket, appId)
    for step 4. They are public by design and are not secrets.
