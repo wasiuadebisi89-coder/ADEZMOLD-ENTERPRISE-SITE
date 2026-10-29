@@ -29,7 +29,9 @@ export function authErrorMessage(e: unknown): string {
       return `This site is not set up correctly for sign-in (${code}). Please tell the administrator.`;
     default:
       // The code helps whoever runs the site; it says nothing about whether an account exists.
-      return code.startsWith('auth/')
+      // Logged so the cause can be read in the browser console when there is no code.
+      console.error(e);
+      return code
         ? `Something went wrong (${code}). Please try again.`
         : 'Something went wrong. Please try again.';
   }
