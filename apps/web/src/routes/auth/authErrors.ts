@@ -19,7 +19,18 @@ export function authErrorMessage(e: unknown): string {
       return 'This account has been disabled.';
     case 'auth/network-request-failed':
       return 'Could not reach the server. Check your connection.';
+    // Set-up problems in the Firebase project, not the user's fault. Named so they can be fixed.
+    case 'auth/operation-not-allowed':
+    case 'auth/configuration-not-found':
+      return 'Email sign-in is not switched on for this site yet. Please tell the administrator.';
+    case 'auth/invalid-api-key':
+    case 'auth/api-key-not-valid.-please-pass-a-valid-api-key.':
+    case 'auth/unauthorized-domain':
+      return `This site is not set up correctly for sign-in (${code}). Please tell the administrator.`;
     default:
-      return 'Something went wrong. Please try again.';
+      // The code helps whoever runs the site; it says nothing about whether an account exists.
+      return code.startsWith('auth/')
+        ? `Something went wrong (${code}). Please try again.`
+        : 'Something went wrong. Please try again.';
   }
 }
