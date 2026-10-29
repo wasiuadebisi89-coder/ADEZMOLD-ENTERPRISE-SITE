@@ -81,6 +81,13 @@ g iam service-accounts add-iam-policy-binding "$SA" --role=roles/iam.workloadIde
   --member="principalSet://iam.googleapis.com/projects/${NUMBER}/locations/global/workloadIdentityPools/${POOL}/attribute.repository/${REPO}" \
   >/dev/null
 
+echo "== Container repository for function images"
+# Created here so the deploy can set its cleanup policy before the first functions deploy.
+if ! exists g artifacts repositories describe gcf-artifacts --location="$REGION"; then
+  g artifacts repositories create gcf-artifacts --location="$REGION" --repository-format=docker \
+    --description="Cloud Functions images (cleaned up by the deploy workflow)"
+fi
+
 echo "== Log-based metrics and alerts"
 if ! exists g logging metrics describe bms_command_errors; then
   g logging metrics create bms_command_errors \
