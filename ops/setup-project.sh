@@ -18,13 +18,14 @@ PROVIDER=github-actions
 
 g() { gcloud --project "$PROJECT" --quiet "$@"; }
 exists() { "$@" >/dev/null 2>&1; }
-# Retries a command a few times: a database that was just created refuses changes for a minute
-# or so ("ABORTED: There are concurrent database changes").
+# Retries a command, 30 seconds apart, TRIES times (default 6): a database that was just created
+# refuses changes for a minute or so ("ABORTED: There are concurrent database changes"), and a
+# new log-based metric takes up to 10 minutes before alert policies can use it.
 retry() {
-  local attempt
-  for attempt in 1 2 3 4 5 6; do
+  local attempt tries="${TRIES:-6}"
+  for ((attempt = 1; attempt <= tries; attempt++)); do
     if "$@"; then return 0; fi
-    [ "$attempt" -lt 6 ] || return 1
+    [ "$attempt" -lt "$tries" ] || return 1
     echo "   ...not ready yet, trying again in 30 seconds"
     sleep 30
   done
@@ -89,8 +90,9 @@ if ! exists g logging metrics describe bms_rate_limited; then
     --description="BMS commands refused by the per-user rate limit" \
     --log-filter='resource.type="cloud_run_revision" AND jsonPayload.message="Rate limited"'
 fi
-CHANNEL="$(g beta monitoring channels list --filter="labels.email_address=\"$ALERT_EMAIL\"" \
-  --format='value(name)' | head -1)"
+# Matched here rather than with --filter, which cannot see channel labels reliably.
+CHANNEL="$(g beta monitoring channels list --format='value(name,labels.email_address)' |
+  awk -v email="$ALERT_EMAIL" '$2 == email { print $1; exit }')"
 if [[ -z "$CHANNEL" ]]; then
   CHANNEL="$(g beta monitoring channels create --display-name="BMS alerts" --type=email \
     --channel-labels="email_address=$ALERT_EMAIL" --format='value(name)')"
@@ -99,7 +101,8 @@ existing="$(g monitoring policies list --format='value(displayName)' || true)"
 for policy in ops/alerts/*.json; do
   name="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["displayName"])' "$policy")"
   if ! grep -qxF "$name" <<<"$existing"; then
-    g monitoring policies create --policy-from-file="$policy" --notification-channels="$CHANNEL"
+    TRIES=20 retry g monitoring policies create --policy-from-file="$policy" \
+      --notification-channels="$CHANNEL"
   fi
 done
 
