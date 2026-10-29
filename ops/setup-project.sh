@@ -36,7 +36,9 @@ g services enable firestore.googleapis.com cloudfunctions.googleapis.com run.goo
   cloudbuild.googleapis.com artifactregistry.googleapis.com eventarc.googleapis.com \
   firebasehosting.googleapis.com firebaserules.googleapis.com firebasestorage.googleapis.com \
   identitytoolkit.googleapis.com iamcredentials.googleapis.com logging.googleapis.com \
-  monitoring.googleapis.com firebaseappcheck.googleapis.com recaptchaenterprise.googleapis.com
+  monitoring.googleapis.com firebaseappcheck.googleapis.com recaptchaenterprise.googleapis.com \
+  cloudbilling.googleapis.com firebaseextensions.googleapis.com pubsub.googleapis.com \
+  storage.googleapis.com
 
 echo "== Firestore (default) database in $REGION, with point-in-time recovery"
 if ! exists g firestore databases describe --database='(default)'; then
