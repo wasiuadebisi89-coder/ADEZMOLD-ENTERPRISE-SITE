@@ -46,7 +46,7 @@ export default function Dashboard() {
         description={`${company!.legalName} · ${company!.baseCurrency} · ${company!.timeZone}`}
       />
       <Alert tone="info" className="mb-6">
-        Sales, purchases, stock and accounting arrive in the next releases. This overview shows only
+        Sales, purchases, stock, accounting and reports are in the menu. This overview shows only
         live company data; no figures are estimated.
       </Alert>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
