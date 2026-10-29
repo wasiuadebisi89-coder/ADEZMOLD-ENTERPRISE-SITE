@@ -39,17 +39,25 @@ export default function SignUp() {
 
   const onSubmit = form.handleSubmit(async ({ displayName, email, password }) => {
     setError(null);
+    let cred;
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(cred.user, { displayName });
-      await sendEmailVerification(cred.user);
-      const next = params.get('next');
-      navigate(`/verify-email${next ? `?next=${encodeURIComponent(next)}` : ''}`, {
-        replace: true,
-      });
+      cred = await createUserWithEmailAndPassword(auth, email, password);
     } catch (e) {
       setError(authErrorMessage(e));
+      return;
     }
+    // The account exists now, so a failed name or email step must not leave the user on a
+    // form they can no longer submit. The next page can resend the email.
+    try {
+      await updateProfile(cred.user, { displayName });
+      await sendEmailVerification(cred.user);
+    } catch (e) {
+      console.error(e);
+    }
+    const next = params.get('next');
+    navigate(`/verify-email${next ? `?next=${encodeURIComponent(next)}` : ''}`, {
+      replace: true,
+    });
   });
 
   return (

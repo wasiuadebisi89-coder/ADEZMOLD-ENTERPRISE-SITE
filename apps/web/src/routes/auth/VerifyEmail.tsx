@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Alert } from '../../components/ui/feedback';
 import { useAuth } from '../../lib/auth';
 import { AuthLayout } from './AuthLayout';
+import { authErrorMessage } from './authErrors';
 import { safeNext } from './SignIn';
 
 export default function VerifyEmail() {
@@ -33,8 +34,8 @@ export default function VerifyEmail() {
     try {
       await sendEmailVerification(user);
       setMessage({ tone: 'info', text: 'Verification email sent.' });
-    } catch {
-      setMessage({ tone: 'error', text: 'Please wait a little before requesting another email.' });
+    } catch (e) {
+      setMessage({ tone: 'error', text: authErrorMessage(e) });
     }
   };
 
