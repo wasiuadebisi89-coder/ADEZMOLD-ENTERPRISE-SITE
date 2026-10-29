@@ -66,6 +66,13 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
 
+      # Firebase refuses to finish a functions deploy until old container images have a cleanup
+      # policy. Setting it first keeps the deploy from stopping before Hosting is released.
+      - name: Set the function image cleanup policy
+        run: >-
+          pnpm exec firebase functions:artifacts:setpolicy --project "$TARGET" --non-interactive
+          --location europe-west1 --days 3 --force
+
       - name: Deploy rules, indexes, functions and hosting
         run: >-
           pnpm exec firebase deploy --project "$TARGET" --non-interactive
