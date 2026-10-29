@@ -9,7 +9,7 @@ import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { TYPE_LABEL, money, useAccounts, type AccountRow } from '../../lib/ledger';
-import { formatDate } from '../../lib/utils';
+import { formatDate, loadErrorMessage } from '../../lib/utils';
 
 /**
  * Balances come from server-side sums over ledger entries (docs/bms/adr/0004), one query per
@@ -55,8 +55,10 @@ export default function TrialBalance() {
       setError(null);
       try {
         setResult({ asAt: date, tb: await loadTrialBalance(companyId, accounts.data, date) });
-      } catch {
-        setError('Could not load balances. Check your connection and try again.');
+      } catch (e) {
+        setError(
+          loadErrorMessage(e, 'Could not load balances. Check your connection and try again.'),
+        );
       } finally {
         setRunning(false);
       }
@@ -70,7 +72,7 @@ export default function TrialBalance() {
     let cancelled = false;
     void loadTrialBalance(companyId, accounts.data, today)
       .then((tb) => !cancelled && setResult({ asAt: today, tb }))
-      .catch(() => !cancelled && setError('Could not load balances.'));
+      .catch((e) => !cancelled && setError(loadErrorMessage(e, 'Could not load balances.')));
     return () => {
       cancelled = true;
     };

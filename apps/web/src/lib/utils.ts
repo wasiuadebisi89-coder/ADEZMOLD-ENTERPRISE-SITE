@@ -1,3 +1,4 @@
+import { FirebaseError } from 'firebase/app';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -16,4 +17,14 @@ export function formatDate(iso: string): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' }).format(
     new Date(Date.UTC(y!, m! - 1, d!)),
   );
+}
+
+/** Why a read failed, in words, so a set-up problem is not mistaken for a bad connection. */
+export function loadErrorMessage(e: unknown, fallback: string): string {
+  console.error(e);
+  const code = e instanceof FirebaseError ? e.code : '';
+  if (code === 'failed-precondition')
+    return 'The database is still preparing for this report. Try again in a few minutes.';
+  if (code === 'permission-denied') return 'Your role cannot see these figures.';
+  return code ? `${fallback} (${code})` : fallback;
 }
