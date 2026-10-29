@@ -2,16 +2,21 @@
 
 Two Firebase projects, both in **europe-west1** (DECISION 12):
 
-| Alias        | Project id (proposed)  | Plan                                  | Deploys                                 |
-| ------------ | ---------------------- | ------------------------------------- | --------------------------------------- |
-| `staging`    | `adezmold-bms-staging` | Blaze with a budget alert, now        | Automatically after CI passes on `main` |
-| `production` | `adezmold-bms-prod`    | Created and moved to Blaze at go-live | By hand, after approval in GitHub       |
+| Alias        | Project id (proposed)        | Plan                                  | Deploys                                 |
+| ------------ | ---------------------------- | ------------------------------------- | --------------------------------------- |
+| `staging`    | `gen-lang-client-0555602350` | Blaze with a budget alert, now        | Automatically after CI passes on `main` |
+| `production` | `adezmold-bms-prod`          | Created and moved to Blaze at go-live | By hand, after approval in GitHub       |
 
 Why Blaze for staging (DECISION 13): every write in the product goes through the `api` Cloud
 Function, and the free Spark plan cannot deploy Cloud Functions or managed Firestore backups.
 Blaze still includes the free monthly quota; a small staging project normally stays inside it.
 
 Project ids are global. If one is taken, pick another and change it in `.firebaserc`.
+
+2026-10-29: billing would not link to a new project, so the owner chose to use an existing
+project already on Blaze, `gen-lang-client-0555602350` (created by Google AI Studio), as
+staging. Its Gemini API keys are unaffected. Section 1 still applies, except creating the
+project and upgrading it.
 
 Nothing here has been run against a real project yet: the steps below are for the owner, who
 holds the Google account. Section 7 lists what to check once they have been done.
@@ -49,7 +54,7 @@ repository and run:
 ```sh
 git clone https://github.com/wasiuadebisi89-coder/ADEZMOLD-ENTERPRISE-SITE.git
 cd ADEZMOLD-ENTERPRISE-SITE
-ops/setup-project.sh adezmold-bms-staging wasiuadebisi89-coder/ADEZMOLD-ENTERPRISE-SITE you@example.com
+ops/setup-project.sh gen-lang-client-0555602350 wasiuadebisi89-coder/ADEZMOLD-ENTERPRISE-SITE you@example.com
 ```
 
 It can be run again safely. It:
