@@ -12,6 +12,8 @@ test.beforeEach(async () => {
 });
 
 async function noA11yViolations(page: Page) {
+  // A colour still mid-transition (a button just enabled) would be measured as too faint.
+  await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; }' });
   const a11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(a11y.violations).toEqual([]);
 }
