@@ -1,7 +1,7 @@
 {
   "projects": {
     "default": "demo-bms",
-    "staging": "adezmold-bms-staging",
+    "staging": "gen-lang-client-0555602350",
     "production": "adezmold-bms-prod"
   }
 }
