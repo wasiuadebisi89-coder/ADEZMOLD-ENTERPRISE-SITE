@@ -18,6 +18,17 @@ PROVIDER=github-actions
 
 g() { gcloud --project "$PROJECT" --quiet "$@"; }
 exists() { "$@" >/dev/null 2>&1; }
+# Retries a command a few times: a database that was just created refuses changes for a minute
+# or so ("ABORTED: There are concurrent database changes").
+retry() {
+  local attempt
+  for attempt in 1 2 3 4 5 6; do
+    if "$@"; then return 0; fi
+    [ "$attempt" -lt 6 ] || return 1
+    echo "   ...not ready yet, trying again in 30 seconds"
+    sleep 30
+  done
+}
 
 echo "== APIs"
 g services enable firestore.googleapis.com cloudfunctions.googleapis.com run.googleapis.com \
@@ -30,15 +41,15 @@ echo "== Firestore (default) database in $REGION, with point-in-time recovery"
 if ! exists g firestore databases describe --database='(default)'; then
   g firestore databases create --database='(default)' --location="$REGION" --type=firestore-native
 fi
-g firestore databases update --database='(default)' --enable-pitr --delete-protection
+retry g firestore databases update --database='(default)' --enable-pitr --delete-protection
 
 echo "== Backups: daily kept 14 days, weekly (Sunday) kept 14 weeks"
 schedules="$(g firestore backups schedules list --database='(default)' --format=json || true)"
 if ! grep -q dailyRecurrence <<<"$schedules"; then
-  g firestore backups schedules create --database='(default)' --recurrence=daily --retention=14d
+  retry g firestore backups schedules create --database='(default)' --recurrence=daily --retention=14d
 fi
 if ! grep -q weeklyRecurrence <<<"$schedules"; then
-  g firestore backups schedules create --database='(default)' --recurrence=weekly \
+  retry g firestore backups schedules create --database='(default)' --recurrence=weekly \
     --day-of-week=SUN --retention=98d
 fi
 
