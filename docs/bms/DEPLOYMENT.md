@@ -2,10 +2,10 @@
 
 Two Firebase projects, both in **europe-west1** (DECISION 12):
 
-| Alias        | Project id (proposed)        | Plan                                  | Deploys                                 |
-| ------------ | ---------------------------- | ------------------------------------- | --------------------------------------- |
-| `staging`    | `adezmold-bms-staging`       | Blaze with a budget alert, now        | Automatically after CI passes on `main` |
-| `production` | `adezmold-bms-prod`          | Created and moved to Blaze at go-live | By hand, after approval in GitHub       |
+| Alias        | Project id (proposed)  | Plan                                  | Deploys                                 |
+| ------------ | ---------------------- | ------------------------------------- | --------------------------------------- |
+| `staging`    | `adezmold-bms-staging` | Blaze with a budget alert, now        | Automatically after CI passes on `main` |
+| `production` | `adezmold-bms-prod`    | Created and moved to Blaze at go-live | By hand, after approval in GitHub       |
 
 Why Blaze for staging (DECISION 13): every write in the product goes through the `api` Cloud
 Function, and the free Spark plan cannot deploy Cloud Functions or managed Firestore backups.
