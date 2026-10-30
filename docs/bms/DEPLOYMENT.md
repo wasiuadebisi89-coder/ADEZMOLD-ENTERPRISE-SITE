@@ -4,7 +4,7 @@ Two Firebase projects, both in **europe-west1** (DECISION 12):
 
 | Alias        | Project id (proposed)        | Plan                                  | Deploys                                 |
 | ------------ | ---------------------------- | ------------------------------------- | --------------------------------------- |
-| `staging`    | `gen-lang-client-0555602350` | Blaze with a budget alert, now        | Automatically after CI passes on `main` |
+| `staging`    | `adezmold-bms-staging`       | Blaze with a budget alert, now        | Automatically after CI passes on `main` |
 | `production` | `adezmold-bms-prod`          | Created and moved to Blaze at go-live | By hand, after approval in GitHub       |
 
 Why Blaze for staging (DECISION 13): every write in the product goes through the `api` Cloud
@@ -17,6 +17,12 @@ Project ids are global. If one is taken, pick another and change it in `.firebas
 project already on Blaze, `gen-lang-client-0555602350` (created by Google AI Studio), as
 staging. Its Gemini API keys are unaffected. Section 1 still applies, except creating the
 project and upgrading it.
+
+2026-10-30: that project also hosted the owner's separate CCS App. The BMS deploys replaced its
+Hosting site and its Firestore and Storage rules, and CCS users could not log in. The owner
+rolled those back by hand. **BMS must only deploy to a project that runs nothing else.** The
+deploy workflow now refuses `gen-lang-client-0555602350`, and the staging alias points at
+`adezmold-bms-staging` again, to be created as in section 1.
 
 Nothing here has been run against a real project yet: the steps below are for the owner, who
 holds the Google account. Section 7 lists what to check once they have been done.
