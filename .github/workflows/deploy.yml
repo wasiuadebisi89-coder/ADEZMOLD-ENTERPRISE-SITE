@@ -54,6 +54,12 @@ jobs:
               exit 1
               ;;
           esac
+          # The web config and Google access come from the environment's variables; they must
+          # name the same project, or the site would be built for one project and sent to another.
+          if [ "$project" != "${{ vars.FIREBASE_PROJECT_ID }}" ]; then
+            echo "::error::.firebaserc says $project but FIREBASE_PROJECT_ID says ${{ vars.FIREBASE_PROJECT_ID }}."
+            exit 1
+          fi
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
