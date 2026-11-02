@@ -393,3 +393,27 @@ DECISIONS 19–22: the owner accepted the recommended defaults (OPEN_DECISIONS.m
 | `pnpm test:e2e` (Playwright, desktop + mobile) | 25 passed (2 new)         |
 
 Staging and production are still waiting on a billing account (Phase 8).
+
+## 2026-11-02: first staging smoke test
+
+Staging is now its own project, `adezmold-bms-staging` (europe-west1, Blaze), at
+<https://adezmold-bms-staging.web.app>. It deploys automatically after CI passes on `main`.
+The earlier attempt in `gen-lang-client-0555602350` was stopped because that project also hosts
+another app (see the incident note in DEPLOYMENT.md).
+
+**Checked by the owner on staging**
+
+| Step                                        | Result                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Deploy (hosting, functions, rules, indexes) | succeeded (deploy runs 41461741702 and 41477264433)                                     |
+| Sign-up with email and password             | works                                                                                   |
+| Verification and password-reset emails      | **not received**: Firebase accepts the send but nothing arrives in Gmail (spam checked) |
+| Company creation                            | works (email verified by hand through the Identity Toolkit API)                         |
+| Posting journals                            | works                                                                                   |
+| Trial balance                               | works after PR #22 added the `sum()` indexes                                            |
+
+**Still open**
+
+- Auth email delivery. Plan: custom SMTP sender for Firebase Auth before production.
+- The other reports were not opened in this test.
+- Recovery drill and staging load test (OPERATIONS.md §5).
