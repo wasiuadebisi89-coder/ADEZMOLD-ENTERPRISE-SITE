@@ -417,3 +417,17 @@ another app (see the incident note in DEPLOYMENT.md).
 - Auth email delivery. Plan: custom SMTP sender for Firebase Auth before production.
 - The other reports were not opened in this test.
 - Recovery drill and staging load test (OPERATIONS.md §5).
+
+## 2026-11-03: recovery drill on staging
+
+Run by the owner in Cloud Shell, following OPERATIONS.md §5.
+
+| Step                                  | Result                                                                                      |
+| ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Latest daily backup                   | `ab91fb32-…`, snapshot 2026-11-02 18:27:47 UTC                                              |
+| Restore into database `restore-drill` | started 10:09:41 UTC; data readable by 10:32 UTC, when the owner checked (under 23 minutes) |
+| Journals in the test company          | 1 in `(default)`, 1 in `restore-drill`: match                                               |
+| Delete the copy                       | delete protection switched off, then deleted at 10:33 UTC                                   |
+
+Notes: a restored database inherits delete protection, so it has to be switched off before
+deleting it. The data set was tiny, so this says nothing about restore time for a full company.

@@ -97,5 +97,4 @@ trying. The live app keeps running on `(default)` while the restored copy is che
    Copying documents back into `(default)` with an admin script is the last resort, needs
    the owner's approval, and must be recorded in the incident note.
 
-The drill has **not been run yet**: there is no real project until the owner completes
-DEPLOYMENT.md. It is on the checklist in DEPLOYMENT.md §7.
+Last drill: 2026-11-03 on staging (`adezmold-bms-staging`), passed. See PROGRESS.md.
