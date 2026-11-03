@@ -132,5 +132,5 @@ Check, and note the date and result in PROGRESS.md:
       (browser dev tools → Network → the document).
 - [ ] Logs Explorer shows `jsonPayload.event="command"` lines for those actions.
 - [ ] Firestore → **Disaster recovery** shows both backup schedules and PITR enabled.
-- [ ] The recovery drill in OPERATIONS.md §5 has been run once on staging.
+- [x] The recovery drill in OPERATIONS.md §5 has been run once on staging (2026-11-03).
 - [ ] The budget alert email address is right.
