@@ -431,3 +431,10 @@ Run by the owner in Cloud Shell, following OPERATIONS.md §5.
 
 Notes: a restored database inherits delete protection, so it has to be switched off before
 deleting it. The data set was tiny, so this says nothing about restore time for a full company.
+
+## 2026-11-03: auth emails on staging
+
+Firebase Auth on staging now sends through the owner's Gmail account (app password, SMTP
+`smtp.gmail.com:587` STARTTLS, set in Authentication → Templates → SMTP settings). The owner
+requested a password reset and the email arrived. Before customers use production, it should
+send from an address on the business's own domain (DEPLOYMENT.md §1 step 4).

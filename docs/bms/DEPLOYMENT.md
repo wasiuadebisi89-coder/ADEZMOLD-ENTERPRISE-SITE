@@ -38,6 +38,11 @@ holds the Google account. Section 7 lists what to check once they have been done
    function's `MAX_INSTANCES` (3 on staging) and the per-user rate limit keep runaway use small.
 4. **Build → Authentication → Get started → Email/Password: enable**. Under **Settings →
    Authorized domains** the project's `web.app` and `firebaseapp.com` domains are already listed.
+   Then **Templates → SMTP settings**: switch on and enter your own mail account, because
+   Firebase's built-in sender did not reach Gmail on staging (2026-11-02). Staging uses a Gmail
+   app password (`smtp.gmail.com`, port 587, STARTTLS). Production should send from an address
+   on the business's own domain. The SMTP password stays in the console; never put it in the
+   repository or in chat.
 5. **Build → Firestore Database**: leave it; the setup script creates it in europe-west1.
    (If you create it in the console instead, choose **europe-west1** and **production mode**.
    The location cannot be changed later.)
