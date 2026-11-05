@@ -85,10 +85,17 @@ gcloud run services add-iam-policy-binding api --region=europe-west1 --project=P
 ```
 
 2026-11-05, first production deploy: `adezmold-bms-prod` sits in organization 275119584361,
-which had this rule. It was lifted for that project only. The same day showed two other
-first-deploy gaps, both now fixed in the repository. The functions build account lacked the
-Cloud Build role, which the setup script now grants. And the invoker was never set after a
-half-failed first deploy, which `invoker: 'public'` in `functions/src/index.ts` now covers.
+which had this rule. It was lifted for that project only. The same day showed three other
+first-deploy gaps, all now fixed in the repository:
+
+- The functions build account (`NUMBER-compute@developer.gserviceaccount.com`) lacked the
+  Cloud Build role. The setup script now grants it.
+- The same account also runs the function, and inside the organization it got no automatic
+  Editor role. Every call then failed with "Please sign in again", because the function could
+  not look the user up in Firebase Auth. The setup script now grants it `datastore.user`,
+  `firebaseauth.admin` and `logging.logWriter`.
+- The invoker was never set after a half-failed first deploy. `invoker: 'public'` in
+  `functions/src/index.ts` now covers that.
 
 ## 3. Run the setup script
 
