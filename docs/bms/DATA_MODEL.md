@@ -71,7 +71,9 @@ company creation and can be copied and customised, not deleted.
                                        grni|inputTax|outputTax|retainedEarnings|
                                        openingBalanceEquity|revenue|cogs|...), parentId,
                                        isPostable (false = heading), isControl (derived from
-                                       subtype), status, hasPostings, template {id, version}
+                                       subtype), status, hasPostings, template {id, version},
+                                       bank {bankName, accountName, accountNumber,
+                                       currency} on registered company bank accounts
   journals/{journalId}               ★ number, postingDate, periodId, branchId,
                                        origin (manual|opening_balance|reversal|system),
                                        currency, memo, reference, lines[] (embedded, ≤200, with
@@ -233,6 +235,13 @@ Sales officers read only returns and refunds with their own `createdBy`.
   bankClearings/{entryId}      ★ accountId, reconciliationId, statementDate — one per ledger
                                entry cleared, so an entry can be cleared only once
 ```
+
+Company bank accounts are ledger accounts with the Bank role plus a `bank` block of the bank's
+own details. `bankAccount.create` either creates that ledger account or adds the details to an
+existing Bank account (such as the template's 1120); `bankAccount.update` edits the details and
+deactivates or reactivates the ledger account. Only active accounts are offered for payments,
+receipts, refunds and the till; reconciliation lists every cash and bank account. Bank accounts
+are in the company's base currency until foreign-currency accounts are supported.
 
 ## 10. Fixed assets (Phase 7, as built)
 

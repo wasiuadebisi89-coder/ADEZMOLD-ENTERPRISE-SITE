@@ -681,6 +681,48 @@ export const completeBankReconciliationInput = scoped.extend({
   entryIds: z.array(z.string().regex(/^[A-Za-z0-9_-]{1,80}$/, 'Invalid id')).max(400),
 });
 
+// --- Company bank accounts -------------------------------------------------------------------
+
+/** An account number as printed by the bank (NUBAN, IBAN...). Spaces and dashes are dropped. */
+export const bankAccountNumber = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[\s-]/g, '').toUpperCase())
+  .pipe(z.string().regex(/^[A-Z0-9]{4,34}$/, 'Use 4–34 letters or digits, e.g. 0123456789'));
+
+const bankDetailsInput = {
+  bankName: trimmed(2, 80),
+  accountName: trimmed(2, 120),
+  accountNumber: bankAccountNumber,
+};
+
+/**
+ * Registers a company bank account. Its money is kept on a ledger account with the Bank role:
+ * either a new one created here or an existing Bank account (such as the template's 1120).
+ */
+export const createBankAccountInput = scoped.extend({
+  ...bankDetailsInput,
+  /** Must be the company's base currency until foreign-currency accounts are supported. */
+  currency: z.enum(SUPPORTED_CURRENCY_CODES).optional(),
+  ledger: z.discriminatedUnion('mode', [
+    z.object({
+      mode: z.literal('new'),
+      code: accountCode,
+      name: trimmed(2, 120),
+      parentId: docId.nullable().default(null),
+    }),
+    z.object({ mode: z.literal('existing'), accountId: docId }),
+  ]),
+});
+export const updateBankAccountInput = scoped.extend({
+  accountId: docId,
+  bankName: bankDetailsInput.bankName.optional(),
+  accountName: bankDetailsInput.accountName.optional(),
+  accountNumber: bankAccountNumber.optional(),
+  /** Deactivating hides the account from payments, receipts and the till. */
+  status: z.enum(['active', 'inactive']).optional(),
+});
+
 // --- Fixed assets (Phase 7) -----------------------------------------------------------------
 
 export const month = periodId;
@@ -917,6 +959,8 @@ export const COMMAND_SCHEMAS = {
   'customerRefund.create': createCustomerRefundInput,
   'customerRefund.decide': decideCustomerRefundInput,
   'bankReconciliation.complete': completeBankReconciliationInput,
+  'bankAccount.create': createBankAccountInput,
+  'bankAccount.update': updateBankAccountInput,
   'fixedAsset.create': createFixedAssetInput,
   'fixedAsset.dispose': disposeFixedAssetInput,
   'depreciation.run': runDepreciationInput,

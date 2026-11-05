@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('./firebase', () => ({ db: {} }));
-const { postableForJournals, sortChart, tryParseMoney } = await import('./ledger');
+const {
+  maskAccountNumber,
+  moneyAccountLabel,
+  moneyAccounts,
+  postableForJournals,
+  sortChart,
+  suggestBankCode,
+  tryParseMoney,
+} = await import('./ledger');
 const { lineTotals } = await import('../components/JournalLines');
 
 describe('sortChart', () => {
@@ -66,5 +74,60 @@ describe('postableForJournals', () => {
       { ...base, id: 'ar', isPostable: true, isControl: true, status: 'active' },
     ]);
     expect(rows.map((r) => r.id)).toEqual(['ok']);
+  });
+});
+
+describe('bank accounts in pickers', () => {
+  const row = (over: Record<string, unknown>) =>
+    ({
+      id: String(over.code),
+      name: 'Account',
+      type: 'asset',
+      subtype: 'general',
+      parentId: null,
+      isPostable: true,
+      isControl: false,
+      status: 'active',
+      hasPostings: false,
+      ...over,
+    }) as Parameters<typeof moneyAccounts>[0][number];
+
+  it('offers active, postable cash and bank accounts only', () => {
+    const rows = [
+      row({ code: '1110', subtype: 'cash' }),
+      row({ code: '1120', subtype: 'bank' }),
+      row({ code: '1121', subtype: 'bank', status: 'inactive' }),
+      row({ code: '1100', isPostable: false }),
+      row({ code: '1200', subtype: 'receivable' }),
+    ];
+    expect(moneyAccounts(rows).map((a) => a.code)).toEqual(['1110', '1120']);
+  });
+
+  it('labels bank accounts with the bank and the last four digits', () => {
+    expect(maskAccountNumber('0123456789')).toBe('••6789');
+    expect(moneyAccountLabel({ code: '1110', name: 'Cash on hand' })).toBe('1110 · Cash on hand');
+    expect(
+      moneyAccountLabel({
+        code: '1121',
+        name: 'Operations',
+        bank: {
+          bankName: 'GTBank',
+          accountName: 'Adezmold',
+          accountNumber: '0123456789',
+          currency: 'NGN',
+        },
+      }),
+    ).toBe('1121 · Operations (GTBank ••6789)');
+  });
+
+  it('suggests the next free code after the cash and bank accounts', () => {
+    expect(
+      suggestBankCode([
+        { code: '1110', subtype: 'cash' },
+        { code: '1120', subtype: 'bank' },
+        { code: '1121', subtype: 'general' },
+      ]),
+    ).toBe('1122');
+    expect(suggestBankCode([{ code: '6700', subtype: 'general' }])).toBe('');
   });
 });

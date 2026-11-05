@@ -11,7 +11,13 @@ import { Button } from '../../components/ui/button';
 import { Alert, Card, PageHeader, Spinner } from '../../components/ui/feedback';
 import { Field, Input, Select } from '../../components/ui/form';
 import { useCompany } from '../../lib/company';
-import { money, tryParseMoney, useAccounts } from '../../lib/ledger';
+import {
+  money,
+  moneyAccountLabel,
+  moneyAccounts,
+  tryParseMoney,
+  useAccounts,
+} from '../../lib/ledger';
 import { useCustomers, useOpenSalesInvoices, useOwnOnly } from '../../lib/sales';
 import { useAction } from '../../lib/useAction';
 import { usePostingBranches } from './NewJournal';
@@ -38,9 +44,7 @@ export default function NewCustomerReceipt() {
   const invoices = useOpenSalesInvoices(companyId, customerId);
 
   const branch = branchId || branches.data[0]?.id || '';
-  const into = accounts.data.filter(
-    (a) => a.status === 'active' && a.isPostable && (a.subtype === 'cash' || a.subtype === 'bank'),
-  );
+  const into = moneyAccounts(accounts.data);
   const account = depositAccountId || into[0]?.id || '';
   const received = tryParseMoney(amount, currency);
   const allocated = allocationTotal(allocations, currency);
@@ -112,7 +116,7 @@ export default function NewCustomerReceipt() {
               <Select value={account} onChange={(e) => setDepositAccountId(e.target.value)}>
                 {into.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.code} · {a.name}
+                    {moneyAccountLabel(a)}
                   </option>
                 ))}
               </Select>

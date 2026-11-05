@@ -147,6 +147,14 @@ export type ApprovalRequestDoc = ApprovalTarget & {
 
 // --- Ledger (DATA_MODEL.md §4) ---------------------------------------------------------------
 
+/** The bank's own details for a company bank account, kept on its ledger account. */
+export interface BankDetails {
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  currency: string;
+}
+
 export interface AccountDoc {
   code: string;
   name: string;
@@ -160,6 +168,8 @@ export interface AccountDoc {
   /** Set by the first posting; the type and subtype are fixed from then on. */
   hasPostings: boolean;
   template: { id: string; version: number } | null;
+  /** Set on Bank accounts registered as company bank accounts (bankAccount.create). */
+  bank?: BankDetails | null;
   createdAt: Timestamp;
   createdBy: string;
   updatedAt: Timestamp;

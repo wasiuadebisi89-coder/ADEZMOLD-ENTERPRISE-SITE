@@ -1,7 +1,11 @@
 import type { CommandName } from '@bms/schemas';
 import type { AnyCommand } from './lib/command.js';
 import { createFixedAsset, disposeFixedAsset, runDepreciation } from './commands/assets.js';
-import { completeBankReconciliation } from './commands/bank.js';
+import {
+  completeBankReconciliation,
+  createBankAccount,
+  updateBankAccount,
+} from './commands/bank.js';
 import { closeFiscalYear } from './commands/closing.js';
 import {
   createProject,
@@ -141,6 +145,8 @@ export const COMMANDS: Record<CommandName, AnyCommand> = {
   'customerRefund.create': createCustomerRefund,
   'customerRefund.decide': decideCustomerRefund,
   'bankReconciliation.complete': completeBankReconciliation,
+  'bankAccount.create': createBankAccount,
+  'bankAccount.update': updateBankAccount,
   'fixedAsset.create': createFixedAsset,
   'fixedAsset.dispose': disposeFixedAsset,
   'depreciation.run': runDepreciation,

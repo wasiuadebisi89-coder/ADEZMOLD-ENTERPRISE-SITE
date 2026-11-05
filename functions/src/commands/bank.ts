@@ -5,18 +5,21 @@
  * on the statement but not in the books are entered as journals or documents first.
  */
 import { fromStorable, toDecimalString, toStorable } from '@bms/domain';
+import type { Transaction } from 'firebase-admin/firestore';
 import { defineCommand } from '../lib/command.js';
 import { companyTarget, money } from '../lib/documents.js';
-import { failedPrecondition, invalid } from '../lib/errors.js';
+import { conflict, failedPrecondition, invalid, notFound } from '../lib/errors.js';
 import {
   companyRefs,
   type AccountDoc,
+  type BankDetails,
   type BankClearingDoc,
   type BankReconciliationDoc,
   type BankStateDoc,
   type CompanyDoc,
   type LedgerEntryDoc,
 } from '../lib/model.js';
+import { checkParent } from './ledger.js';
 
 export const completeBankReconciliation = defineCommand({
   name: 'bankReconciliation.complete',
@@ -118,6 +121,164 @@ export const completeBankReconciliation = defineCommand({
           statementBalance: statement.toString(),
           entries: input.entryIds.length,
         },
+      },
+    };
+  },
+});
+
+// --- Company bank accounts -------------------------------------------------------------------
+
+/** Refuses a bank and account number another of the company's accounts already uses. */
+async function checkNumberFree(
+  tx: Transaction,
+  companyId: string,
+  bankName: string,
+  accountNumber: string,
+  selfId?: string,
+): Promise<void> {
+  const same = await tx.get(
+    companyRefs(companyId).accounts.where('bank.accountNumber', '==', accountNumber),
+  );
+  const clash = same.docs.find(
+    (d) =>
+      d.id !== selfId &&
+      (d.data() as AccountDoc).bank?.bankName.toLowerCase() === bankName.toLowerCase(),
+  );
+  if (clash) {
+    const other = clash.data() as AccountDoc;
+    throw conflict(
+      'bank_account_exists',
+      `${bankName} ${accountNumber} is already set up as ${other.code} ${other.name}`,
+    );
+  }
+}
+
+export const createBankAccount = defineCommand({
+  name: 'bankAccount.create',
+  access: { kind: 'company', permission: 'ledger.accounts.manage' },
+  async handler({ tx, caller, input, now }) {
+    const refs = companyRefs(input.companyId);
+    const baseCurrency = ((await tx.get(refs.company)).data() as CompanyDoc).baseCurrency;
+    const currency = input.currency ?? baseCurrency;
+    if (currency !== baseCurrency) {
+      throw invalid(
+        'currency_unsupported',
+        `Bank accounts must be in ${baseCurrency}, the company's currency, for now`,
+        { fields: { currency: `Use ${baseCurrency}` } },
+      );
+    }
+    const bank: BankDetails = {
+      bankName: input.bankName,
+      accountName: input.accountName,
+      accountNumber: input.accountNumber,
+      currency,
+    };
+
+    if (input.ledger.mode === 'existing') {
+      const accountId = input.ledger.accountId;
+      const account = (await tx.get(refs.account(accountId))).data() as AccountDoc | undefined;
+      if (!account) throw notFound('account_not_found', 'Ledger account not found');
+      if (account.subtype !== 'bank' || !account.isPostable) {
+        throw invalid('account_invalid', 'Choose a ledger account with the Bank role');
+      }
+      if (account.bank) {
+        throw conflict(
+          'bank_details_exist',
+          `${account.code} ${account.name} already has bank details; edit them instead`,
+        );
+      }
+      await checkNumberFree(tx, input.companyId, bank.bankName, bank.accountNumber);
+      tx.update(refs.account(accountId), { bank, updatedAt: now, updatedBy: caller.uid });
+      return {
+        result: { accountId },
+        audit: {
+          target: companyTarget(input.companyId),
+          entityType: 'account',
+          entityId: accountId,
+          before: { bank: null },
+          after: { bank },
+        },
+      };
+    }
+
+    const { code, name, parentId } = input.ledger;
+    const duplicate = await tx.get(refs.accounts.where('code', '==', code).limit(1));
+    if (!duplicate.empty) {
+      throw conflict('code_taken', `Account code ${code} is already used`);
+    }
+    await checkParent(tx, input.companyId, parentId, 'asset');
+    await checkNumberFree(tx, input.companyId, bank.bankName, bank.accountNumber);
+    const ref = refs.accounts.doc();
+    const doc: AccountDoc = {
+      code,
+      name,
+      type: 'asset',
+      subtype: 'bank',
+      parentId,
+      isPostable: true,
+      isControl: false,
+      status: 'active',
+      hasPostings: false,
+      template: null,
+      bank,
+      createdAt: now,
+      createdBy: caller.uid,
+      updatedAt: now,
+      updatedBy: caller.uid,
+    };
+    tx.set(ref, doc);
+    return {
+      result: { accountId: ref.id },
+      audit: {
+        target: companyTarget(input.companyId),
+        entityType: 'account',
+        entityId: ref.id,
+        after: { code, name, type: 'asset', subtype: 'bank', bank },
+      },
+    };
+  },
+});
+
+export const updateBankAccount = defineCommand({
+  name: 'bankAccount.update',
+  access: { kind: 'company', permission: 'ledger.accounts.manage' },
+  async handler({ tx, caller, input, now }) {
+    const refs = companyRefs(input.companyId);
+    const account = (await tx.get(refs.account(input.accountId))).data() as AccountDoc | undefined;
+    if (!account?.bank) throw notFound('bank_account_not_found', 'Bank account not found');
+    const bank: BankDetails = {
+      ...account.bank,
+      ...(input.bankName !== undefined && { bankName: input.bankName }),
+      ...(input.accountName !== undefined && { accountName: input.accountName }),
+      ...(input.accountNumber !== undefined && { accountNumber: input.accountNumber }),
+    };
+    if (
+      bank.accountNumber !== account.bank.accountNumber ||
+      bank.bankName.toLowerCase() !== account.bank.bankName.toLowerCase()
+    ) {
+      await checkNumberFree(
+        tx,
+        input.companyId,
+        bank.bankName,
+        bank.accountNumber,
+        input.accountId,
+      );
+    }
+    const status = input.status ?? account.status;
+    tx.update(refs.account(input.accountId), {
+      bank,
+      status,
+      updatedAt: now,
+      updatedBy: caller.uid,
+    });
+    return {
+      result: { accountId: input.accountId },
+      audit: {
+        target: companyTarget(input.companyId),
+        entityType: 'account',
+        entityId: input.accountId,
+        before: { bank: account.bank, status: account.status },
+        after: { bank, status },
       },
     };
   },

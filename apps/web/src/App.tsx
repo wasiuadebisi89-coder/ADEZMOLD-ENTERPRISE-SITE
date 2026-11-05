@@ -61,6 +61,7 @@ const CustomerReceiptDetail = lazy(() => import('./routes/company/CustomerReceip
 const NewCreditNote = lazy(() => import('./routes/company/NewCreditNote'));
 const CreditNoteDetail = lazy(() => import('./routes/company/CreditNoteDetail'));
 const CustomerRefundDetail = lazy(() => import('./routes/company/CustomerRefundDetail'));
+const BankAccounts = lazy(() => import('./routes/company/BankAccounts'));
 const BankReconciliation = lazy(() => import('./routes/company/BankReconciliation'));
 const Reports = lazy(() => import('./routes/company/Reports'));
 const FixedAssets = lazy(() => import('./routes/company/FixedAssets'));
@@ -181,6 +182,7 @@ const router = createBrowserRouter([
       { path: 'sales/invoices/:invoiceId/return', element: <NewCreditNote /> },
       { path: 'sales/returns/:creditNoteId', element: <CreditNoteDetail /> },
       { path: 'sales/refunds/:refundId', element: <CustomerRefundDetail /> },
+      { path: 'bank-accounts', element: <BankAccounts /> },
       { path: 'bank-reconciliation', element: <BankReconciliation /> },
       { path: 'reports', element: <Reports /> },
       { path: 'fixed-assets', element: <FixedAssets /> },

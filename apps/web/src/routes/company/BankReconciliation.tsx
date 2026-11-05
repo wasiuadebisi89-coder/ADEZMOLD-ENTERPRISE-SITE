@@ -10,7 +10,7 @@ import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useCollection, useDoc } from '../../lib/firestore-hooks';
-import { money, useAccounts } from '../../lib/ledger';
+import { money, moneyAccountLabel, useAccounts } from '../../lib/ledger';
 import { useAction } from '../../lib/useAction';
 import { formatDate, formatDateTime } from '../../lib/utils';
 
@@ -299,14 +299,17 @@ export default function BankReconciliation() {
         description="Tick the entries that appear on the bank statement. When they add up to the statement's closing balance, finish the reconciliation. Anything on the statement that is not in the books needs to be recorded first."
       />
       {banks.length === 0 ? (
-        <EmptyState title="No cash or bank accounts" />
+        <EmptyState
+          title="No cash or bank accounts"
+          description="Add the company's bank accounts under Bank accounts first."
+        />
       ) : (
         <>
           <Field label="Account" className="mb-4 max-w-sm">
             <Select value={chosen} onChange={(e) => setAccountId(e.target.value)}>
               {banks.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.code} · {a.name}
+                  {moneyAccountLabel(a)}
                 </option>
               ))}
             </Select>

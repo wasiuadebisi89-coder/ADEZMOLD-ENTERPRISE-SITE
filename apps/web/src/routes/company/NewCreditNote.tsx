@@ -10,7 +10,7 @@ import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { qty, useLocations } from '../../lib/inventory';
-import { useAccounts } from '../../lib/ledger';
+import { moneyAccountLabel, moneyAccounts, useAccounts } from '../../lib/ledger';
 import { type SalesInvoiceRow } from '../../lib/sales';
 import { useAction } from '../../lib/useAction';
 
@@ -50,9 +50,7 @@ export default function NewCreditNote() {
   const quarantines = locations.data.filter(
     (l) => l.type === 'quarantine' && l.status === 'active' && l.branchId === i.branchId,
   );
-  const refundFrom = accounts.data.filter(
-    (a) => a.status === 'active' && a.isPostable && (a.subtype === 'cash' || a.subtype === 'bank'),
-  );
+  const refundFrom = moneyAccounts(accounts.data);
   const quarantine = quarantineId || quarantines[0]?.id || '';
   const refundAccount = refundAccountId || refundFrom[0]?.id || '';
   const rows = i.lines.map((l) => {
@@ -189,7 +187,7 @@ export default function NewCreditNote() {
               <Select value={refundAccount} onChange={(e) => setRefundAccountId(e.target.value)}>
                 {refundFrom.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.code} · {a.name}
+                    {moneyAccountLabel(a)}
                   </option>
                 ))}
               </Select>
