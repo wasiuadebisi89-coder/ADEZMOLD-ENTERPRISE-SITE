@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toDecimalString } from '@bms/domain';
 import { useCompany } from '../lib/company';
-import { money, tryParseMoney, useAccounts } from '../lib/ledger';
+import { money, moneyAccountLabel, moneyAccounts, tryParseMoney, useAccounts } from '../lib/ledger';
 import { useAction } from '../lib/useAction';
 import { Button } from './ui/button';
 import { Dialog } from './ui/dialog';
@@ -24,9 +24,7 @@ export function RefundDialog({
   const navigate = useNavigate();
   const accounts = useAccounts(companyId);
   const action = useAction();
-  const from = accounts.data.filter(
-    (a) => a.status === 'active' && a.isPostable && (a.subtype === 'cash' || a.subtype === 'bank'),
-  );
+  const from = moneyAccounts(accounts.data);
   const [accountId, setAccountId] = useState('');
   const [amount, setAmount] = useState(toDecimalString(BigInt(available), currency));
   const [reason, setReason] = useState('');
@@ -65,7 +63,7 @@ export function RefundDialog({
           <Select value={account} onChange={(e) => setAccountId(e.target.value)}>
             {from.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.code} · {a.name}
+                {moneyAccountLabel(a)}
               </option>
             ))}
           </Select>

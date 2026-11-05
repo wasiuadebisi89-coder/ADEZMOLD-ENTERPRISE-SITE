@@ -24,7 +24,13 @@ import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { isService, qty, useLocations, useProducts } from '../../lib/inventory';
-import { money, tryParseMoney, useAccounts } from '../../lib/ledger';
+import {
+  money,
+  moneyAccountLabel,
+  moneyAccounts,
+  tryParseMoney,
+  useAccounts,
+} from '../../lib/ledger';
 import {
   useAvailability,
   useCustomers,
@@ -239,9 +245,7 @@ export default function NewSale() {
   );
   const location = locationId || usable[0]?.id || '';
   const availability = useAvailability(companyId, location);
-  const payInto = accounts.data.filter(
-    (a) => a.status === 'active' && a.isPostable && (a.subtype === 'cash' || a.subtype === 'bank'),
-  );
+  const payInto = moneyAccounts(accounts.data);
   const account = accountId || payInto[0]?.id || '';
   const activeCustomers = customers.data.filter((c) => c.status === 'active');
   const customer = customers.data.find((c) => c.id === customerId) ?? null;
@@ -603,7 +607,7 @@ export default function NewSale() {
               <Select value={account} onChange={(e) => setAccountId(e.target.value)}>
                 {payInto.map((acc) => (
                   <option key={acc.id} value={acc.id}>
-                    {acc.code} · {acc.name}
+                    {moneyAccountLabel(acc)}
                   </option>
                 ))}
               </Select>

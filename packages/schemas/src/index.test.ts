@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { createCompanyInput, createInvitationInput, setPeriodStatusInput } from './index.js';
+import {
+  bankAccountNumber,
+  createBankAccountInput,
+  createCompanyInput,
+  createInvitationInput,
+  setPeriodStatusInput,
+} from './index.js';
 
 const base = {
   idempotencyKey: randomUUID(),
@@ -50,5 +56,25 @@ describe('other schemas', () => {
     const ok = { idempotencyKey: base.idempotencyKey, companyId: 'c1', status: 'closed' };
     expect(setPeriodStatusInput.safeParse({ ...ok, periodId: '2026-10' }).success).toBe(true);
     expect(setPeriodStatusInput.safeParse({ ...ok, periodId: '2026-13' }).success).toBe(false);
+  });
+});
+
+describe('bank accounts', () => {
+  const key = randomUUID();
+  it('normalises account numbers and requires a ledger choice', () => {
+    const parsed = createBankAccountInput.parse({
+      idempotencyKey: key,
+      companyId: 'c1',
+      bankName: ' GTBank ',
+      accountName: 'Adezmold',
+      accountNumber: '0123-456 789',
+      ledger: { mode: 'new', code: '1121', name: 'GTBank' },
+    });
+    expect(parsed.accountNumber).toBe('0123456789');
+    expect(parsed.bankName).toBe('GTBank');
+    expect(parsed.ledger).toEqual({ mode: 'new', code: '1121', name: 'GTBank', parentId: null });
+    expect(bankAccountNumber.safeParse('12').success).toBe(false);
+    expect(bankAccountNumber.safeParse('0123/456').success).toBe(false);
+    expect(bankAccountNumber.parse('gb29 nwbk 6016 1331 9268 19')).toBe('GB29NWBK60161331926819');
   });
 });

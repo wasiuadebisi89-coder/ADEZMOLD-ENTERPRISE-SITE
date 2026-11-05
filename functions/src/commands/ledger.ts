@@ -76,7 +76,7 @@ export const applyChartTemplate = defineCommand({
   },
 });
 
-async function checkParent(
+export async function checkParent(
   tx: Transaction,
   companyId: string,
   parentId: string | null,

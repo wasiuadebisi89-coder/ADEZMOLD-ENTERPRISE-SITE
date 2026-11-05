@@ -28,6 +28,7 @@ import {
   Store,
   Truck,
   Users,
+  Wallet,
   X,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -68,6 +69,12 @@ const NAV: NavItem[] = [
     permission: ['reports.financial.read', 'reports.stock.read', 'sales.read', 'purchasing.read'],
   },
   { to: 'fixed-assets', label: 'Fixed assets', icon: Armchair, permission: 'assets.read' },
+  {
+    to: 'bank-accounts',
+    label: 'Bank accounts',
+    icon: Wallet,
+    permission: 'ledger.accounts.read',
+  },
   {
     to: 'bank-reconciliation',
     label: 'Bank reconciliation',

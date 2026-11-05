@@ -21,6 +21,15 @@ export interface AccountRow {
   isControl: boolean;
   status: 'active' | 'inactive';
   hasPostings: boolean;
+  /** The bank's details, on a registered company bank account. */
+  bank?: BankDetails | null;
+}
+
+export interface BankDetails {
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  currency: string;
 }
 
 export interface JournalLineRow {
@@ -127,6 +136,42 @@ export function sortChart<T extends Pick<AccountRow, 'id' | 'code' | 'parentId'>
   };
   visit(null, 0);
   return out;
+}
+
+/** Cash and bank accounts money can be paid from or into: active and postable. */
+export function moneyAccounts<T extends AccountRow>(accounts: readonly T[]): T[] {
+  return accounts.filter(
+    (a) => a.status === 'active' && a.isPostable && (a.subtype === 'cash' || a.subtype === 'bank'),
+  );
+}
+
+/** Shows the last four characters of an account number, e.g. "••6789". */
+export function maskAccountNumber(accountNumber: string): string {
+  return `••${accountNumber.slice(-4)}`;
+}
+
+/** How a cash or bank account reads in a picker: "1121 · Operations (GTBank ••6789)". */
+export function moneyAccountLabel(a: Pick<AccountRow, 'code' | 'name' | 'bank'>): string {
+  const label = `${a.code} · ${a.name}`;
+  return a.bank
+    ? `${label} (${a.bank.bankName} ${maskAccountNumber(a.bank.accountNumber)})`
+    : label;
+}
+
+/**
+ * The next free code after the company's cash and bank accounts, e.g. 1121 after 1120, so a
+ * new bank account lands beside the others in the chart. Empty when there is no obvious one.
+ */
+export function suggestBankCode(accounts: readonly Pick<AccountRow, 'code' | 'subtype'>[]): string {
+  const taken = new Set(accounts.map((a) => a.code));
+  const money = accounts
+    .filter((a) => (a.subtype === 'bank' || a.subtype === 'cash') && /^\d+$/.test(a.code))
+    .map((a) => Number(a.code));
+  if (money.length === 0) return '';
+  for (let n = Math.max(...money) + 1; n < Math.max(...money) + 100; n++) {
+    if (!taken.has(String(n))) return String(n);
+  }
+  return '';
 }
 
 /** Accounts a manual or opening journal may use. */

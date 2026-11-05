@@ -10,7 +10,13 @@ import {
   allocationInput,
   allocationTotal,
 } from '../../components/AllocationTable';
-import { money, tryParseMoney, useAccounts } from '../../lib/ledger';
+import {
+  money,
+  moneyAccountLabel,
+  moneyAccounts,
+  tryParseMoney,
+  useAccounts,
+} from '../../lib/ledger';
 import { outstanding, useOpenInvoices, useSuppliers } from '../../lib/purchasing';
 import { useAction } from '../../lib/useAction';
 import { usePostingBranches } from './NewJournal';
@@ -36,9 +42,7 @@ export default function NewSupplierPayment() {
   const invoices = useOpenInvoices(companyId, supplierId);
 
   const branch = branchId || branches.data[0]?.id || '';
-  const payFrom = accounts.data.filter(
-    (a) => a.status === 'active' && a.isPostable && (a.subtype === 'cash' || a.subtype === 'bank'),
-  );
+  const payFrom = moneyAccounts(accounts.data);
   const account = paymentAccountId || payFrom[0]?.id || '';
   const paid = tryParseMoney(amount, currency);
   const allocated = allocationTotal(allocations, currency);
@@ -110,7 +114,7 @@ export default function NewSupplierPayment() {
               <Select value={account} onChange={(e) => setPaymentAccountId(e.target.value)}>
                 {payFrom.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.code} · {a.name}
+                    {moneyAccountLabel(a)}
                   </option>
                 ))}
               </Select>
