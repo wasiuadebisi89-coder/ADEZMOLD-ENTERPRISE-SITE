@@ -24,8 +24,13 @@ rolled those back by hand. **BMS must only deploy to a project that runs nothing
 deploy workflow now refuses `gen-lang-client-0555602350`, and the staging alias points at
 `adezmold-bms-staging` again, to be created as in section 1.
 
-Nothing here has been run against a real project yet: the steps below are for the owner, who
-holds the Google account. Section 7 lists what to check once they have been done.
+2026-11-02: staging runs in `adezmold-bms-staging` (smoke test, recovery drill and auth emails
+checked, see PROGRESS.md). 2026-11-05: `adezmold-bms-prod` created; linking it to billing first
+needed a project-quota increase from Google, because two AI Studio projects on the billing
+account cannot be unlinked by the owner.
+
+The steps below are for the owner, who holds the Google account. Section 7 lists what to check
+once they have been done.
 
 ## 1. Create the staging project
 
@@ -67,7 +72,7 @@ repository and run:
 ```sh
 git clone https://github.com/wasiuadebisi89-coder/ADEZMOLD-ENTERPRISE-SITE.git
 cd ADEZMOLD-ENTERPRISE-SITE
-ops/setup-project.sh gen-lang-client-0555602350 wasiuadebisi89-coder/ADEZMOLD-ENTERPRISE-SITE you@example.com
+ops/setup-project.sh adezmold-bms-staging wasiuadebisi89-coder/ADEZMOLD-ENTERPRISE-SITE you@example.com
 ```
 
 It can be run again safely. It:
