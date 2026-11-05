@@ -42,7 +42,7 @@ export default function SignIn() {
   return (
     <AuthLayout
       title="Sign in"
-      subtitle="Welcome back."
+      subtitle="Welcome back. Sign in to continue to your companies."
       footer={
         <>
           New here?{' '}
