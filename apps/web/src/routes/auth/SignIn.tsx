@@ -6,7 +6,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { Button } from '../../components/ui/button';
 import { Alert } from '../../components/ui/feedback';
-import { Field, Input } from '../../components/ui/form';
+import { Field, Input, PasswordInput } from '../../components/ui/form';
 import { auth } from '../../lib/firebase';
 import { AuthLayout } from './AuthLayout';
 import { authErrorMessage } from './authErrors';
@@ -65,7 +65,7 @@ export default function SignIn() {
           <Input type="email" autoComplete="email" {...form.register('email')} />
         </Field>
         <Field label="Password" error={form.formState.errors.password?.message}>
-          <Input type="password" autoComplete="current-password" {...form.register('password')} />
+          <PasswordInput autoComplete="current-password" {...form.register('password')} />
         </Field>
         <div className="flex items-center justify-between">
           <Link className="text-sm text-brand-700 hover:underline" to="/forgot-password">

@@ -1,7 +1,9 @@
 import * as LabelPrimitive from '@radix-ui/react-label';
+import { Eye, EyeOff } from 'lucide-react';
 import {
   forwardRef,
   useId,
+  useState,
   type InputHTMLAttributes,
   type ReactElement,
   type SelectHTMLAttributes,
@@ -18,6 +20,37 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     return <input ref={ref} className={cn(control, 'h-10', className)} {...props} />;
   },
 );
+
+/**
+ * A password input with a button that shows or hides what was typed.
+ * The button's name is visible-to-screen-readers text, not aria-label, so it never
+ * matches the field's own label.
+ */
+export const PasswordInput = forwardRef<
+  HTMLInputElement,
+  Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>
+>(function PasswordInput({ className, ...props }, ref) {
+  const [visible, setVisible] = useState(false);
+  const Icon = visible ? EyeOff : Eye;
+  return (
+    <div className="relative">
+      <input
+        ref={ref}
+        type={visible ? 'text' : 'password'}
+        className={cn(control, 'h-10 pr-10', className)}
+        {...props}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-slate-500 hover:text-slate-800"
+      >
+        <Icon className="size-4" aria-hidden="true" />
+        <span className="sr-only">{visible ? 'Hide password' : 'Show password'}</span>
+      </button>
+    </div>
+  );
+});
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
   function Select({ className, ...props }, ref) {

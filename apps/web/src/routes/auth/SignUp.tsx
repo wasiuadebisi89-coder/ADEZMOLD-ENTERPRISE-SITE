@@ -10,7 +10,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { Button } from '../../components/ui/button';
 import { Alert } from '../../components/ui/feedback';
-import { Field, Input } from '../../components/ui/form';
+import { Field, Input, PasswordInput } from '../../components/ui/form';
 import { auth } from '../../lib/firebase';
 import { AuthLayout } from './AuthLayout';
 import { authErrorMessage } from './authErrors';
@@ -82,10 +82,10 @@ export default function SignUp() {
           <Input type="email" autoComplete="email" {...form.register('email')} />
         </Field>
         <Field label="Password" error={errors.password?.message} hint="At least 10 characters.">
-          <Input type="password" autoComplete="new-password" {...form.register('password')} />
+          <PasswordInput autoComplete="new-password" {...form.register('password')} />
         </Field>
         <Field label="Confirm password" error={errors.confirm?.message}>
-          <Input type="password" autoComplete="new-password" {...form.register('confirm')} />
+          <PasswordInput autoComplete="new-password" {...form.register('confirm')} />
         </Field>
         <Button type="submit" className="w-full" loading={form.formState.isSubmitting}>
           Create account
