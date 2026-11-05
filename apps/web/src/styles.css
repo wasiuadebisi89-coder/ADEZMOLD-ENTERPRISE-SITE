@@ -7,6 +7,11 @@
   --color-brand-600: #0d9488;
   --color-brand-700: #0f766e;
   --color-brand-800: #115e59;
+  --color-brand-900: #0b3f3b;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #f5b301;
+  --color-gold-500: #d99a00;
+  --color-gold-700: #8a5d00;
 }
 
 @layer base {
