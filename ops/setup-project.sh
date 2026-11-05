@@ -88,6 +88,12 @@ echo "== Build service account for Cloud Functions"
 BUILD_SA="${NUMBER}-compute@developer.gserviceaccount.com"
 retry g projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$BUILD_SA" \
   --role=roles/cloudbuild.builds.builder --condition=None >/dev/null
+# The same account runs the function. Projects inside an organization often skip the automatic
+# Editor grant, so give it what the API uses: Firestore, Auth lookups and revocation, logs.
+for role in roles/datastore.user roles/firebaseauth.admin roles/logging.logWriter; do
+  retry g projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$BUILD_SA" \
+    --role="$role" --condition=None >/dev/null
+done
 
 echo "== Container repository for function images"
 # Created here so the deploy can set its cleanup policy before the first functions deploy.

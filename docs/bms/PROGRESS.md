@@ -438,3 +438,20 @@ Firebase Auth on staging now sends through the owner's Gmail account (app passwo
 `smtp.gmail.com:587` STARTTLS, set in Authentication → Templates → SMTP settings). The owner
 requested a password reset and the email arrived. Before customers use production, it should
 send from an address on the business's own domain (DEPLOYMENT.md §1 step 4).
+
+## 2026-11-05: production go-live
+
+Production is `adezmold-bms-prod` (europe-west1, Blaze), at <https://adezmold-bms-prod.web.app>.
+It deploys by hand, after approval in the GitHub `production` environment, with App Check
+enforced (reCAPTCHA Enterprise).
+
+| Step                                          | Result                                                                                                                                     |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Billing                                       | needed a project-quota increase from Google (granted 2026-11-05)                                                                           |
+| Setup script                                  | finished on the second run (new service account propagation, now retried)                                                                  |
+| First deploy (run 42029803849)                | function build failed (build account role); succeeded after re-run                                                                         |
+| Company creation                              | failed, then worked after three fixes (DEPLOYMENT.md §2): public invoker, organization rule lifted for this project, runtime account roles |
+| Sign-up, verification email, company creation | work (owner, 18:15 UTC)                                                                                                                    |
+
+The trial balance on the new company loads, and the owner confirmed the backup schedule is enabled
+(18:24 UTC). Open: send auth emails from a domain address before customers sign up.
