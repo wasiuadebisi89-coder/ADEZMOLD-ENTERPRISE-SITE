@@ -82,6 +82,13 @@ retry g iam service-accounts add-iam-policy-binding "$SA" --role=roles/iam.workl
   --member="principalSet://iam.googleapis.com/projects/${NUMBER}/locations/global/workloadIdentityPools/${POOL}/attribute.repository/${REPO}" \
   >/dev/null
 
+echo "== Build service account for Cloud Functions"
+# New projects build functions as the Compute Engine default service account, which no longer
+# gets the Cloud Build role automatically, so the first functions deploy fails without this.
+BUILD_SA="${NUMBER}-compute@developer.gserviceaccount.com"
+retry g projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$BUILD_SA" \
+  --role=roles/cloudbuild.builds.builder --condition=None >/dev/null
+
 echo "== Container repository for function images"
 # Created here so the deploy can set its cleanup policy before the first functions deploy.
 if ! exists g artifacts repositories describe gcf-artifacts --location="$REGION"; then
