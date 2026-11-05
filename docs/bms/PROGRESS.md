@@ -453,4 +453,5 @@ enforced (reCAPTCHA Enterprise).
 | Company creation                              | failed, then worked after three fixes (DEPLOYMENT.md §2): public invoker, organization rule lifted for this project, runtime account roles |
 | Sign-up, verification email, company creation | work (owner, 18:15 UTC)                                                                                                                    |
 
-Not yet checked: trial balance on the new company, backup schedules and PITR in the console.
+The trial balance on the new company loads, and the owner confirmed the backup schedule is enabled
+(18:24 UTC). Open: send auth emails from a domain address before customers sign up.
