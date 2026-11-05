@@ -64,7 +64,8 @@ fi
 for role in roles/firebase.admin roles/cloudfunctions.admin roles/run.admin \
   roles/artifactregistry.admin roles/cloudbuild.builds.editor roles/iam.serviceAccountUser \
   roles/serviceusage.serviceUsageConsumer roles/datastore.indexAdmin roles/firebaserules.admin; do
-  g projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$SA" --role="$role" \
+  # A new service account can take a minute to become visible to IAM, so retry.
+  retry g projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$SA" --role="$role" \
     --condition=None >/dev/null
 done
 if ! exists g iam workload-identity-pools describe "$POOL" --location=global; then
@@ -77,7 +78,7 @@ if ! exists g iam workload-identity-pools providers describe "$PROVIDER" \
     --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
     --attribute-condition="assertion.repository == '${REPO}'"
 fi
-g iam service-accounts add-iam-policy-binding "$SA" --role=roles/iam.workloadIdentityUser \
+retry g iam service-accounts add-iam-policy-binding "$SA" --role=roles/iam.workloadIdentityUser \
   --member="principalSet://iam.googleapis.com/projects/${NUMBER}/locations/global/workloadIdentityPools/${POOL}/attribute.repository/${REPO}" \
   >/dev/null
 
