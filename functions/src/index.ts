@@ -16,6 +16,10 @@ export const api = onCall(
   {
     region: REGION,
     enforceAppCheck: process.env.ENFORCE_APP_CHECK === 'true',
+    // Callable functions must be reachable from the browser; sign-in and App Check are checked
+    // in code. Declaring it makes every deploy set the invoker, not only the first one: a first
+    // deploy that failed half-way once left production without it (2026-11-05).
+    invoker: 'public',
     memory: '256MiB',
     timeoutSeconds: 60,
     // Caps cost and, with the per-user limit, how hard one account can drive the API.
