@@ -58,11 +58,37 @@ once they have been done.
    Hosting. Keep the config values shown (apiKey, authDomain, projectId, storageBucket, appId)
    for step 4. They are public by design and are not secrets.
 
-## 2. Production (later)
+## 2. Production
 
-Repeat section 1 for `adezmold-bms-prod` when going live, with a budget that suits real use.
-Until then nothing deploys to production: the workflow only deploys there when started by
-hand.
+Repeat section 1 for `adezmold-bms-prod`, with a budget that suits real use. Production only
+deploys when started by hand (**Actions → Deploy → Run workflow → production**, on a computer:
+GitHub hides the button on phones) and approved in the `production` environment.
+
+**If the project sits in a Google Cloud organization** (`gcloud projects describe PROJECT
+--format='value(parent)'` prints `type=organization`), the organization may forbid public
+access (`iam.allowedPolicyMemberDomains`). The browser then cannot call the `api` function:
+Cloud Run logs "The request was not authenticated" and the app shows "internal". The function
+must be public; sign-in, App Check and the rate limit are checked in code. Lift the rule for
+this project only, then deploy (or add the invoker by hand):
+
+```sh
+gcloud organizations add-iam-policy-binding ORG_ID --member=user:YOU --role=roles/orgpolicy.policyAdmin
+cat > allow-public.yaml <<'YAML'
+name: projects/PROJECT/policies/iam.allowedPolicyMemberDomains
+spec:
+  rules:
+  - allowAll: true
+YAML
+gcloud org-policies set-policy allow-public.yaml --billing-project=PROJECT
+gcloud run services add-iam-policy-binding api --region=europe-west1 --project=PROJECT \
+  --member=allUsers --role=roles/run.invoker
+```
+
+2026-11-05, first production deploy: `adezmold-bms-prod` sits in organization 275119584361,
+which had this rule. It was lifted for that project only. The same day showed two other
+first-deploy gaps, both now fixed in the repository. The functions build account lacked the
+Cloud Build role, which the setup script now grants. And the invoker was never set after a
+half-failed first deploy, which `invoker: 'public'` in `functions/src/index.ts` now covers.
 
 ## 3. Run the setup script
 
