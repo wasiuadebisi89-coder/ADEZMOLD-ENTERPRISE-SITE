@@ -10,6 +10,7 @@ import type {
   Permission,
   SystemRoleId,
 } from '@bms/domain';
+import type { CompanyStatus } from '@bms/schemas';
 import { db } from './firebase.js';
 
 export type MemberStatus = 'active' | 'suspended' | 'removed';
@@ -23,7 +24,17 @@ export interface CompanyDoc {
   fiscalYearStartMonth: number;
   costingMethod: 'weighted_average' | 'fifo';
   businessTypes: string[];
-  status: 'active' | 'suspended';
+  /**
+   * `pending` until the platform owner approves the registration. Only `active` companies can
+   * run commands. Companies created before approvals existed are already `active`.
+   */
+  status: CompanyStatus;
+  /** Who registered the company, shown to the platform owner when deciding. */
+  registrant?: { uid: string; email: string | null; displayName: string | null };
+  /** Last platform decision: the reason is shown to the company's members. */
+  statusReason?: string | null;
+  statusChangedAt?: Timestamp;
+  statusChangedBy?: string;
   /** Set by posting services once a value can no longer change (Phase 2+). */
   locks: { baseCurrency: boolean; costingMethod: boolean; fiscalYearStartMonth: boolean };
   createdAt: Timestamp;

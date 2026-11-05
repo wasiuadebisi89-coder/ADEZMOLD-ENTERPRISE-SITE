@@ -66,6 +66,7 @@ const Reports = lazy(() => import('./routes/company/Reports'));
 const FixedAssets = lazy(() => import('./routes/company/FixedAssets'));
 const NewFixedAsset = lazy(() => import('./routes/company/NewFixedAsset'));
 const FixedAssetDetail = lazy(() => import('./routes/company/FixedAssetDetail'));
+const Platform = lazy(() => import('./routes/Platform'));
 const NotFound = lazy(() => import('./routes/NotFound'));
 
 function Home() {
@@ -121,6 +122,14 @@ const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <CreateCompany />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: '/platform',
+    element: (
+      <RequireAuth>
+        <Platform />
       </RequireAuth>
     ),
   },

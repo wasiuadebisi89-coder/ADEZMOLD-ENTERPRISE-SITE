@@ -164,6 +164,18 @@ Production starts with `ENFORCE_APP_CHECK=true` (`functions/env/.env.production`
 secret the functions need later goes in Secret Manager (`firebase functions:secrets:set`),
 never in these files or in the repository.
 
+### Platform owner (company approvals)
+
+New companies wait as **pending** until the platform owner approves them at `/platform`
+(docs/bms/COMPANY_APPROVALS.md). Who the platform owner is comes from the GitHub environment
+variable **`PLATFORM_OWNER_EMAILS`** (comma-separated; set it on both the `staging` and
+`production` environments under Settings → Environments). The deploy writes it into the
+functions' settings, so no personal address is kept in the repository. If it is not set, the
+deploy warns and nobody can open the dashboard; registrations still wait safely.
+
+The owner signs in with that address (verified), opens `/platform`, and the app grants Platform
+Super Admin on that first visit. Companies the owner registers are approved at once.
+
 ## 7. After the first deploy
 
 Check, and note the date and result in PROGRESS.md:

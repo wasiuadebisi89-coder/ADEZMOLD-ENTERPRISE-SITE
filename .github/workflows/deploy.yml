@@ -91,6 +91,22 @@ jobs:
           pnpm exec firebase functions:artifacts:setpolicy --project "$TARGET" --non-interactive
           --location europe-west1 --days 3 --force
 
+      # The platform owner (who approves company registrations) comes from the environment's
+      # PLATFORM_OWNER_EMAILS variable, so no personal address is kept in the repository.
+      - name: Add the platform owner setting
+        env:
+          OWNERS: ${{ vars.PLATFORM_OWNER_EMAILS }}
+        run: |
+          if [ -z "$OWNERS" ]; then
+            echo "::warning::PLATFORM_OWNER_EMAILS is not set; nobody can open the approval dashboard."
+            exit 0
+          fi
+          if ! printf '%s' "$OWNERS" | grep -Eq '^[^[:space:],]+@[^[:space:],]+(,[^[:space:],]+@[^[:space:],]+)*$'; then
+            echo "::error::PLATFORM_OWNER_EMAILS must be comma-separated email addresses."
+            exit 1
+          fi
+          printf '\nPLATFORM_OWNER_EMAILS=%s\n' "$OWNERS" >> "functions/env/.env.$TARGET"
+
       - name: Deploy rules, indexes, functions and hosting
         run: >-
           pnpm exec firebase deploy --project "$TARGET" --non-interactive

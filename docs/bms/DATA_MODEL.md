@@ -22,8 +22,9 @@ rounded lines (see ACCOUNTING_POLICIES §9).
 
 ```
 users/{uid}                         displayName, email, status, defaultCompanyId
-users/{uid}/memberships/{companyId} ★ mirror for the company switcher (name, role names, status)
-platformAdmins/{uid}                ★ granted by script only
+users/{uid}/memberships/{companyId} ★ mirror for the company switcher (name, role names, status,
+                                      companyStatus; absent = active)
+platformAdmins/{uid}                ★ granted by platform.claimAdmin to PLATFORM_OWNER_EMAILS only
 platformAuditLogs/{id}              ★ actor, action, targetCompanyId, reason, at
 invitations/{inviteId}              ★ companyId, email (normalised), roleIds, branchIds,
                                       tokenHash, expiresAt, status, invitedBy
@@ -33,7 +34,9 @@ invitations/{inviteId}              ★ companyId, email (normalised), roleIds, 
 
 ```
 companies/{companyId}                ★ legalName, tradingName, country, baseCurrency,
-                                       timeZone, fiscalYearStartMonth, status, plan,
+                                       timeZone, fiscalYearStartMonth, plan,
+                                       status (pending|active|rejected|suspended), registrant,
+                                       statusReason, statusChangedAt/By,
                                        costingMethod (locked after first stock posting),
                                        businessTypes: ['trading'] (later 'services','production')
   branches/{branchId}                ★ code, name, address, status, isHeadOffice

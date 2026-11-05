@@ -1,5 +1,5 @@
 import { SYSTEM_ROLES, TRADING_TEMPLATE, businessDate, fiscalYearForDate } from '@bms/domain';
-import { defineCommand } from '../lib/command.js';
+import { defineCommand, isPlatformAdmin } from '../lib/command.js';
 import { failedPrecondition } from '../lib/errors.js';
 import { db } from '../lib/firebase.js';
 import {
@@ -25,6 +25,8 @@ export const createCompany = defineCommand({
     const refs = companyRefs(companyId);
     const branchId = input.headOffice.code;
     const meta = { updatedAt: now, updatedBy: caller.uid };
+    // A SaaS registration waits for the platform owner, except the platform owner's own.
+    const status = (await isPlatformAdmin(tx, caller)) ? 'active' : 'pending';
 
     const company: CompanyDoc = {
       legalName: input.legalName,
@@ -35,7 +37,15 @@ export const createCompany = defineCommand({
       fiscalYearStartMonth: input.fiscalYearStartMonth,
       costingMethod: 'weighted_average',
       businessTypes: ['trading'],
-      status: 'active',
+      status,
+      registrant: {
+        uid: caller.uid,
+        email: caller.email ?? null,
+        displayName: caller.displayName ?? null,
+      },
+      statusReason: null,
+      statusChangedAt: now,
+      statusChangedBy: caller.uid,
       locks: { baseCurrency: false, costingMethod: false, fiscalYearStartMonth: false },
       createdAt: now,
       createdBy: caller.uid,
@@ -119,6 +129,7 @@ export const createCompany = defineCommand({
     tx.set(membershipMirror(caller.uid, companyId), {
       companyName: company.tradingName,
       status: 'active',
+      companyStatus: status,
       roleIds: member.roleIds,
       updatedAt: now,
     });
@@ -129,7 +140,7 @@ export const createCompany = defineCommand({
     );
 
     return {
-      result: { companyId, branchId, fiscalYearId: fy.id },
+      result: { companyId, branchId, fiscalYearId: fy.id, status },
       audit: {
         target: { scope: 'company', companyId },
         entityType: 'company',
@@ -138,6 +149,7 @@ export const createCompany = defineCommand({
           legalName: company.legalName,
           baseCurrency: company.baseCurrency,
           timeZone: company.timeZone,
+          status,
         },
       },
     };

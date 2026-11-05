@@ -71,12 +71,30 @@ export const companyInput = {
   headOffice: { code: 'HQ', name: 'Head office' },
 };
 
+/** Registers a company and approves it, as the platform owner would. */
 export async function createCompany(admin: Caller, overrides: Record<string, unknown> = {}) {
-  return call<{ companyId: string; branchId: string; fiscalYearId: string }>(
+  const created = await call<{ companyId: string; branchId: string; fiscalYearId: string }>(
     'company.create',
     { ...companyInput, ...overrides },
     admin,
   );
+  await approveCompany(created.companyId);
+  return created;
+}
+
+/** Marks a registration approved directly in Firestore (tests of other features only). */
+export async function approveCompany(companyId: string): Promise<void> {
+  await db.doc(`companies/${companyId}`).update({ status: 'active' });
+}
+
+/** Makes `email` a platform owner for the duration of a test. */
+export function setPlatformOwners(emails: string): () => void {
+  const previous = process.env.PLATFORM_OWNER_EMAILS;
+  process.env.PLATFORM_OWNER_EMAILS = emails;
+  return () => {
+    if (previous === undefined) delete process.env.PLATFORM_OWNER_EMAILS;
+    else process.env.PLATFORM_OWNER_EMAILS = previous;
+  };
 }
 
 /** Invites and accepts so `user` becomes a member with `roleIds`. */

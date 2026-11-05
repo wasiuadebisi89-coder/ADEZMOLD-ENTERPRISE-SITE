@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { addDays, addMonths, businessDate } from '@bms/domain';
-import { createCompany, resetEmulators, signUp } from './helpers';
+import { approveCompany, createCompany, resetEmulators, signUp } from './helpers';
 import { newCustomer, stockedRice } from './sales-helpers';
 
 const TODAY = businessDate(new Date(), 'Africa/Lagos');
@@ -26,8 +26,10 @@ async function companyForPastMonths(page: Page) {
     .getByLabel('Financial year starts in')
     .selectOption(String(Number(addDays(TODAY, -70).slice(5, 7))));
   await page.getByRole('button', { name: 'Create company' }).click();
-  await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Waiting for approval' })).toBeVisible();
   const companyId = page.url().split('/c/')[1]!.split('/')[0]!;
+  await approveCompany(companyId);
+  await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
   await page.goto(`/c/${companyId}/settings`);
   await page.getByLabel('Backdating window (days)').fill('366');
   await page.getByRole('button', { name: 'Save settings' }).click();

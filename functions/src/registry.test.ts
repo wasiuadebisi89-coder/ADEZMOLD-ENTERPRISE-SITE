@@ -8,6 +8,8 @@ const NON_COMPANY_COMMANDS = [
   'company.create',
   'invitation.accept',
   'platform.supportRead',
+  'platform.claimAdmin',
+  'platform.setCompanyStatus',
   'session.revokeAll',
 ];
 

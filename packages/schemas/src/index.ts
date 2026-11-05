@@ -840,6 +840,28 @@ export const platformSupportReadInput = base.extend({
 });
 export const revokeSessionsInput = base;
 
+/** Company registration states. New companies wait as `pending` until the platform owner decides. */
+export const COMPANY_STATUSES = ['pending', 'active', 'rejected', 'suspended'] as const;
+export type CompanyStatus = (typeof COMPANY_STATUSES)[number];
+
+/** Grants Platform Super Admin to a configured platform owner (PLATFORM_OWNER_EMAILS). */
+export const platformClaimAdminInput = base;
+
+/**
+ * Approves, rejects, suspends or reactivates a company. Approving needs no reason; every other
+ * change does, and the registrant sees it.
+ */
+export const platformSetCompanyStatusInput = base
+  .extend({
+    companyId,
+    status: z.enum(['active', 'rejected', 'suspended']),
+    reason: trimmed(3, 500).optional(),
+  })
+  .refine((v) => v.status === 'active' || (v.reason ?? '').length >= 3, {
+    message: 'Give a reason the registrant will see',
+    path: ['reason'],
+  });
+
 /** Command name → schema. The functions layer registers exactly these names. */
 export const COMMAND_SCHEMAS = {
   'company.create': createCompanyInput,
@@ -910,6 +932,8 @@ export const COMMAND_SCHEMAS = {
   'productionOrder.complete': completeProductionOrderInput,
   'productionOrder.cancel': cancelProductionOrderInput,
   'platform.supportRead': platformSupportReadInput,
+  'platform.claimAdmin': platformClaimAdminInput,
+  'platform.setCompanyStatus': platformSetCompanyStatusInput,
   'session.revokeAll': revokeSessionsInput,
 } as const;
 

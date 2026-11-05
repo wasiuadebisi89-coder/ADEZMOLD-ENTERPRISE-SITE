@@ -67,12 +67,37 @@ export async function signOut(page: Page) {
   await expect(page.getByLabel('Email')).toBeVisible();
 }
 
+/**
+ * Registers a company and approves it behind the scenes, as the platform owner would, so tests
+ * of other features start from a working company. platform.spec.ts covers the real approval.
+ */
 export async function createCompany(page: Page, legalName = 'Adezmold Trading Ltd') {
+  const companyId = await registerCompany(page, legalName);
+  await approveCompany(companyId);
+  await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
+  return companyId;
+}
+
+/** Fills in the registration form and waits on the approval screen. */
+export async function registerCompany(page: Page, legalName = 'Adezmold Trading Ltd') {
   await page.goto('/companies/new');
   await page.getByLabel('Legal name').fill(legalName);
   await page.getByRole('button', { name: 'Create company' }).click();
-  await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Waiting for approval' })).toBeVisible();
   return page.url().split('/c/')[1]!.split('/')[0]!;
+}
+
+/** Sets a company active through the emulator's admin access (bypasses security rules). */
+export async function approveCompany(companyId: string): Promise<void> {
+  const res = await fetch(
+    `http://${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/companies/${companyId}?updateMask.fieldPaths=status`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { status: { stringValue: 'active' } } }),
+    },
+  );
+  expect(res.ok).toBe(true);
 }
 
 export async function signOutFromShell(page: Page, email: string) {

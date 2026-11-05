@@ -12,8 +12,12 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
   yet filtered by branch: a member who can read the ledger sees all branches.
 - **No production deployment yet.** Firebase projects (`bms-staging`, `bms-prod`), region,
   App Check site key and billing are owner actions (OPEN_DECISIONS #12–13).
-- **Platform Super Admin** is granted by a script with service-account access; that script and
-  the support UI are Phase 8 items. The `platform.supportRead` command and its audit log exist.
+- **Platform Super Admin** is granted to the addresses in `PLATFORM_OWNER_EMAILS` on their first
+  visit to `/platform` (COMPANY_APPROVALS.md). There is no support UI for `platform.supportRead`
+  yet; the command and its audit log exist.
+- **Registration emails.** Registrants see the outcome of their registration in the app (the
+  waiting screen updates live and shows the reason). No email is sent yet: that needs an
+  outgoing mail service for the functions, and Firebase Auth's SMTP only sends Auth emails.
 - **Web bundle** is about 270 kB gzipped (mostly the Firebase SDK). Route-level code splitting
   is in place; further splitting is a Phase 8 performance task.
 - **Rate limiting** of commands relies on Firebase Auth and App Check for now; per-user
