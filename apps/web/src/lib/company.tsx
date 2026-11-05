@@ -1,6 +1,7 @@
 import { doc } from 'firebase/firestore';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { Permission } from '@bms/domain';
+import type { CompanyStatus } from '@bms/schemas';
 import { useAuth } from './auth';
 import { db } from './firebase';
 import { useDoc } from './firestore-hooks';
@@ -14,7 +15,8 @@ export interface Company {
   timeZone: string;
   fiscalYearStartMonth: number;
   costingMethod: string;
-  status: string;
+  status: CompanyStatus;
+  statusReason?: string | null;
   locks: { baseCurrency: boolean; costingMethod: boolean; fiscalYearStartMonth: boolean };
 }
 

@@ -2,16 +2,20 @@ import { collection } from 'firebase/firestore';
 import { Building2, ChevronRight, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
+import type { CompanyStatus } from '@bms/schemas';
 import { Button } from '../components/ui/button';
 import { Alert, Badge, Card, EmptyState, PageHeader, Spinner } from '../components/ui/feedback';
 import { useAuth } from '../lib/auth';
 import { db } from '../lib/firebase';
 import { useCollection } from '../lib/firestore-hooks';
+import { COMPANY_STATUS_LABEL, COMPANY_STATUS_TONE } from '../lib/platform';
 import { TopBar } from './TopBar';
 
 interface Membership {
   companyName: string;
   status: 'active' | 'suspended' | 'removed';
+  /** Absent on companies registered before approvals existed, which are active. */
+  companyStatus?: CompanyStatus;
   roleIds: string[];
 }
 
@@ -66,6 +70,11 @@ export default function Companies() {
                     >
                       <Building2 className="size-5 text-slate-400" aria-hidden />
                       <span className="flex-1 font-medium">{m.companyName}</span>
+                      {m.companyStatus && m.companyStatus !== 'active' && (
+                        <Badge tone={COMPANY_STATUS_TONE[m.companyStatus]}>
+                          {COMPANY_STATUS_LABEL[m.companyStatus]}
+                        </Badge>
+                      )}
                       <ChevronRight className="size-4 text-slate-400" aria-hidden />
                     </Link>
                   ) : (

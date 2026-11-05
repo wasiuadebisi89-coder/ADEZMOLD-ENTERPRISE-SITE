@@ -160,6 +160,12 @@ async function loadCompanyContext(
     throw denied('not_a_member', 'You are not an active member of this company');
   }
   const companySnap = await tx.get(refs.company);
+  if (companySnap.exists && companySnap.get('status') === 'pending') {
+    throw denied(
+      'company_pending_approval',
+      'This company is waiting for approval. You can use it once it is approved',
+    );
+  }
   if (!companySnap.exists || companySnap.get('status') !== 'active') {
     throw denied('company_inactive', 'This company is not active');
   }
@@ -168,6 +174,12 @@ async function loadCompanyContext(
     : [];
   const roles = roleSnaps.filter((s) => s.exists).map((s) => s.data() as RoleDoc);
   return { companyId, member, permissions: effectivePermissions(roles) };
+}
+
+/** Platform Super Admin needs both the custom claim and the `platformAdmins` record. */
+export async function isPlatformAdmin(tx: Transaction, caller: Caller): Promise<boolean> {
+  if (!caller.platformAdmin) return false;
+  return (await tx.get(db.doc(`platformAdmins/${caller.uid}`))).exists;
 }
 
 interface CommandRecord {
@@ -224,8 +236,7 @@ export async function runCommand<N extends CommandName, R>(
       if (!anyOf.some((p) => company!.permissions.has(p))) throw denied('missing_permission');
     }
     if (access.kind === 'platformAdmin') {
-      const adminSnap = await tx.get(db.doc(`platformAdmins/${caller.uid}`));
-      if (!adminSnap.exists) throw denied('not_platform_admin');
+      if (!(await isPlatformAdmin(tx, caller))) throw denied('not_platform_admin');
     }
 
     const existing = await tx.get(commandRef);

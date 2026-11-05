@@ -20,6 +20,13 @@ service cloud.firestore {
         && memberDoc(companyId).data.status == 'active';
     }
 
+    // Platform Super Admin: the custom claim and the server-granted record (ADR-0005).
+    function isPlatformAdmin() {
+      return signedIn()
+        && request.auth.token.platformAdmin == true
+        && exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid));
+    }
+
     function can(companyId, permission) {
       return isActiveMember(companyId)
         && memberDoc(companyId).data.permissions.hasAny([permission]);
@@ -54,8 +61,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Platform Super Admins see the company record (not its books) to approve registrations.
+    match /platformAuditLogs/{entryId} {
+      allow read: if isPlatformAdmin();
+      allow write: if false;
+    }
+
     match /companies/{companyId} {
-      allow read: if isActiveMember(companyId);
+      allow read: if isActiveMember(companyId) || isPlatformAdmin();
       allow write: if false;
 
       match /members/{uid} {

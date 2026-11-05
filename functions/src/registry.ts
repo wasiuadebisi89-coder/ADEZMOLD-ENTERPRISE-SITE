@@ -71,7 +71,12 @@ import {
   updateCustomer,
   updateTaxCode,
 } from './commands/sales.js';
-import { platformSupportRead, revokeAllSessions } from './commands/platform.js';
+import {
+  platformClaimAdmin,
+  platformSetCompanyStatus,
+  platformSupportRead,
+  revokeAllSessions,
+} from './commands/platform.js';
 import {
   allocateCreditNote,
   createCreditNote,
@@ -151,5 +156,7 @@ export const COMMANDS: Record<CommandName, AnyCommand> = {
   'productionOrder.complete': completeProductionOrder,
   'productionOrder.cancel': cancelProductionOrder,
   'platform.supportRead': platformSupportRead,
+  'platform.claimAdmin': platformClaimAdmin,
+  'platform.setCompanyStatus': platformSetCompanyStatus,
   'session.revokeAll': revokeAllSessions,
 };

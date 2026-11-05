@@ -19,3 +19,4 @@ ui-debug.log
 auth_export/
 !functions/env/.env.staging
 !functions/env/.env.production
+!functions/env/.env.demo-bms

@@ -555,6 +555,23 @@ describe('G2 audit log immutability and platform collections', () => {
     const root = env.authenticatedContext('root', { platformAdmin: true }).firestore();
     await assertFails(getDoc(doc(root, 'platformAdmins/root')));
     await assertFails(setDoc(doc(db(ADMIN_A), 'platformAdmins/admin-a'), { grantedAt: 1 }));
-    await assertFails(getDoc(doc(root, 'companies/A')));
+    await assertFails(setDoc(doc(root, 'platformAuditLogs/x'), { action: 'fake' }));
+  });
+  it('platform admins read company records to approve registrations, but not their books', async () => {
+    const root = env.authenticatedContext('root', { platformAdmin: true }).firestore();
+    await assertSucceeds(getDoc(doc(root, 'companies/A')));
+    await assertSucceeds(
+      getDocs(query(collection(root, 'companies'), where('status', '==', 'pending'))),
+    );
+    await assertSucceeds(getDocs(collection(root, 'platformAuditLogs')));
+    for (const path of COMPANY_PATHS.filter((p) => p !== 'companies/A')) {
+      await assertFails(getDoc(doc(root, path)));
+    }
+    await assertFails(updateDoc(doc(root, 'companies/A'), { status: 'active' }));
+    // The claim alone, or the record alone, is not enough.
+    const claimOnly = env.authenticatedContext('pretender', { platformAdmin: true }).firestore();
+    await assertFails(getDoc(doc(claimOnly, 'companies/A')));
+    await assertFails(getDocs(collection(claimOnly, 'platformAuditLogs')));
+    await assertFails(getDoc(doc(db('root'), 'companies/A')));
   });
 });

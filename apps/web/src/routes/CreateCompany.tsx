@@ -81,7 +81,7 @@ export default function CreateCompany() {
       <main className="mx-auto max-w-2xl px-4 py-8">
         <PageHeader
           title="Create a company"
-          description="You'll be its Company Admin. You can invite colleagues afterwards."
+          description="You'll be its Company Admin. New companies are checked and approved before they go live; you can invite colleagues once it is approved."
         />
         <Card className="p-6">
           <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>

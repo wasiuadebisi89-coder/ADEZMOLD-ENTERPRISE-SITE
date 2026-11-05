@@ -1,5 +1,6 @@
 import { Outlet, useParams } from 'react-router';
 import { AppShell } from '../../components/AppShell';
+import { CompanyStatusScreen } from '../../components/CompanyStatusScreen';
 import { Alert, Spinner } from '../../components/ui/feedback';
 import { CompanyProvider, useCompany } from '../../lib/company';
 import { Link } from 'react-router';
@@ -17,6 +18,15 @@ function Gate() {
           </Link>
         </Alert>
       </div>
+    );
+  }
+  if (company.status && company.status !== 'active') {
+    return (
+      <CompanyStatusScreen
+        name={company.legalName}
+        status={company.status as 'pending' | 'rejected' | 'suspended'}
+        reason={company.statusReason}
+      />
     );
   }
   return (
