@@ -1,9 +1,10 @@
 import { doc } from 'firebase/firestore';
 import { Printer } from 'lucide-react';
 import { useMemo } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
 import { formatRatePercent } from '@bms/domain';
 import { useToday } from '../../components/BackdateNotice';
+import { PrintReceiptButton } from '../../components/ReceiptPrint';
 import { Button } from '../../components/ui/button';
 import { Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
@@ -18,6 +19,7 @@ import {
   type CreditNoteRow,
   type SalesInvoiceRow,
 } from '../../lib/sales';
+import { saleReceipt } from '../../lib/receipt';
 import { formatDate } from '../../lib/utils';
 import { CreditNoteTable } from './CreditNoteDetail';
 import { InvoiceStatus } from './CustomerDetail';
@@ -41,6 +43,9 @@ export default function SalesInvoiceDetail() {
   const currency = company?.baseCurrency ?? 'NGN';
   const today = useToday();
   const { invoiceId = '' } = useParams();
+  const location = useLocation();
+  const tenderedMinor =
+    (location.state as { tenderedMinor?: number } | null)?.tenderedMinor ?? null;
   const ref = useMemo(
     () => doc(db, `companies/${companyId}/salesInvoices/${invoiceId}`),
     [companyId, invoiceId],
@@ -69,6 +74,11 @@ export default function SalesInvoiceDetail() {
             <Button variant="secondary" onClick={() => window.print()}>
               <Printer className="size-4" aria-hidden /> Print
             </Button>
+            <PrintReceiptButton
+              title={`Receipt for ${i.number}`}
+              branchId={i.branchId}
+              build={(h) => saleReceipt(i, h, { tenderedMinor })}
+            />
             {can('sales.receipt.post') && i.customerId && left > 0 && (
               <Button asChild>
                 <Link to={`${p}/receipts/new?customer=${i.customerId}`}>Receive payment</Link>

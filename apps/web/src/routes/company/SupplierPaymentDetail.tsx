@@ -3,12 +3,14 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
+import { PrintReceiptButton } from '../../components/ReceiptPrint';
 import { Alert, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { money } from '../../lib/ledger';
+import { supplierPaymentReceipt } from '../../lib/receipt';
 import { outstanding, useOpenInvoices, type PaymentRow } from '../../lib/purchasing';
 import { useAction } from '../../lib/useAction';
 import { formatDate, formatDateTime } from '../../lib/utils';
@@ -109,6 +111,11 @@ export default function SupplierPaymentDetail() {
             <Button variant="secondary" asChild>
               <Link to={`${p}?tab=payments`}>All payments</Link>
             </Button>
+            <PrintReceiptButton
+              title={`Payment voucher ${x.number}`}
+              branchId={x.branchId}
+              build={(h) => supplierPaymentReceipt(x, h)}
+            />
             {can('purchasing.payment.post') && unallocated > 0 && (
               <Button onClick={() => setApplying(true)}>Apply to invoices</Button>
             )}
