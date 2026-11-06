@@ -46,8 +46,11 @@ export default function NewStockAdjustment() {
   const locations = useLocations(companyId);
   const balances = useStockBalances(companyId, undefined, can('reports.stock.read'));
   const action = useAction();
-  const kinds = (['adjustment', 'count', 'opening'] as Kind[]).filter((k) =>
-    can(k === 'count' ? 'inventory.count.create' : 'inventory.adjustment.create'),
+  const approves = (k: Kind) =>
+    can(k === 'count' ? 'inventory.count.approve' : 'inventory.adjustment.approve');
+  const kinds = (['adjustment', 'count', 'opening'] as Kind[]).filter(
+    (k) =>
+      approves(k) || can(k === 'count' ? 'inventory.count.create' : 'inventory.adjustment.create'),
   );
   const [kind, setKind] = useState<Kind>(kinds[0] ?? 'adjustment');
   const [locationId, setLocationId] = useState('');
@@ -99,7 +102,11 @@ export default function NewStockAdjustment() {
     <>
       <PageHeader
         title="New stock adjustment"
-        description="Nothing changes until a second person approves it. Stock is valued at the costing method when approved."
+        description={
+          approves(kind)
+            ? 'You can approve stock changes, so this posts as soon as you save it.'
+            : 'Nothing changes until a manager or admin approves it. Stock is valued at the costing method when approved.'
+        }
         actions={
           <Button variant="secondary" asChild>
             <Link to={`/c/${companyId}/stock-adjustments`}>Cancel</Link>
@@ -235,7 +242,7 @@ export default function NewStockAdjustment() {
         </Card>
         <div className="flex justify-end">
           <Button type="submit" loading={action.pending} disabled={!complete}>
-            Send for approval
+            {approves(kind) ? 'Post' : 'Send for approval'}
           </Button>
         </div>
       </form>

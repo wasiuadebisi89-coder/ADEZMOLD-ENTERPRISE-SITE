@@ -27,13 +27,17 @@ export default function StockAdjustments() {
   const adjustments = useCollection<Omit<AdjustmentRow, 'id'>>(q, `adjustments-${companyId}`);
   const locations = useLocations(companyId);
   const locationName = new Map(locations.data.map((l) => [l.id, `${l.branchId} · ${l.name}`]));
-  const canCreate = can('inventory.adjustment.create') || can('inventory.count.create');
+  const canCreate =
+    can('inventory.adjustment.create') ||
+    can('inventory.count.create') ||
+    can('inventory.adjustment.approve') ||
+    can('inventory.count.approve');
 
   return (
     <>
       <PageHeader
         title="Stock adjustments"
-        description="Opening stock, counts and corrections. Each one needs approval by a second person before stock and the ledger change."
+        description="Opening stock, counts and corrections. Admins and managers post straight away; others wait for their approval."
         actions={
           canCreate && (
             <Button asChild>

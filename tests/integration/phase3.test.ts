@@ -221,9 +221,9 @@ describe('I2 opening stock', () => {
     expect((await db.doc(`${base()}/products/${id}`).get()).get('hasMovements')).toBe(true);
   });
 
-  it('refuses self-approval, missing costs and a second opening for the same place', async () => {
+  it('admins and managers post at once; missing costs and a second opening are refused', async () => {
     const id = await product('CEM-50');
-    const { adjustmentId } = await call<{ adjustmentId: string }>(
+    const res = await call<{ adjustmentId: string; status: string; value: string }>(
       'stockAdjustment.create',
       {
         companyId,
@@ -234,14 +234,41 @@ describe('I2 opening stock', () => {
       },
       admin,
     );
-    await expectReason(
-      call(
-        'stockAdjustment.decide',
-        { companyId, adjustmentId, decision: 'approved', reason: 'Self' },
-        admin,
-      ),
-      'self_approval',
+    expect(res).toMatchObject({ status: 'posted', value: '100000' });
+    expect(await balance(id)).toEqual({ qty: 10_000, value: 100_000 });
+    const doc = (await db.doc(`${base()}/stockAdjustments/${res.adjustmentId}`).get()).data()!;
+    expect(doc).toMatchObject({ status: 'posted', decidedBy: admin.uid });
+    expect(doc.journalId).toBeTruthy();
+
+    const other = await product('ROD');
+    const byManager = await call<{ status: string }>(
+      'stockAdjustment.create',
+      {
+        companyId,
+        kind: 'adjustment',
+        locationId: HQ_STORE,
+        reason: 'Found on shelf',
+        lines: [{ productId: other, quantity: '3', unitCost: '50' }],
+      },
+      manager,
     );
+    expect(byManager.status).toBe('posted');
+    expect(await balance(other)).toEqual({ qty: 3_000, value: 15_000 });
+
+    const pending = await call<{ status: string }>(
+      'stockAdjustment.create',
+      {
+        companyId,
+        kind: 'adjustment',
+        locationId: HQ_STORE,
+        reason: 'Store officer waits',
+        lines: [{ productId: other, quantity: '1', unitCost: '50' }],
+      },
+      store,
+    );
+    expect(pending.status).toBe('pending');
+    expect(await balance(other)).toEqual({ qty: 3_000, value: 15_000 });
+
     await expectReason(
       call(
         'stockAdjustment.create',
@@ -256,9 +283,22 @@ describe('I2 opening stock', () => {
       ),
       'cost_required',
     );
-    await adjust('opening', [{ productId: id, quantity: '5', unitCost: '100' }]);
     await expectReason(
       adjust('opening', [{ productId: id, quantity: '5', unitCost: '100' }]),
+      'opening_after_movements',
+    );
+    await expectReason(
+      call(
+        'stockAdjustment.create',
+        {
+          companyId,
+          kind: 'opening',
+          locationId: HQ_STORE,
+          reason: 'Again',
+          lines: [{ productId: id, quantity: '5', unitCost: '100' }],
+        },
+        admin,
+      ),
       'opening_after_movements',
     );
   });

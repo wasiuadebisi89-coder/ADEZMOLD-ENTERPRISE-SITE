@@ -40,7 +40,7 @@ Green in CI on PR #3 and merged.
 
 - [x] Locations (store and quarantine per branch), categories, products
 - [x] Stock balances, movements and FIFO cost layers; moving weighted average or FIFO, locked after the first stock posting
-- [x] Stock adjustments, counts and opening stock, each approved by a second person and posted to the ledger in the same transaction
+- [x] Stock adjustments, counts and opening stock, posted at once by admins and managers, otherwise approved first, and posted to the ledger in the same transaction
 - [x] Products, stock card and adjustment screens; costing method in Settings
 - [ ] Location transfers, unit conversions, barcodes (later phases, KNOWN_LIMITATIONS.md)
 

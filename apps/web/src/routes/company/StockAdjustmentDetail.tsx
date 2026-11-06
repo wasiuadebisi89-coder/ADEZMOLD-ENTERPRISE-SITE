@@ -76,7 +76,7 @@ function DecideDialog({
 }
 
 export default function StockAdjustmentDetail() {
-  const { companyId, company, member, can } = useCompany();
+  const { companyId, company, can } = useCompany();
   const currency = company?.baseCurrency ?? 'NGN';
   const { adjustmentId = '' } = useParams();
   const ref = useMemo(
@@ -91,7 +91,6 @@ export default function StockAdjustmentDetail() {
   if (!a) return <EmptyState title="Adjustment not found" />;
   const canDecide =
     a.status === 'pending' &&
-    a.createdBy !== member?.uid &&
     can(a.kind === 'count' ? 'inventory.count.approve' : 'inventory.adjustment.approve');
 
   return (
@@ -115,7 +114,7 @@ export default function StockAdjustmentDetail() {
           </>
         }
       />
-      {a.status === 'pending' && a.createdBy === member?.uid && (
+      {a.status === 'pending' && !canDecide && (
         <Alert tone="info" className="mb-4">
           Waiting for another person with approval rights.
         </Alert>
