@@ -18,6 +18,7 @@ import {
   type StatementSection,
 } from '@bms/domain';
 import { useToday } from '../../components/BackdateNotice';
+import { PrintButton, ReportPrintHeader, useReportPrint } from '../../components/ReportPrint';
 import { Button } from '../../components/ui/button';
 import { Alert, Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { Field, Input, Select } from '../../components/ui/form';
@@ -150,6 +151,14 @@ function ProfitAndLoss() {
   const result = useMovements(range, true);
   const valid = isIsoDate(from) && isIsoDate(to) && from <= to;
   const pl = result.rows ? profitAndLoss(result.rows) : null;
+  const report = useReportPrint(
+    pl
+      ? {
+          title: 'Profit and loss',
+          subtitle: `${formatDate(range.from)} to ${formatDate(range.to)}`,
+        }
+      : null,
+  );
   return (
     <>
       <Card className="mb-4 p-4">
@@ -169,8 +178,10 @@ function ProfitAndLoss() {
           <Button type="submit" disabled={!valid}>
             Show report
           </Button>
+          <PrintButton report={report} />
         </form>
       </Card>
+      <ReportPrintHeader report={report} />
       {result.error && <Alert tone="error">Could not load the figures. Try again.</Alert>}
       {result.loading || !pl ? (
         !result.error && <Spinner />
@@ -215,6 +226,9 @@ function BalanceSheetReport() {
   const [range, setRange] = useState({ to: today });
   const result = useMovements(range);
   const bs = result.rows ? balanceSheet(result.rows) : null;
+  const report = useReportPrint(
+    bs ? { title: 'Balance sheet', subtitle: `As at ${formatDate(range.to)}` } : null,
+  );
   return (
     <>
       <Card className="mb-4 p-4">
@@ -231,8 +245,10 @@ function BalanceSheetReport() {
           <Button type="submit" disabled={!isIsoDate(asAt)}>
             Show report
           </Button>
+          <PrintButton report={report} />
         </form>
       </Card>
+      <ReportPrintHeader report={report} />
       {result.error && <Alert tone="error">Could not load the figures. Try again.</Alert>}
       {result.loading || !bs ? (
         !result.error && <Spinner />
@@ -313,7 +329,16 @@ function useControlBalance(subtype: AccountSubtype, enabled: boolean, asAt: stri
 }
 
 /** A date to report at, applied when the button is pressed. Today by default. */
-function AsAtPicker({ value, onChange }: { value: string; onChange: (date: string) => void }) {
+function AsAtPicker({
+  value,
+  onChange,
+  children,
+}: {
+  value: string;
+  onChange: (date: string) => void;
+  /** Extra controls on the right, such as the print button. */
+  children?: React.ReactNode;
+}) {
   const today = useToday();
   const [draft, setDraft] = useState(value);
   const valid = isIsoDate(draft) && draft <= today;
@@ -332,6 +357,7 @@ function AsAtPicker({ value, onChange }: { value: string; onChange: (date: strin
         <Button type="submit" disabled={!valid}>
           Show report
         </Button>
+        {children}
       </form>
     </Card>
   );
@@ -545,9 +571,20 @@ function Ageing({ side }: { side: 'receivable' | 'payable' }) {
           outstanding: BigInt(outstanding(i)),
         }));
   }
+  const report = useReportPrint(
+    items === null
+      ? null
+      : {
+          title: side === 'receivable' ? 'Receivables ageing' : 'Payables ageing',
+          subtitle: `As at ${formatDate(asAt)}`,
+        },
+  );
   return (
     <>
-      <AsAtPicker value={asAt} onChange={setAsAt} />
+      <AsAtPicker value={asAt} onChange={setAsAt}>
+        <PrintButton report={report} />
+      </AsAtPicker>
+      <ReportPrintHeader report={report} />
       {past.error && <Alert tone="error">Could not load the figures. Try again.</Alert>}
       {items === null ? (
         !past.error && <Spinner />
@@ -631,10 +668,22 @@ function StockValuation() {
       byProduct.set(b.productId, row);
     }
   }
+  const location = locations.data.find((l) => l.id === locationId);
+  const loaded = !(products.loading || locations.loading || byProduct === null);
+  const report = useReportPrint(
+    loaded
+      ? {
+          title: 'Stock valuation',
+          subtitle: `As at ${formatDate(asAt)} · ${location ? locationLabel(location) : 'All locations'}`,
+        }
+      : null,
+  );
   const picker = (
     <>
-      <AsAtPicker value={asAt} onChange={setAsAt} />
-      <div className="mb-4 max-w-xs">
+      <AsAtPicker value={asAt} onChange={setAsAt}>
+        <PrintButton report={report} />
+      </AsAtPicker>
+      <div className="mb-4 max-w-xs" data-print-hide>
         <Field label="Location">
           <Select value={locationId} onChange={(e) => setLocationId(e.target.value)}>
             <option value="">All locations</option>
@@ -646,10 +695,10 @@ function StockValuation() {
           </Select>
         </Field>
       </div>
+      <ReportPrintHeader report={report} />
     </>
   );
-  const location = locations.data.find((l) => l.id === locationId);
-  if (products.loading || locations.loading || byProduct === null) {
+  if (!loaded || byProduct === null) {
     return (
       <>
         {picker}

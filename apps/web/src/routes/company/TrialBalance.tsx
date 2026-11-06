@@ -2,6 +2,7 @@ import { collection, getAggregateFromServer, query, sum, where } from 'firebase/
 import { useCallback, useEffect, useState } from 'react';
 import { isIsoDate, trialBalance, type TrialBalance as TB } from '@bms/domain';
 import { useToday } from '../../components/BackdateNotice';
+import { PrintButton, ReportPrintHeader, useReportPrint } from '../../components/ReportPrint';
 import { Button } from '../../components/ui/button';
 import { Alert, Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { Field, Input } from '../../components/ui/form';
@@ -66,6 +67,10 @@ export default function TrialBalance() {
     [companyId, accounts.data],
   );
 
+  const report = useReportPrint(
+    result ? { title: 'Trial balance', subtitle: `As at ${formatDate(result.asAt)}` } : null,
+  );
+
   const ready = !accounts.loading;
   useEffect(() => {
     if (!ready) return;
@@ -100,8 +105,10 @@ export default function TrialBalance() {
           <Button type="submit" loading={running} disabled={!isIsoDate(asAt)}>
             Show balances
           </Button>
+          <PrintButton report={report} />
         </form>
       </Card>
+      <ReportPrintHeader report={report} />
       {error && (
         <Alert tone="error" className="mb-4">
           {error}

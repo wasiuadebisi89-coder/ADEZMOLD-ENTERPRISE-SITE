@@ -176,3 +176,75 @@ test('@mobile the reports fit a phone screen', async ({ page }) => {
   );
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('F3 reports print on A4 with the company letterhead', async ({ page }) => {
+  await signUp(page, 'Ada Owner', 'owner@example.test');
+  const companyId = await createCompany(page);
+  await stockedRice(page, companyId);
+  await newCustomer(page, companyId, 'SHOP', '5000');
+  await page.goto(`/c/${companyId}/sales/new`);
+  await page.getByLabel('Customer').selectOption({ label: 'SHOP · SHOP Stores' });
+  await page.getByLabel('Line 1 product').selectOption({ label: 'RICE-50 · Rice 50kg bag' });
+  await page.getByLabel('Line 1 quantity').fill('2');
+  await page.getByRole('button', { name: 'Complete sale' }).click();
+  await expect(page.getByRole('heading', { name: 'Sale SI-000001' })).toBeVisible();
+
+  // The print dialog cannot be driven, so record what the page looked like when it opened.
+  await page.addInitScript(() => {
+    window.print = () => {
+      const w = window as unknown as { printed: unknown[] };
+      w.printed = [
+        ...(w.printed ?? []),
+        {
+          title: document.title,
+          printing: document.documentElement.dataset.printing,
+          page: document.getElementById('report-print-page')?.textContent ?? '',
+        },
+      ];
+    };
+  });
+  const pdfDir = process.env.E2E_PDF_DIR;
+  const reports: [path: string, title: string, check: string][] = [
+    ['trial-balance', 'Trial balance', 'Totals'],
+    ['reports?tab=profit-and-loss', 'Profit and loss', 'Net profit'],
+    ['reports?tab=balance-sheet', 'Balance sheet', 'Total assets'],
+    ['reports?tab=receivables', 'Receivables ageing', 'SHOP Stores'],
+    ['reports?tab=payables', 'Payables ageing', 'Nothing outstanding'],
+    ['reports?tab=stock', 'Stock valuation', 'Rice 50kg bag'],
+  ];
+  for (const [path, title, check] of reports) {
+    await page.goto(`/c/${companyId}/${path}`);
+    await expect(page.getByText(check).first()).toBeVisible();
+    const button = page.getByRole('button', { name: 'Print or save PDF' });
+    await expect(button).toBeEnabled();
+    // The letterhead is only on paper.
+    await expect(page.getByTestId('print-header')).toBeHidden();
+    await button.click();
+    const printed = await page.evaluate(
+      () => (window as unknown as { printed: unknown[] }).printed,
+    );
+    expect(printed.at(-1)).toMatchObject({
+      title: expect.stringMatching(new RegExp(`^${title} - Adezmold Trading Ltd - `)),
+      printing: 'report',
+      page: expect.stringContaining('size: A4 portrait'),
+    });
+
+    // Lay the page out as it prints: letterhead on, app around the report off.
+    await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.getByTestId('print-header')).toBeVisible();
+    await expect(page.getByTestId('print-header')).toContainText(title);
+    await expect(page.getByRole('navigation', { name: 'Company' })).toBeHidden();
+    await expect(button).toBeHidden();
+    if (pdfDir) {
+      await page.pdf({
+        path: `${pdfDir}/${title.toLowerCase().replaceAll(' ', '-')}.pdf`,
+        preferCSSPageSize: true,
+        printBackground: true,
+      });
+    }
+    await page.emulateMedia({ media: 'screen' });
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await expect(page.getByRole('navigation', { name: 'Company' })).toBeVisible();
+  }
+});

@@ -34,3 +34,59 @@
     }
   }
 }
+
+/* A4 report printing (components/ReportPrint.tsx). Scoped to report prints only. */
+.report-print-only {
+  display: none;
+}
+@media print {
+  html[data-printing='report'] {
+    font-size: 10pt;
+    background: #fff;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  html[data-printing='report'] body {
+    background: #fff;
+  }
+  html[data-printing='report'] .report-print-only {
+    display: block;
+  }
+  html[data-printing='report']
+    :is([data-print-hide], [data-page-header], #main [role='tablist'], #main form) {
+    display: none !important;
+  }
+  html[data-printing='report'] #main {
+    padding: 0;
+  }
+  html[data-printing='report'] #main > div {
+    max-width: none;
+  }
+  html[data-printing='report'] #main section {
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  html[data-printing='report'] #main .overflow-x-auto {
+    overflow: visible;
+  }
+  html[data-printing='report'] #main table {
+    width: 100%;
+    font-size: 9pt;
+  }
+  html[data-printing='report'] #main thead {
+    display: table-header-group;
+    background: var(--color-brand-50);
+    color: var(--color-brand-900);
+  }
+  html[data-printing='report'] #main :is(th, td) {
+    padding: 3pt 6pt;
+  }
+  html[data-printing='report'] #main tr {
+    break-inside: avoid;
+  }
+  html[data-printing='report'] #main a {
+    color: inherit;
+    text-decoration: none;
+  }
+}

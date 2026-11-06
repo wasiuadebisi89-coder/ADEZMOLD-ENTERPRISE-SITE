@@ -230,12 +230,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh lg:flex">
       <a
         href="#main"
+        data-print-hide
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2"
       >
         Skip to content
       </a>
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white p-3 lg:flex">
+      <aside
+        data-print-hide
+        className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white p-3 lg:flex"
+      >
         <CompanyHeader />
         <div className="mt-4 flex-1">
           <Nav />
@@ -244,7 +248,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile top bar + drawer */}
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-slate-200 bg-white px-3 lg:hidden">
+      <header
+        data-print-hide
+        className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-slate-200 bg-white px-3 lg:hidden"
+      >
         <button
           type="button"
           className="rounded p-2 hover:bg-slate-100"
