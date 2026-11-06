@@ -2,6 +2,7 @@ import { doc } from 'firebase/firestore';
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router';
 import { Button } from '../../components/ui/button';
+import { PrintReceiptButton } from '../../components/ReceiptPrint';
 import { Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useToday } from '../../components/BackdateNotice';
@@ -10,6 +11,7 @@ import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { qty } from '../../lib/inventory';
 import { money } from '../../lib/ledger';
+import { purchaseInvoiceReceipt } from '../../lib/receipt';
 import { outstanding, type InvoiceRow } from '../../lib/purchasing';
 import { formatDate } from '../../lib/utils';
 
@@ -46,6 +48,11 @@ export default function PurchaseInvoiceDetail() {
             <Button variant="secondary" asChild>
               <Link to={`${p}?tab=invoices`}>All invoices</Link>
             </Button>
+            <PrintReceiptButton
+              title={`Supplier invoice ${i.number}`}
+              branchId={i.branchId}
+              build={(h) => purchaseInvoiceReceipt(i, h)}
+            />
             {can('purchasing.payment.post') && left > 0 && (
               <Button asChild>
                 <Link to={`${p}/payments/new?supplier=${i.supplierId}`}>Pay supplier</Link>

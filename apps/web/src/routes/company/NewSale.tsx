@@ -340,7 +340,10 @@ export default function NewSale() {
         ...(approvalState === 'approved' && approval ? { creditApprovalId: approval.id } : {}),
         ...(backdate.approvalId ? { backdateApprovalId: backdate.approvalId } : {}),
       });
-      void navigate(`/c/${companyId}/sales/invoices/${res.invoiceId}`);
+      void navigate(`/c/${companyId}/sales/invoices/${res.invoiceId}`, {
+        // Lets the receipt show cash received and change; not stored with the sale.
+        state: change > 0n && receivedMinor ? { tenderedMinor: Number(receivedMinor) } : null,
+      });
     } catch {
       /* shown below */
     }

@@ -2,6 +2,7 @@ import { doc } from 'firebase/firestore';
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApplyCreditDialog } from '../../components/ApplyCreditDialog';
+import { PrintReceiptButton } from '../../components/ReceiptPrint';
 import { RefundDialog } from '../../components/RefundDialog';
 import { Button } from '../../components/ui/button';
 import { Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
@@ -10,6 +11,7 @@ import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { money } from '../../lib/ledger';
+import { customerPaymentReceipt } from '../../lib/receipt';
 import { unusedCredit, type CustomerReceiptRow } from '../../lib/sales';
 import { formatDate, formatDateTime } from '../../lib/utils';
 import { RefundList } from './CustomerRefundDetail';
@@ -40,6 +42,11 @@ export default function CustomerReceiptDetail() {
             <Button variant="secondary" asChild>
               <Link to={`${p}?tab=receipts`}>All payments</Link>
             </Button>
+            <PrintReceiptButton
+              title={`Receipt for ${x.number}`}
+              branchId={x.branchId}
+              build={(h) => customerPaymentReceipt(x, h)}
+            />
             {(can('sales.refund.post') || can('sales.refund.request')) && unallocated > 0 && (
               <Button variant="secondary" onClick={() => setOpen('refund')}>
                 Refund

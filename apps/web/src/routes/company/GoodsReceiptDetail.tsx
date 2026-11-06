@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Link, useParams } from 'react-router';
 import { COST_SCALE } from '@bms/domain';
 import { Button } from '../../components/ui/button';
+import { PrintReceiptButton } from '../../components/ReceiptPrint';
 import { Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
@@ -10,6 +11,7 @@ import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { qty } from '../../lib/inventory';
 import { money } from '../../lib/ledger';
+import { goodsReceivedReceipt } from '../../lib/receipt';
 import { RECEIPT_STATUS, type ReceiptRow } from '../../lib/purchasing';
 import { formatDate, formatDateTime } from '../../lib/utils';
 
@@ -38,6 +40,11 @@ export default function GoodsReceiptDetail() {
             <Button variant="secondary" asChild>
               <Link to={`${p}?tab=receipts`}>All receipts</Link>
             </Button>
+            <PrintReceiptButton
+              title={`Goods received note ${r.number}`}
+              branchId={r.branchId}
+              build={(h) => goodsReceivedReceipt(r, h)}
+            />
             {can('purchasing.invoice.post') && (
               <Button variant="secondary" asChild>
                 <Link to={`${p}/returns/new?supplier=${r.supplierId}`}>Return goods</Link>
