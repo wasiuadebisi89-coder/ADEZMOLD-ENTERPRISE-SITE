@@ -120,6 +120,60 @@ describe('I1 locations and catalogue', () => {
   });
 });
 
+describe('I1b correcting a wrong unit', () => {
+  const unitOf = async (id: string) => (await db.doc(`${base()}/products/${id}`).get()).get('unit');
+
+  it('changes the unit of a product with no stock yet', async () => {
+    const id = await product('TILE', 'kg');
+    await call('product.update', { companyId, productId: id, unit: 'carton' }, admin);
+    expect(await unitOf(id)).toBe('carton');
+  });
+
+  it('relabels posted stock without changing quantities or value', async () => {
+    const id = await product('PIPE', 'kg');
+    await adjust('opening', [{ productId: id, quantity: '10', unitCost: '100' }]);
+    await call('product.update', { companyId, productId: id, unit: 'pcs' }, admin);
+    expect(await unitOf(id)).toBe('pcs');
+    expect(await balance(id)).toEqual({ qty: 10_000, value: 100_000 });
+    const audit = await db
+      .collection(`${base()}/auditLogs`)
+      .where('action', '==', 'product.update')
+      .get();
+    const entry = audit.docs.find((d) => d.get('entityId') === id)!;
+    expect(entry.get('before')).toMatchObject({ unit: 'kg' });
+    expect(entry.get('after')).toMatchObject({ unit: 'pcs' });
+  });
+
+  it('refuses a unit that cannot hold the quantities already recorded', async () => {
+    const id = await product('WIRE', 'm');
+    await adjust('opening', [{ productId: id, quantity: '2.5', unitCost: '100' }]);
+    await expectReason(
+      call('product.update', { companyId, productId: id, unit: 'roll' }, admin),
+      'unit_decimals',
+    );
+    expect(await unitOf(id)).toBe('m');
+  });
+
+  it('waits for pending adjustments that count the old unit', async () => {
+    const id = await product('NAIL', 'kg');
+    await call(
+      'stockAdjustment.create',
+      {
+        companyId,
+        kind: 'opening',
+        locationId: HQ_STORE,
+        reason: 'Go-live',
+        lines: [{ productId: id, quantity: '3', unitCost: '50' }],
+      },
+      store,
+    );
+    await expectReason(
+      call('product.update', { companyId, productId: id, unit: 'pack' }, admin),
+      'unit_in_use',
+    );
+  });
+});
+
 describe('I2 opening stock', () => {
   it('needs a second person, then posts stock, movements and the ledger together', async () => {
     const id = await product('CEM-50');

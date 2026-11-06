@@ -327,6 +327,8 @@ export const createProductInput = scoped.extend({
 export const updateProductInput = scoped.extend({
   productId: docId,
   name: trimmed(2, 160).optional(),
+  /** Corrects a wrong unit. Quantities keep their numbers; only the unit they count changes. */
+  unit: z.enum(UNIT_CODES).optional(),
   categoryId: docId.nullable().optional(),
   description: z.string().trim().max(500).optional(),
   salePrice: amount.nullable().optional(),

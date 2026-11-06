@@ -10,8 +10,11 @@ end-to-end tests drive the web app (`tests/e2e/phase3.spec.ts`).
 
 - I1.1 Every branch gets a store and a quarantine location, on company and branch creation.
   A location holding stock cannot be deactivated.
-- I1.2 SKUs are unique per company; the unit comes from a fixed list and cannot change; a
-  category must exist and be active.
+- I1.2 SKUs are unique per company; the unit comes from a fixed list; a category must exist
+  and be active. A wrong unit can be corrected later: quantities keep their numbers (10 kg
+  becomes 10 pcs) and stock value is unchanged. It is refused while a pending adjustment or an
+  active bill of materials names the product, or when recorded quantities have more decimals
+  than the new unit allows. Posted documents keep the unit they were posted with.
 - I1.3 Only `inventory.products.manage` can change products and categories; locations need
   `company.branches.manage`.
 

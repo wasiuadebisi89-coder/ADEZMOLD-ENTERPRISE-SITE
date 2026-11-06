@@ -7,6 +7,7 @@ import {
   parseQuantity,
   parseUnitCost,
   toStorable,
+  UNITS,
   valueAt,
   type JournalLine,
   type StockBalance,
@@ -18,6 +19,7 @@ import { conflict, denied, failedPrecondition, invalid, notFound } from '../lib/
 import {
   companyRefs,
   productType,
+  type BomDoc,
   type CategoryDoc,
   type CompanyDoc,
   type LocationDoc,
@@ -26,6 +28,7 @@ import {
   type StockAdjustmentDoc,
   type StockAdjustmentLineDoc,
   type StockBalanceDoc,
+  type StockMovementDoc,
 } from '../lib/model.js';
 import { readSystemAccounts } from '../lib/documents.js';
 import { preparePosting, writePosting } from '../lib/posting.js';
@@ -256,6 +259,74 @@ export const createProduct = defineCommand({
   },
 });
 
+/** True when the quantity can be shown in the unit without losing decimals. */
+function fitsUnit(milli: number, unit: UnitCode): boolean {
+  const step = 10 ** (3 - UNITS[unit].decimals);
+  return milli % step === 0;
+}
+
+/**
+ * A unit chosen by mistake can be corrected. Quantities are stored in milli-units, so the
+ * numbers stay as they are and only the unit they count changes (10 kg becomes 10 pcs). Stock
+ * value and average cost are untouched. Posted documents keep the unit they were posted with.
+ * Refused while a pending adjustment or an active bill of materials still names the old unit,
+ * or when a quantity already recorded has more decimals than the new unit allows.
+ */
+async function checkUnitChange(
+  tx: Transaction,
+  companyId: string,
+  productId: string,
+  product: ProductDoc,
+  unit: UnitCode,
+  keepsReorderLevel: boolean,
+) {
+  const refs = companyRefs(companyId);
+  const [pending, boms, movements, balances] = await Promise.all([
+    tx.get(refs.stockAdjustments.where('status', '==', 'pending')),
+    tx.get(refs.boms.where('status', '==', 'active')),
+    product.hasMovements
+      ? tx.get(refs.stockMovements.where('productId', '==', productId))
+      : Promise.resolve(null),
+    product.hasMovements
+      ? tx.get(refs.stockBalances.where('productId', '==', productId))
+      : Promise.resolve(null),
+  ]);
+  const adj = pending.docs
+    .map((d) => d.data() as StockAdjustmentDoc)
+    .find((a) => a.lines.some((l) => l.productId === productId));
+  if (adj) {
+    throw failedPrecondition(
+      'unit_in_use',
+      `Approve or reject ${adj.number} first. It counts this product in ${product.unit}.`,
+    );
+  }
+  const bom = boms.docs
+    .map((d) => d.data() as BomDoc)
+    .find((b) => b.productId === productId || b.components.some((c) => c.productId === productId));
+  if (bom) {
+    throw failedPrecondition(
+      'unit_in_use',
+      `Make the bill of materials "${bom.name}" inactive first. It counts this product in ${product.unit}.`,
+    );
+  }
+  const quantities = [
+    ...(movements?.docs ?? []).flatMap((d) => {
+      const m = d.data() as StockMovementDoc;
+      return [m.qtyMilli, m.balanceQtyMilli];
+    }),
+    ...(balances?.docs ?? []).map((d) => (d.data() as StockBalanceDoc).qtyMilli),
+    ...(keepsReorderLevel && product.reorderLevelMilli != null ? [product.reorderLevelMilli] : []),
+  ];
+  if (quantities.some((q) => !fitsUnit(Math.abs(q), unit))) {
+    throw failedPrecondition(
+      'unit_decimals',
+      UNITS[unit].decimals === 0
+        ? `This product already has part quantities, and ${UNITS[unit].name.toLowerCase()} must be whole numbers`
+        : `This product already has quantities with more decimals than ${UNITS[unit].name.toLowerCase()} allow`,
+    );
+  }
+}
+
 export const updateProduct = defineCommand({
   name: 'product.update',
   access: { kind: 'company', permission: 'inventory.products.manage' },
@@ -267,14 +338,21 @@ export const updateProduct = defineCommand({
     const company = companySnap!.data() as CompanyDoc;
     if (input.categoryId !== undefined) await checkCategory(tx, input.companyId, input.categoryId);
 
+    const unit = input.unit ?? product.unit;
+    if (unit !== product.unit) {
+      const keepsReorderLevel = input.reorderLevel === undefined;
+      await checkUnitChange(tx, input.companyId, input.productId, product, unit, keepsReorderLevel);
+    }
+
     const patch: Partial<ProductDoc> = {};
+    if (unit !== product.unit) patch.unit = unit;
     if (input.name !== undefined) patch.name = input.name;
     if (input.categoryId !== undefined) patch.categoryId = input.categoryId;
     if (input.description !== undefined) patch.description = input.description;
     if (input.status !== undefined) patch.status = input.status;
     const price = parseOptionalMoney(input.salePrice, company.baseCurrency);
     if (price !== undefined) patch.salePrice = price;
-    const reorder = parseOptionalQty(input.reorderLevel, product.unit);
+    const reorder = parseOptionalQty(input.reorderLevel, unit);
     if (reorder !== undefined && reorder !== null && productType(product) === 'service') {
       throw invalid(
         'not_stocked',
