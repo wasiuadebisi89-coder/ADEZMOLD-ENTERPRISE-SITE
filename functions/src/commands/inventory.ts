@@ -14,7 +14,7 @@ import {
   type UnitCode,
 } from '@bms/domain';
 import type { Timestamp, Transaction } from 'firebase-admin/firestore';
-import { defineCommand } from '../lib/command.js';
+import { defineCommand, type Caller, type CompanyContext } from '../lib/command.js';
 import { conflict, denied, failedPrecondition, invalid, notFound } from '../lib/errors.js';
 import {
   companyRefs,
@@ -405,7 +405,11 @@ const balanceOf = (doc: StockBalanceDoc | undefined): StockBalance => ({
 
 export const createStockAdjustment = defineCommand({
   name: 'stockAdjustment.create',
-  access: { kind: 'company', permission: (input) => CREATE_PERMISSION[input.kind] },
+  // Anyone who may approve may also record: their adjustments post straight away.
+  access: {
+    kind: 'company',
+    permission: (input) => [CREATE_PERMISSION[input.kind], APPROVE_PERMISSION[input.kind]],
+  },
   async handler({ tx, caller, input, now, company }) {
     const refs = companyRefs(input.companyId);
     const productIds = [...new Set(input.lines.map((l) => l.productId))];
@@ -491,9 +495,6 @@ export const createStockAdjustment = defineCommand({
     const seriesDoc = seriesSnap!.data() as NumberSeriesDoc | undefined;
     const next = seriesDoc?.next ?? 1;
     const number = `${series.prefix}-${String(next).padStart(6, '0')}`;
-    if (seriesDoc) tx.update(refs.numberSeries(series.id), { next: next + 1 });
-    else tx.set(refs.numberSeries(series.id), { prefix: series.prefix, next: next + 1 });
-
     const ref = refs.stockAdjustments.doc();
     const doc: StockAdjustmentDoc = {
       number,
@@ -512,19 +513,217 @@ export const createStockAdjustment = defineCommand({
       journalId: null,
       valueMinor: null,
     };
-    tx.set(ref, doc);
+
+    // Admins and managers (who hold the approve permission) post at once; others wait.
+    const postNow = company!.permissions.has(APPROVE_PERMISSION[input.kind]);
+    const write = postNow
+      ? await planAdjustmentPosting(
+          tx,
+          { company: company!, caller, now },
+          input.companyId,
+          ref.id,
+          doc,
+        )
+      : null;
+
+    // --- Writes (after every read) ------------------------------------------------------------
+    if (seriesDoc) tx.update(refs.numberSeries(series.id), { next: next + 1 });
+    else tx.set(refs.numberSeries(series.id), { prefix: series.prefix, next: next + 1 });
+    const posted = write?.();
+    tx.set(ref, posted ? { ...doc, ...posted.fields, decisionReason: input.reason } : doc);
     return {
-      result: { adjustmentId: ref.id, number },
+      result: {
+        adjustmentId: ref.id,
+        number,
+        status: posted ? ('posted' as const) : ('pending' as const),
+        journalId: posted?.journalId ?? null,
+        value: posted ? posted.net.toString() : null,
+      },
       audit: {
         target: { scope: 'company', companyId: input.companyId },
         entityType: 'stockAdjustment',
         entityId: ref.id,
-        after: { number, kind: doc.kind, locationId: doc.locationId, lines: lines.length },
+        after: {
+          number,
+          kind: doc.kind,
+          locationId: doc.locationId,
+          lines: lines.length,
+          status: posted ? 'posted' : 'pending',
+          ...(posted ? { journalId: posted.journalId, value: posted.net.toString() } : {}),
+        },
         reason: input.reason,
       },
     };
   },
 });
+
+/**
+ * Reads and plans the stock and ledger effect of an adjustment, then returns a function that
+ * writes it. Firestore needs every read before the first write, so callers run their own
+ * writes after this resolves.
+ */
+async function planAdjustmentPosting(
+  tx: Transaction,
+  ctx: { company: CompanyContext; caller: Caller; now: Timestamp },
+  companyId: string,
+  adjustmentId: string,
+  adj: StockAdjustmentDoc,
+) {
+  const { company, caller, now } = ctx;
+  const refs = companyRefs(companyId);
+  // --- Reads ----------------------------------------------------------------------------
+  const productIds = adj.lines.map((l) => l.productId);
+  const [companySnap, locationSnap, ...productSnaps] = await tx.getAll(
+    refs.company,
+    refs.location(adj.locationId),
+    ...productIds.map((id) => refs.product(id)),
+  );
+  const companyDoc = companySnap!.data() as CompanyDoc;
+  const location = locationSnap!.data() as LocationDoc | undefined;
+  if (!location || location.status !== 'active') {
+    throw failedPrecondition('location_inactive', 'The location is no longer active');
+  }
+  const products = productSnaps.map((s) => s.data() as ProductDoc | undefined);
+  const book = await StockBook.read(
+    tx,
+    companyId,
+    companyDoc.costingMethod === 'fifo',
+    productIds.map((productId) => ({
+      productId,
+      locationId: adj.locationId,
+      branchId: adj.branchId,
+    })),
+  );
+  const counterSubtype = adj.kind === 'opening' ? 'openingBalanceEquity' : 'inventoryAdjustment';
+  const accounts = await readSystemAccounts(
+    tx,
+    companyId,
+    ['inventory', counterSubtype],
+    ['inventory'],
+  );
+  const inventoryAccountId = accounts.inventory;
+  const counterAccountId = accounts[counterSubtype];
+
+  // --- Plan -----------------------------------------------------------------------------
+  const postingDate = businessDate(now.toDate(), companyDoc.timeZone);
+  const valueByLine = new Map<number, bigint>();
+  adj.lines.forEach((line, i) => {
+    const lineNo = line.lineNo;
+    const product = products[i];
+    if (!product || product.status !== 'active') {
+      throw failedPrecondition(
+        'product_inactive',
+        `Line ${lineNo}: the product is no longer active`,
+      );
+    }
+    if (adj.kind === 'opening' && book.hasRecord(line.productId, adj.locationId)) {
+      throw failedPrecondition(
+        'opening_after_movements',
+        `Line ${lineNo}: ${product.sku} already has stock movements at this location`,
+      );
+    }
+    const delta = fromStorable(line.deltaMilli);
+    if (delta === 0n) return;
+    try {
+      if (delta > 0n) {
+        const before = book.balance(line.productId, adj.locationId);
+        const cost =
+          line.unitCostScaled !== null
+            ? fromStorable(line.unitCostScaled)
+            : defaultIncreaseCost(before);
+        const value = valueAt(delta, cost);
+        book.receive(line.productId, adj.locationId, delta, value, adj.kind, {
+          id: adjustmentId,
+          lineNo: null,
+          date: postingDate,
+        });
+        valueByLine.set(lineNo, value);
+      } else {
+        const value = book.issue(line.productId, adj.locationId, -delta, adj.kind);
+        valueByLine.set(lineNo, -value);
+      }
+    } catch (e) {
+      inventoryError(e, lineNo);
+    }
+  });
+
+  const values = [...valueByLine.values()];
+  const increase = values.filter((v) => v > 0n).reduce((s, v) => s + v, 0n);
+  const decrease = values.filter((v) => v < 0n).reduce((s, v) => s - v, 0n);
+  const journalLines: JournalLine[] = [];
+  if (increase > 0n) {
+    journalLines.push(
+      { accountId: inventoryAccountId, debit: increase, credit: 0n, memo: 'Stock added' },
+      { accountId: counterAccountId, debit: 0n, credit: increase, memo: 'Stock added' },
+    );
+  }
+  if (decrease > 0n) {
+    journalLines.push(
+      { accountId: counterAccountId, debit: decrease, credit: 0n, memo: 'Stock removed' },
+      { accountId: inventoryAccountId, debit: 0n, credit: decrease, memo: 'Stock removed' },
+    );
+  }
+
+  const prepared = journalLines.length
+    ? await preparePosting(
+        tx,
+        { company: company, caller, now },
+        {
+          origin: 'system',
+          branchId: adj.branchId,
+          postingDate,
+          memo: `${adj.number}: ${adj.reason}`,
+          reference: adj.number,
+          lines: journalLines,
+          source: { type: 'stockAdjustment', id: adjustmentId, number: adj.number },
+        },
+      )
+    : null;
+
+  return () => {
+    // --- Writes ---------------------------------------------------------------------------
+    const journalId = prepared
+      ? writePosting(tx, { companyId: companyId, caller, now }, prepared).journalId
+      : null;
+    const moved = book.write(tx, {
+      postingDate,
+      sourceType: 'stockAdjustment',
+      sourceId: adjustmentId,
+      sourceNumber: adj.number,
+      journalId,
+      now,
+      uid: caller.uid,
+    });
+    adj.lines.forEach((line, i) => {
+      if (moved.has(line.productId) && !products[i]!.hasMovements) {
+        products[i]!.hasMovements = true;
+        tx.update(refs.product(line.productId), { hasMovements: true });
+      }
+    });
+    if (book.hasMovements && !companyDoc.locks.costingMethod) {
+      tx.update(refs.company, { 'locks.costingMethod': true });
+    }
+
+    const net = increase - decrease;
+    return {
+      postingDate,
+      journalId,
+      net,
+      fields: {
+        status: 'posted' as const,
+        decidedAt: now,
+        decidedBy: caller.uid,
+        postingDate,
+        journalId,
+        valueMinor: toStorable(net),
+        lines: adj.lines.map((l) => ({
+          ...l,
+          valueMinor: toStorable(valueByLine.get(l.lineNo) ?? 0n),
+        })),
+      },
+    };
+  };
+}
 
 export const decideStockAdjustment = defineCommand({
   name: 'stockAdjustment.decide',
@@ -540,9 +739,6 @@ export const decideStockAdjustment = defineCommand({
         'adjustment_not_pending',
         'This adjustment has already been decided',
       );
-    }
-    if (adj.createdBy === caller.uid) {
-      throw denied('self_approval', 'You cannot approve or reject your own adjustment');
     }
     if (!branchAllowed(company!.member.branchScope, adj.branchId)) {
       throw denied('branch_not_allowed', 'You cannot change stock at this branch');
@@ -574,152 +770,15 @@ export const decideStockAdjustment = defineCommand({
       };
     }
 
-    // --- Reads ----------------------------------------------------------------------------
-    const productIds = adj.lines.map((l) => l.productId);
-    const [companySnap, locationSnap, ...productSnaps] = await tx.getAll(
-      refs.company,
-      refs.location(adj.locationId),
-      ...productIds.map((id) => refs.product(id)),
-    );
-    const companyDoc = companySnap!.data() as CompanyDoc;
-    const location = locationSnap!.data() as LocationDoc | undefined;
-    if (!location || location.status !== 'active') {
-      throw failedPrecondition('location_inactive', 'The location is no longer active');
-    }
-    const products = productSnaps.map((s) => s.data() as ProductDoc | undefined);
-    const book = await StockBook.read(
+    const write = await planAdjustmentPosting(
       tx,
+      { company: company!, caller, now },
       input.companyId,
-      companyDoc.costingMethod === 'fifo',
-      productIds.map((productId) => ({
-        productId,
-        locationId: adj.locationId,
-        branchId: adj.branchId,
-      })),
+      input.adjustmentId,
+      adj,
     );
-    const counterSubtype = adj.kind === 'opening' ? 'openingBalanceEquity' : 'inventoryAdjustment';
-    const accounts = await readSystemAccounts(
-      tx,
-      input.companyId,
-      ['inventory', counterSubtype],
-      ['inventory'],
-    );
-    const inventoryAccountId = accounts.inventory;
-    const counterAccountId = accounts[counterSubtype];
-
-    // --- Plan -----------------------------------------------------------------------------
-    const postingDate = businessDate(now.toDate(), companyDoc.timeZone);
-    const valueByLine = new Map<number, bigint>();
-    adj.lines.forEach((line, i) => {
-      const lineNo = line.lineNo;
-      const product = products[i];
-      if (!product || product.status !== 'active') {
-        throw failedPrecondition(
-          'product_inactive',
-          `Line ${lineNo}: the product is no longer active`,
-        );
-      }
-      if (adj.kind === 'opening' && book.hasRecord(line.productId, adj.locationId)) {
-        throw failedPrecondition(
-          'opening_after_movements',
-          `Line ${lineNo}: ${product.sku} already has stock movements at this location`,
-        );
-      }
-      const delta = fromStorable(line.deltaMilli);
-      if (delta === 0n) return;
-      try {
-        if (delta > 0n) {
-          const before = book.balance(line.productId, adj.locationId);
-          const cost =
-            line.unitCostScaled !== null
-              ? fromStorable(line.unitCostScaled)
-              : defaultIncreaseCost(before);
-          const value = valueAt(delta, cost);
-          book.receive(line.productId, adj.locationId, delta, value, adj.kind, {
-            id: input.adjustmentId,
-            lineNo: null,
-            date: postingDate,
-          });
-          valueByLine.set(lineNo, value);
-        } else {
-          const value = book.issue(line.productId, adj.locationId, -delta, adj.kind);
-          valueByLine.set(lineNo, -value);
-        }
-      } catch (e) {
-        inventoryError(e, lineNo);
-      }
-    });
-
-    const values = [...valueByLine.values()];
-    const increase = values.filter((v) => v > 0n).reduce((s, v) => s + v, 0n);
-    const decrease = values.filter((v) => v < 0n).reduce((s, v) => s - v, 0n);
-    const journalLines: JournalLine[] = [];
-    if (increase > 0n) {
-      journalLines.push(
-        { accountId: inventoryAccountId, debit: increase, credit: 0n, memo: 'Stock added' },
-        { accountId: counterAccountId, debit: 0n, credit: increase, memo: 'Stock added' },
-      );
-    }
-    if (decrease > 0n) {
-      journalLines.push(
-        { accountId: counterAccountId, debit: decrease, credit: 0n, memo: 'Stock removed' },
-        { accountId: inventoryAccountId, debit: 0n, credit: decrease, memo: 'Stock removed' },
-      );
-    }
-
-    const prepared = journalLines.length
-      ? await preparePosting(
-          tx,
-          { company: company!, caller, now },
-          {
-            origin: 'system',
-            branchId: adj.branchId,
-            postingDate,
-            memo: `${adj.number}: ${adj.reason}`,
-            reference: adj.number,
-            lines: journalLines,
-            source: { type: 'stockAdjustment', id: input.adjustmentId, number: adj.number },
-          },
-        )
-      : null;
-
-    // --- Writes ---------------------------------------------------------------------------
-    const journalId = prepared
-      ? writePosting(tx, { companyId: input.companyId, caller, now }, prepared).journalId
-      : null;
-    const moved = book.write(tx, {
-      postingDate,
-      sourceType: 'stockAdjustment',
-      sourceId: input.adjustmentId,
-      sourceNumber: adj.number,
-      journalId,
-      now,
-      uid: caller.uid,
-    });
-    adj.lines.forEach((line, i) => {
-      if (moved.has(line.productId) && !products[i]!.hasMovements) {
-        products[i]!.hasMovements = true;
-        tx.update(refs.product(line.productId), { hasMovements: true });
-      }
-    });
-    if (book.hasMovements && !companyDoc.locks.costingMethod) {
-      tx.update(refs.company, { 'locks.costingMethod': true });
-    }
-
-    const net = increase - decrease;
-    tx.update(adjRef, {
-      status: 'posted',
-      decidedAt: now,
-      decidedBy: caller.uid,
-      decisionReason: input.reason,
-      postingDate,
-      journalId,
-      valueMinor: toStorable(net),
-      lines: adj.lines.map((l) => ({
-        ...l,
-        valueMinor: toStorable(valueByLine.get(l.lineNo) ?? 0n),
-      })),
-    });
+    const { postingDate, journalId, net, fields } = write();
+    tx.update(adjRef, { ...fields, decisionReason: input.reason });
 
     return {
       result: {

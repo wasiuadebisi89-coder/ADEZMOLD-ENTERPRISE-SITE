@@ -10,7 +10,7 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
 | 3   | Fiscal year start                   | January, monthly periods                                                                                     | Phase 1 (default only) |
 | 4   | Backdating window without approval  | **Confirmed:** 3 days                                                                                        | Phase 2                |
 | 5   | Default inventory costing           | **Confirmed:** moving weighted average; FIFO optional, locked after first stock posting                      | Phase 3                |
-| 6   | Stock adjustment approvals          | **Confirmed:** all adjustments need approval                                                                 | Phase 3                |
+| 6   | Stock adjustment approvals          | **Changed 2026-11-06:** admins/managers post at once; others need approval                                   | Phase 3                |
 | 7   | Customer credit limit               | **Confirmed:** block over the limit (0 = cash only) unless a manager approves                                | Phase 5                |
 | 8   | Tax rounding                        | **Confirmed:** per line, to the minor unit                                                                   | Phase 5                |
 | 9   | Prices tax-inclusive or exclusive   | **Confirmed:** chosen per company, exclusive by default; rates entered per company, none seeded              | Phase 5                |
@@ -39,6 +39,9 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
 - 2026-10-23: the owner confirmed #14 (the trading chart as drafted), #5 (moving weighted
   average by default, FIFO selectable until the first stock posting) and #6 (every stock
   adjustment needs a second person's approval).
+- 2026-11-06: the owner changed #6: admins and managers (anyone with the approve permission)
+  post stock adjustments, counts and opening stock straight away, and may approve their own
+  pending ones. Store officers still wait for approval.
 - 2026-10-23: the owner confirmed #16 (supplier payments need no second approval) and, after
   asking for help, accepted the recommendations for Phase 5:
   - #7: each customer has a credit limit; 0 means cash only. A sale that would take the

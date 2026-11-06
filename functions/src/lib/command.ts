@@ -43,7 +43,8 @@ export type Access<I> =
   | {
       kind: 'company';
       /** A list means any one of them. */
-      permission: Permission | readonly Permission[] | ((input: I) => Permission);
+      permission:
+        Permission | readonly Permission[] | ((input: I) => Permission | readonly Permission[]);
     }
   | { kind: 'platformAdmin' };
 

@@ -61,8 +61,8 @@ Updated at the end of each phase. Items here are deliberate scope cuts or open r
 - **No unit conversions, product types, barcodes, tax codes or per-category accounts yet.**
   Every product uses one unit from a fixed list, and all stock uses 1300 Inventory.
 - **No negative-stock override.** Negative stock is always refused.
-- **Self-approval is never allowed**, so a single-person company cannot post stock
-  adjustments until a second person with approval rights joins.
+- **Stock adjustments by admins and managers post at once** (owner's call, 2026-11-06). Only
+  staff without approval rights, such as store officers, wait for an approver.
 
 ## Phase 4
 
