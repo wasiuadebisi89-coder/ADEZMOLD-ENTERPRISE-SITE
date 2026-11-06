@@ -54,6 +54,7 @@ function ProductDialog({
           companyId,
           productId: product.id,
           name,
+          ...(unit !== product.unit ? { unit } : {}),
           categoryId: categoryId || null,
           salePrice: salePrice.trim() ? salePrice : null,
           reorderLevel: reorderLevel.trim() ? reorderLevel : null,
@@ -82,7 +83,7 @@ function ProductDialog({
       open
       onOpenChange={(o) => !o && onClose()}
       title={product ? `Edit ${product.sku}` : 'New product'}
-      description={product ? 'The SKU, kind and unit are fixed once a product exists.' : undefined}
+      description={product ? 'The SKU and kind are fixed once a product exists.' : undefined}
     >
       <form onSubmit={submit} className="space-y-4" noValidate>
         {action.error && <Alert tone="error">{action.error.message}</Alert>}
@@ -115,11 +116,7 @@ function ProductDialog({
             </Select>
           </Field>
           <Field label="Unit" error={f.unit}>
-            <Select
-              value={unit}
-              onChange={(e) => setUnit(e.target.value as UnitCode)}
-              disabled={!!product}
-            >
+            <Select value={unit} onChange={(e) => setUnit(e.target.value as UnitCode)}>
               {UNIT_CODES.map((u) => (
                 <option key={u} value={u}>
                   {UNITS[u].name} ({u})
@@ -127,6 +124,13 @@ function ProductDialog({
               ))}
             </Select>
           </Field>
+          {product && unit !== product.unit && (
+            <Alert className="sm:col-span-2">
+              {product.hasMovements
+                ? `Quantities already recorded keep their numbers and are counted in ${UNITS[unit].name.toLowerCase()} from now on (for example 10 ${product.unit} becomes 10 ${unit}). Stock value does not change. Documents already posted keep the unit they were posted with.`
+                : `The unit changes from ${UNITS[product.unit].name.toLowerCase()} to ${UNITS[unit].name.toLowerCase()}.`}
+            </Alert>
+          )}
           <Field label="Category (optional)" error={f.categoryId}>
             <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
               <option value="">None</option>

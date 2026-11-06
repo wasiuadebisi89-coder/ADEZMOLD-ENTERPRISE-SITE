@@ -250,7 +250,7 @@ export interface ProductDoc {
   salePrice: number | null;
   reorderLevelMilli: number | null;
   status: 'active' | 'inactive';
-  /** Set by the first stock movement; the unit is fixed from then on. */
+  /** Set by the first stock movement. A wrong unit can still be corrected (product.update). */
   hasMovements: boolean;
   createdAt: Timestamp;
   createdBy: string;
