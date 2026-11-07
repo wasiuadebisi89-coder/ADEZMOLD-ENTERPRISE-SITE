@@ -101,6 +101,34 @@ interface BranchDoc {
   address?: string;
 }
 
+/** The company and branch lines every receipt starts with. */
+export function useReceiptHeader(
+  branchId: string,
+  medium: ReceiptHeader['medium'] = 'paper',
+): ReceiptHeader {
+  const { companyId, company } = useCompany();
+  const branchRef = useMemo(
+    () => (branchId ? doc(db, `companies/${companyId}/branches/${branchId}`) : null),
+    [companyId, branchId],
+  );
+  const branch = useDoc<BranchDoc>(branchRef);
+  const [printedAt] = useState(() =>
+    new Intl.DateTimeFormat('en-GB', { dateStyle: 'short', timeStyle: 'short' }).format(new Date()),
+  );
+  return useMemo(
+    () => ({
+      tradingName: company?.tradingName || company?.legalName || 'Receipt',
+      legalName: company?.legalName ?? null,
+      branchName: branch.data?.name ?? null,
+      branchAddress: branch.data?.address ?? null,
+      currency: company?.baseCurrency ?? 'NGN',
+      printedAt,
+      medium,
+    }),
+    [company, branch.data, printedAt, medium],
+  );
+}
+
 export function PrintReceiptButton({
   build,
   branchId,
@@ -141,19 +169,11 @@ function ReceiptDialog({
   title: string;
   onClose: () => void;
 }) {
-  const { companyId, company } = useCompany();
-  const branchRef = useMemo(
-    () => (branchId ? doc(db, `companies/${companyId}/branches/${branchId}`) : null),
-    [companyId, branchId],
-  );
-  const branch = useDoc<BranchDoc>(branchRef);
+  const header = useReceiptHeader(branchId);
   const [paper, setPaperState] = useState<PaperWidth>(savedPaper);
   const [printer, setPrinter] = useState(pairedPrinterName);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'error' | 'success'; text: string } | null>(null);
-  const [printedAt] = useState(() =>
-    new Intl.DateTimeFormat('en-GB', { dateStyle: 'short', timeStyle: 'short' }).format(new Date()),
-  );
 
   const setPaper = (p: PaperWidth) => {
     setPaperState(p);
@@ -165,17 +185,7 @@ function ReceiptDialog({
   };
 
   const columns = PAPER[paper].columns;
-  const rows = useMemo(() => {
-    const header: ReceiptHeader = {
-      tradingName: company?.tradingName || company?.legalName || 'Receipt',
-      legalName: company?.legalName ?? null,
-      branchName: branch.data?.name ?? null,
-      branchAddress: branch.data?.address ?? null,
-      currency: company?.baseCurrency ?? 'NGN',
-      printedAt,
-    };
-    return layoutReceipt(build(header), columns);
-  }, [build, company, branch.data, printedAt, columns]);
+  const rows = useMemo(() => layoutReceipt(build(header), columns), [build, header, columns]);
 
   const bluetooth = async (change: boolean) => {
     setMessage(null);

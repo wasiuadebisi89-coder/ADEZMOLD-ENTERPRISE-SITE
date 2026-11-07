@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { PrintReceiptButton } from '../../components/ReceiptPrint';
+import { WhatsAppReceiptButton } from '../../components/WhatsAppShare';
 import { Alert, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
@@ -114,6 +115,12 @@ export default function SupplierPaymentDetail() {
             <PrintReceiptButton
               title={`Payment voucher ${x.number}`}
               branchId={x.branchId}
+              build={(h) => supplierPaymentReceipt(x, h)}
+            />
+            <WhatsAppReceiptButton
+              branchId={x.branchId}
+              party="supplier"
+              partyId={x.supplierId}
               build={(h) => supplierPaymentReceipt(x, h)}
             />
             {can('purchasing.payment.post') && unallocated > 0 && (

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Link, useParams } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { PrintReceiptButton } from '../../components/ReceiptPrint';
+import { WhatsAppReceiptButton } from '../../components/WhatsAppShare';
 import { Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useToday } from '../../components/BackdateNotice';
@@ -51,6 +52,12 @@ export default function PurchaseInvoiceDetail() {
             <PrintReceiptButton
               title={`Supplier invoice ${i.number}`}
               branchId={i.branchId}
+              build={(h) => purchaseInvoiceReceipt(i, h)}
+            />
+            <WhatsAppReceiptButton
+              branchId={i.branchId}
+              party="supplier"
+              partyId={i.supplierId}
               build={(h) => purchaseInvoiceReceipt(i, h)}
             />
             {can('purchasing.payment.post') && left > 0 && (

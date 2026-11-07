@@ -43,7 +43,14 @@ export interface ReceiptHeader {
   currency: string;
   /** When the receipt is printed, already formatted. */
   printedAt: string;
+  /**
+   * paper (the default) for the printer; message for a chat message, which has no print
+   * time and no lines to sign on.
+   */
+  medium?: 'paper' | 'message';
 }
+
+const onPaper = (h: ReceiptHeader) => (h.medium ?? 'paper') === 'paper';
 
 /** Thermal printers only know plain ASCII in their default code page. */
 export function toPrintable(text: string): string {
@@ -157,7 +164,7 @@ function footer(h: ReceiptHeader, thanks: string | null): ReceiptBlock[] {
   return [
     { kind: 'rule' },
     ...(thanks ? [{ kind: 'center', text: thanks } as const] : []),
-    { kind: 'center', text: `Printed ${h.printedAt}` },
+    ...(onPaper(h) ? [{ kind: 'center', text: `Printed ${h.printedAt}` } as const] : []),
   ];
 }
 
@@ -304,13 +311,14 @@ export function goodsReceivedReceipt(r: Omit<ReceiptRow, 'id'>, h: ReceiptHeader
     { kind: 'pair', left: `TOTAL ${h.currency}`, right: m(r.totalMinor), bold: true },
   );
   if (r.memo) blocks.push({ kind: 'blank' }, { kind: 'text', text: r.memo });
-  blocks.push(
-    { kind: 'blank' },
-    { kind: 'text', text: 'Received by: ____________' },
-    { kind: 'blank' },
-    { kind: 'text', text: 'Delivered by: ___________' },
-    ...footer(h, null),
-  );
+  if (onPaper(h))
+    blocks.push(
+      { kind: 'blank' },
+      { kind: 'text', text: 'Received by: ____________' },
+      { kind: 'blank' },
+      { kind: 'text', text: 'Delivered by: ___________' },
+    );
+  blocks.push(...footer(h, null));
   return { blocks };
 }
 
@@ -373,10 +381,8 @@ export function supplierPaymentReceipt(x: Omit<PaymentRow, 'id'>, h: ReceiptHead
   const unused = x.amountMinor - x.allocatedMinor;
   if (unused > 0) blocks.push({ kind: 'pair', left: 'Advance held', right: m(unused) });
   if (x.memo) blocks.push({ kind: 'blank' }, { kind: 'text', text: x.memo });
-  blocks.push(
-    { kind: 'blank' },
-    { kind: 'text', text: 'Received by: ____________' },
-    ...footer(h, null),
-  );
+  if (onPaper(h))
+    blocks.push({ kind: 'blank' }, { kind: 'text', text: 'Received by: ____________' });
+  blocks.push(...footer(h, null));
   return { blocks };
 }

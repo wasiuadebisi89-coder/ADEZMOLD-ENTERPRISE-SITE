@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApplyCreditDialog } from '../../components/ApplyCreditDialog';
 import { PrintReceiptButton } from '../../components/ReceiptPrint';
+import { WhatsAppReceiptButton } from '../../components/WhatsAppShare';
 import { RefundDialog } from '../../components/RefundDialog';
 import { Button } from '../../components/ui/button';
 import { Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
@@ -45,6 +46,12 @@ export default function CustomerReceiptDetail() {
             <PrintReceiptButton
               title={`Receipt for ${x.number}`}
               branchId={x.branchId}
+              build={(h) => customerPaymentReceipt(x, h)}
+            />
+            <WhatsAppReceiptButton
+              branchId={x.branchId}
+              party="customer"
+              partyId={x.customerId}
               build={(h) => customerPaymentReceipt(x, h)}
             />
             {(can('sales.refund.post') || can('sales.refund.request')) && unallocated > 0 && (

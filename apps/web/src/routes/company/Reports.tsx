@@ -19,6 +19,7 @@ import {
 } from '@bms/domain';
 import { useToday } from '../../components/BackdateNotice';
 import { PrintButton, ReportPrintHeader, useReportPrint } from '../../components/ReportPrint';
+import { WhatsAppReminderButton } from '../../components/WhatsAppShare';
 import { Button } from '../../components/ui/button';
 import { Alert, Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { Field, Input, Select } from '../../components/ui/form';
@@ -387,10 +388,13 @@ function AgeingTable({
   party,
   control,
   sign,
+  remind,
 }: {
   items: OpenItem[];
   asAt: string;
   party: 'Customer' | 'Supplier';
+  /** Offer a WhatsApp reminder per row (only for today's figures). */
+  remind: boolean;
   control: ReturnType<typeof useControlBalance>;
   /** +1 for receivables (debit balance), −1 for payables. */
   sign: 1n | -1n;
@@ -427,6 +431,11 @@ function AgeingTable({
                   </Th>
                 ))}
                 <Th className="text-right">Total</Th>
+                {remind && (
+                  <Th className="print:hidden">
+                    <span className="sr-only">WhatsApp</span>
+                  </Th>
+                )}
               </Tr>
             </THead>
             <TBody>
@@ -441,6 +450,16 @@ function AgeingTable({
                   <Td className="text-right font-medium tabular-nums">
                     {money(r.total, currency)}
                   </Td>
+                  {remind && (
+                    <Td className="py-0 text-right print:hidden">
+                      <WhatsAppReminderButton
+                        compact
+                        party={party === 'Customer' ? 'customer' : 'supplier'}
+                        partyId={r.partyId}
+                        label={`${party === 'Customer' ? 'Remind' : 'Send statement to'} ${r.partyName} on WhatsApp`}
+                      />
+                    </Td>
+                  )}
                 </Tr>
               ))}
               <Tr>
@@ -457,6 +476,7 @@ function AgeingTable({
                 <Td className="text-right font-semibold tabular-nums" data-testid="ageing-total">
                   {money(report.total, currency)}
                 </Td>
+                {remind && <Td className="print:hidden" />}
               </Tr>
             </TBody>
           </Table>
@@ -595,6 +615,7 @@ function Ageing({ side }: { side: 'receivable' | 'payable' }) {
           party={side === 'receivable' ? 'Customer' : 'Supplier'}
           control={control}
           sign={side === 'receivable' ? 1n : -1n}
+          remind={now && can(side === 'receivable' ? 'sales.read' : 'purchasing.read')}
         />
       )}
     </>
