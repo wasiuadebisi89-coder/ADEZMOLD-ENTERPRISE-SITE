@@ -5,6 +5,7 @@ import { Link, useLocation, useParams } from 'react-router';
 import { formatRatePercent } from '@bms/domain';
 import { useToday } from '../../components/BackdateNotice';
 import { PrintReceiptButton } from '../../components/ReceiptPrint';
+import { WhatsAppReceiptButton } from '../../components/WhatsAppShare';
 import { Button } from '../../components/ui/button';
 import { Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
@@ -78,6 +79,17 @@ export default function SalesInvoiceDetail() {
               title={`Receipt for ${i.number}`}
               branchId={i.branchId}
               build={(h) => saleReceipt(i, h, { tenderedMinor })}
+            />
+            <WhatsAppReceiptButton
+              branchId={i.branchId}
+              party="customer"
+              partyId={i.customerId}
+              build={(h) => saleReceipt(i, h, { tenderedMinor })}
+              note={
+                left > 0
+                  ? `Kindly pay the balance of ${money(left, currency)} by ${formatDate(i.dueDate)}. Thank you.`
+                  : null
+              }
             />
             {can('sales.receipt.post') && i.customerId && left > 0 && (
               <Button asChild>

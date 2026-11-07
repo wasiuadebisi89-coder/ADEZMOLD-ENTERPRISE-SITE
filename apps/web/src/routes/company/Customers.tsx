@@ -92,7 +92,11 @@ export function CustomerDialog({
           <Field label="Contact person (optional)" error={f.contactName}>
             <Input value={contactName} onChange={(e) => setContactName(e.target.value)} />
           </Field>
-          <Field label="Phone (optional)" error={f.phone}>
+          <Field
+            label="Phone (optional)"
+            hint="Used for WhatsApp receipts and reminders"
+            error={f.phone}
+          >
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
           </Field>
           <Field label="Email (optional)" error={f.email}>

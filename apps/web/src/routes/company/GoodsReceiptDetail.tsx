@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router';
 import { COST_SCALE } from '@bms/domain';
 import { Button } from '../../components/ui/button';
 import { PrintReceiptButton } from '../../components/ReceiptPrint';
+import { WhatsAppReceiptButton } from '../../components/WhatsAppShare';
 import { Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
@@ -43,6 +44,12 @@ export default function GoodsReceiptDetail() {
             <PrintReceiptButton
               title={`Goods received note ${r.number}`}
               branchId={r.branchId}
+              build={(h) => goodsReceivedReceipt(r, h)}
+            />
+            <WhatsAppReceiptButton
+              branchId={r.branchId}
+              party="supplier"
+              partyId={r.supplierId}
               build={(h) => goodsReceivedReceipt(r, h)}
             />
             {can('purchasing.invoice.post') && (

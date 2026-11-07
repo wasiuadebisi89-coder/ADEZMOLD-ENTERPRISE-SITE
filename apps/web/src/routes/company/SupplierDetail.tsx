@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { BackdateNotice, useBackdate, useToday } from '../../components/BackdateNotice';
 import { Button } from '../../components/ui/button';
+import { WhatsAppReminderButton } from '../../components/WhatsAppShare';
 import { Dialog } from '../../components/ui/dialog';
 import { Alert, Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { Field, Input, Select } from '../../components/ui/form';
@@ -163,6 +164,9 @@ export default function SupplierDetail() {
               <Button variant="secondary" onClick={() => setEditing(true)}>
                 Edit
               </Button>
+            )}
+            {(s.balanceMinor > 0 || s.advanceMinor > 0) && (
+              <WhatsAppReminderButton party="supplier" partyId={supplierId} />
             )}
             {can('purchasing.invoice.post') && (
               <Button variant="secondary" onClick={() => setOpening(true)}>
