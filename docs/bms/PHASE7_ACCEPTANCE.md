@@ -48,6 +48,14 @@ web app (`tests/e2e/phase7.spec.ts`).
   31–60, 61–90, over 90) and compare the total with the control account.
 - F4.4 Stock valuation totals stock on hand at cost and compares it with the Inventory account.
 - F4.5 The fixed asset register compares cost and accumulated depreciation with the ledger.
+- F4.6 The day book lists every journal posted on a day or date range (today by default), oldest
+  first, with its voucher type (sales, receipt, payment, purchase, goods received, returns, stock
+  adjustment, journal...), the source document's number, the narration and, optionally, each
+  account line. It totals debits and credits (equal), filters by voucher type, links each voucher
+  to its source document and its journal, steps a day back or forward, and prints on A4.
+  Reversed journals stay in with a "reversed" mark, since both they and their reversals are in
+  the ledger. It is readable by `ledger.journal.read` or `reports.financial.read`, as journals
+  are. One view loads at most 1,000 journals and says so when a range holds more (e2e D1).
 
 ## F5 Security
 

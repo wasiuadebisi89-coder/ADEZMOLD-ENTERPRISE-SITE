@@ -12,6 +12,7 @@ import {
   ClipboardList,
   ListTree,
   Scale,
+  CalendarDays,
   CalendarRange,
   ChevronsUpDown,
   History,
@@ -56,6 +57,12 @@ const NAV: NavItem[] = [
     permission: 'ledger.accounts.read',
   },
   { to: 'journals', label: 'Journals', icon: BookOpen, permission: 'ledger.journal.read' },
+  {
+    to: 'day-book',
+    label: 'Day book',
+    icon: CalendarDays,
+    permission: ['ledger.journal.read', 'reports.financial.read'],
+  },
   {
     to: 'trial-balance',
     label: 'Trial balance',

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('./firebase', () => ({ db: {} }));
 const {
+  journalSourcePath,
   maskAccountNumber,
   moneyAccountLabel,
   moneyAccounts,
@@ -129,5 +130,19 @@ describe('bank accounts in pickers', () => {
       ]),
     ).toBe('1122');
     expect(suggestBankCode([{ code: '6700', subtype: 'general' }])).toBe('');
+  });
+});
+
+describe('journalSourcePath', () => {
+  const src = (type: string) => ({ id: 'j1', source: { type, id: 'd1', number: 'N-1' } });
+  it('links a journal to the document behind it', () => {
+    expect(journalSourcePath('c', src('salesInvoice'))).toBe('/c/c/sales/invoices/d1');
+    expect(journalSourcePath('c', src('supplierPayment'))).toBe('/c/c/purchases/payments/d1');
+    expect(journalSourcePath('c', src('stockAdjustment'))).toBe('/c/c/stock-adjustments/d1');
+    expect(journalSourcePath('c', src('customerRefund'))).toBe('/c/c/sales/refunds/d1');
+  });
+  it('falls back to the journal itself', () => {
+    expect(journalSourcePath('c', { id: 'j1', source: null })).toBe('/c/c/journals/j1');
+    expect(journalSourcePath('c', src('depreciationRun'))).toBe('/c/c/journals/j1');
   });
 });
