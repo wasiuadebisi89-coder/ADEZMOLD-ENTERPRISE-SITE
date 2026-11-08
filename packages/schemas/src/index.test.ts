@@ -5,6 +5,7 @@ import {
   createBankAccountInput,
   createCompanyInput,
   createInvitationInput,
+  postExpenseInput,
   setPeriodStatusInput,
 } from './index.js';
 
@@ -76,5 +77,34 @@ describe('bank accounts', () => {
     expect(bankAccountNumber.safeParse('12').success).toBe(false);
     expect(bankAccountNumber.safeParse('0123/456').success).toBe(false);
     expect(bankAccountNumber.parse('gb29 nwbk 6016 1331 9268 19')).toBe('GB29NWBK60161331926819');
+  });
+});
+
+describe('expenses', () => {
+  const expense = (payment: Record<string, unknown>) => ({
+    idempotencyKey: randomUUID(),
+    companyId: 'c1',
+    branchId: 'HQ',
+    expenseDate: '2026-11-08',
+    lines: [{ accountId: 'a1', description: 'Toner', amount: '25,000' }],
+    payment,
+  });
+  it('needs who was paid when paid now, and a supplier on credit', () => {
+    expect(
+      postExpenseInput.safeParse(expense({ mode: 'paid', paymentAccountId: 'cash' })).success,
+    ).toBe(false);
+    expect(
+      postExpenseInput.safeParse(expense({ mode: 'paid', paymentAccountId: 'cash', payee: '  ' }))
+        .success,
+    ).toBe(false);
+    expect(
+      postExpenseInput.parse(
+        expense({ mode: 'paid', paymentAccountId: 'cash', payee: ' Ade Repairs ' }),
+      ).payment,
+    ).toEqual({ mode: 'paid', paymentAccountId: 'cash', payee: 'Ade Repairs' });
+    expect(postExpenseInput.safeParse(expense({ mode: 'credit' })).success).toBe(false);
+    expect(postExpenseInput.safeParse(expense({ mode: 'credit', supplierId: 's1' })).success).toBe(
+      true,
+    );
   });
 });

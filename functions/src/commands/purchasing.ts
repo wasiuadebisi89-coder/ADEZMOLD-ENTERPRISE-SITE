@@ -79,7 +79,7 @@ function purchasingError(e: unknown, lineNo?: number): never {
   return inventoryError(e, lineNo);
 }
 
-async function readSupplier(
+export async function readSupplier(
   tx: Transaction,
   companyId: string,
   supplierId: string,
@@ -95,7 +95,7 @@ async function readSupplier(
 }
 
 /** Supplier invoice numbers are unique per supplier, ignoring case and spaces. */
-function invoiceKeyId(supplierId: string, supplierInvoiceNo: string): string {
+export function invoiceKeyId(supplierId: string, supplierInvoiceNo: string): string {
   return sha256(`${supplierId}\n${supplierInvoiceNo.replace(/\s+/g, '').toUpperCase()}`).slice(
     0,
     40,

@@ -7,6 +7,7 @@ import {
   updateBankAccount,
 } from './commands/bank.js';
 import { closeFiscalYear } from './commands/closing.js';
+import { postExpense } from './commands/expenses.js';
 import {
   createProject,
   createQuotation,
@@ -131,6 +132,7 @@ export const COMMANDS: Record<CommandName, AnyCommand> = {
   'supplierPayment.post': postSupplierPayment,
   'supplierPayment.allocate': allocateSupplierPayment,
   'supplierReturn.post': postSupplierReturn,
+  'expense.post': postExpense,
   'taxCode.create': createTaxCode,
   'taxCode.update': updateTaxCode,
   'customer.create': createCustomer,

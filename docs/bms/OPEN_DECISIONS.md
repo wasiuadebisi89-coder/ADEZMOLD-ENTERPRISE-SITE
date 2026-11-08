@@ -28,6 +28,7 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
 | 21  | Production costing                  | **Confirmed:** actual cost; materials at the costing method when issued, plus direct costs charged           | Phase 9                |
 | 22  | Production losses                   | **Confirmed:** normal loss spread over good output; abnormal loss written off                                | Phase 9                |
 | 23  | Overdrawn cash and bank accounts    | **Default, to confirm:** blocked; a payment cannot take a cash or bank account below zero                    | Fix (2026-11-08)       |
+| 24  | Recording business expenses         | **Default, to confirm:** as supplier payments/invoices (Accountant, Manager, Admin); no second approval      | Expenses (2026-11-08)  |
 
 ## Confirmed decisions
 
@@ -91,3 +92,9 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
   already exists), reversals and the year-end close are not checked. The owner has been asked
   whether to allow an agreed overdraft on chosen bank accounts instead; until they decide, no
   account may go overdrawn.
+- 2026-11-08: the owner asked that office purchases, services, repairs and replacements be
+  recorded without a journal. #24 defaults to the supplier rules: an expense paid now needs the
+  supplier payment permission and one on credit needs the supplier invoice permission, so
+  Accountants, Managers and Admins record them directly with no second approval (DECISION 16).
+  Store and sales officers cannot; a company admin can give them a custom role with those
+  permissions. Capital items are recorded under Fixed assets, not as expenses.

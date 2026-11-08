@@ -100,6 +100,27 @@ other frameworks.
 - Supplier opening balances: each unpaid invoice from before go-live is recorded as Dr 3300
   Opening balance equity / Cr Trade payables.
 
+### Business expenses (DECISION 24)
+
+- Office supplies, services, repairs and replacement parts can be recorded on the Expenses page
+  without writing a journal. Each item is charged to an expense account (type Expense, role
+  General or Direct service costs); cost of goods sold, stock adjustments, price variances and
+  depreciation are left to their own modules.
+- Paid now: Dr each expense account (and 1400 Input tax recoverable for any tax shown) / Cr the
+  cash or bank account paid from. The payee is a supplier on file or a name typed in. The
+  no-overdraft rule applies (DECISION 23).
+- On credit: the same debits / Cr 2100 Trade payables, and a purchase invoice with expense lines
+  is recorded for the supplier in the same transaction, so it ages and is paid from Purchases
+  like any other invoice. The receipt or invoice number is the supplier invoice number (unique
+  per supplier); without one the expense number is used.
+- Equipment, furniture, vehicles and other items used for more than a year are capital items:
+  they are refused as expenses and recorded under Fixed assets instead (section 11).
+- Posting follows the supplier rules: paying now needs `purchasing.payment.post`, on credit needs
+  `purchasing.invoice.post`, and there is no second approval (DECISION 16). Backdating beyond the
+  window needs an approved request as for any posting.
+- An expense, like a supplier invoice or payment, cannot be reversed from its journal. A mistake
+  is corrected by the accountant with a journal.
+
 ## 6. Landed costs
 
 - A charge on a supplier invoice (from the goods' supplier or another, such as a freight

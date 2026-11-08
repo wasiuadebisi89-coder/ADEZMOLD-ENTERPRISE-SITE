@@ -43,6 +43,9 @@ const StockAdjustmentDetail = lazy(() => import('./routes/company/StockAdjustmen
 const Suppliers = lazy(() => import('./routes/company/Suppliers'));
 const SupplierDetail = lazy(() => import('./routes/company/SupplierDetail'));
 const Purchases = lazy(() => import('./routes/company/Purchases'));
+const Expenses = lazy(() => import('./routes/company/Expenses'));
+const NewExpense = lazy(() => import('./routes/company/NewExpense'));
+const ExpenseDetail = lazy(() => import('./routes/company/ExpenseDetail'));
 const NewGoodsReceipt = lazy(() => import('./routes/company/NewGoodsReceipt'));
 const GoodsReceiptDetail = lazy(() => import('./routes/company/GoodsReceiptDetail'));
 const NewPurchaseInvoice = lazy(() => import('./routes/company/NewPurchaseInvoice'));
@@ -198,6 +201,9 @@ const router = createBrowserRouter([
       { path: 'quotations', element: <Quotations /> },
       { path: 'quotations/new', element: <NewQuotation /> },
       { path: 'quotations/:quotationId', element: <QuotationDetail /> },
+      { path: 'expenses', element: <Expenses /> },
+      { path: 'expenses/new', element: <NewExpense /> },
+      { path: 'expenses/:expenseId', element: <ExpenseDetail /> },
       { path: 'purchases', element: <Purchases /> },
       { path: 'purchases/receipts/new', element: <NewGoodsReceipt /> },
       { path: 'purchases/receipts/:receiptId', element: <GoodsReceiptDetail /> },

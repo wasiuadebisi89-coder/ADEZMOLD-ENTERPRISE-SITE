@@ -488,6 +488,42 @@ export interface PurchaseInvoiceDoc {
   postedBy: string;
 }
 
+/** A business expense (DECISION 24). On credit it also owes a purchase invoice. */
+export interface ExpenseLineDoc {
+  lineNo: number;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  description: string;
+  amountMinor: number;
+}
+
+export interface ExpenseDoc {
+  number: string;
+  mode: 'paid' | 'credit';
+  branchId: string;
+  expenseDate: string;
+  /** Who was paid or is owed: the supplier's name or the name typed in. */
+  payee: string;
+  supplierId: string | null;
+  paymentAccountId: string | null;
+  paymentAccountName: string | null;
+  /** On credit: the purchase invoice that holds what is owed. */
+  purchaseInvoiceId: string | null;
+  purchaseInvoiceNumber: string | null;
+  dueDate: string | null;
+  reference: string | null;
+  memo: string | null;
+  lines: ExpenseLineDoc[];
+  subtotalMinor: number;
+  inputTaxMinor: number;
+  totalMinor: number;
+  projectId: string | null;
+  journalId: string;
+  postedAt: Timestamp;
+  postedBy: string;
+}
+
 export interface PaymentAllocationDoc {
   invoiceId: string;
   invoiceNumber: string;
@@ -1082,6 +1118,8 @@ export function companyRefs(companyId: string) {
     supplierPayments: company.collection('supplierPayments'),
     supplierReturn: (id: string) => company.collection('supplierReturns').doc(id),
     supplierReturns: company.collection('supplierReturns'),
+    expense: (id: string) => company.collection('expenses').doc(id),
+    expenses: company.collection('expenses'),
     stockAvailability: (productId: string, locationId: string) =>
       company.collection('stockAvailability').doc(`${productId}__${locationId}`),
     taxCode: (id: string) => company.collection('taxCodes').doc(id),
