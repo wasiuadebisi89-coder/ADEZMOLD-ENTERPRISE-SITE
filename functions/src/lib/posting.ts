@@ -6,7 +6,12 @@
  * `preparePosting` reads and validates, then `writePosting` writes. Callers that read more
  * documents of their own do so before calling `preparePosting`.
  */
-import type { Timestamp, Transaction } from 'firebase-admin/firestore';
+import {
+  AggregateField,
+  type Query,
+  type Timestamp,
+  type Transaction,
+} from 'firebase-admin/firestore';
 import {
   LedgerError,
   MoneyError,
@@ -16,6 +21,8 @@ import {
   branchAllowed,
   businessDate,
   addDays,
+  formatMoney,
+  moneyOutflows,
   parseMoney,
   periodIdForDate,
   toStorable,
@@ -104,6 +111,8 @@ export interface PreparedPosting {
   seriesNext: number;
   seriesExists: boolean;
   approvalToUse: string | null;
+  /** Cash and bank accounts this journal pays out of; locked when the journal is written. */
+  moneyAccountIds: string[];
 }
 
 export async function preparePosting(
@@ -213,6 +222,8 @@ export async function preparePosting(
     }
   }
 
+  const moneyAccountIds = await assertEnoughMoney(tx, companyId, company, request, accounts);
+
   const seriesDoc = seriesSnap!.data() as NumberSeriesDoc | undefined;
   const next = seriesDoc?.next ?? 1;
   return {
@@ -225,7 +236,55 @@ export async function preparePosting(
     seriesNext: next,
     seriesExists: seriesDoc !== undefined,
     approvalToUse,
+    moneyAccountIds,
   };
+}
+
+/**
+ * Refuses a journal that would take a cash or bank account below zero (DECISION 23). The balance
+ * is checked both on the posting date and across every posting, so neither a backdated payment
+ * nor one made before a later-dated receipt can overdraw the account. Balances come from the
+ * ledger by aggregation (ADR-0004).
+ */
+async function assertEnoughMoney(
+  tx: Transaction,
+  companyId: string,
+  company: CompanyDoc,
+  request: PostingRequest,
+  accounts: Map<string, LedgerAccount & { hasPostings: boolean }>,
+): Promise<string[]> {
+  const outflows = moneyOutflows(request.lines, accounts, request.origin);
+  const entries = companyRefs(companyId).ledgerEntries;
+  const totals = { debit: AggregateField.sum('debit'), credit: AggregateField.sum('credit') };
+  const balanceOf = async (query: Query): Promise<bigint> => {
+    const data = (await tx.get(query.aggregate(totals))).data();
+    return BigInt(data.debit ?? 0) - BigInt(data.credit ?? 0);
+  };
+  for (const [accountId, amount] of outflows) {
+    const account = accounts.get(accountId)!;
+    const byAccount = entries.where('accountId', '==', accountId);
+    const onDate = await balanceOf(byAccount.where('postingDate', '<=', request.postingDate));
+    const overall = await balanceOf(byAccount);
+    const available = onDate < overall ? onDate : overall;
+    if (available < amount) {
+      const money = (v: bigint) => formatMoney(v, company.baseCurrency);
+      throw new CommandError(
+        'failed-precondition',
+        'insufficient_funds',
+        `Not enough money in ${account.code} ${account.name}. It holds ${money(
+          available < 0n ? 0n : available,
+        )}${onDate < overall ? ` on ${request.postingDate}` : ''} and this needs ${money(
+          amount,
+        )}. Record the money paid in first, or pay from another account.`,
+        {
+          accountId,
+          balance: available.toString(),
+          required: amount.toString(),
+        },
+      );
+    }
+  }
+  return [...outflows.keys()];
 }
 
 /** Writes the journal, its ledger entries, the number series and first-posting locks. */
@@ -300,7 +359,15 @@ export function writePosting(
   else tx.set(refs.numberSeries(series.id), nextSeries);
 
   for (const account of accounts.values()) {
-    if (!account.hasPostings) tx.update(refs.account(account.id), { hasPostings: true });
+    // Writing a cash or bank account we paid out of makes two payments from it at the same time
+    // conflict, so the second is retried and sees the first one's balance.
+    const paysOut = prepared.moneyAccountIds.includes(account.id);
+    if (!account.hasPostings || paysOut) {
+      tx.update(refs.account(account.id), {
+        hasPostings: true,
+        ...(paysOut ? { lastPaidOutAt: ctx.now } : {}),
+      });
+    }
   }
 
   // The first posting fixes the currency and the financial year start (ACCOUNTING_POLICIES §1).

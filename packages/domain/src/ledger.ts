@@ -277,3 +277,38 @@ export function trialBalance(inputs: readonly TrialBalanceInput[]): TrialBalance
   rows.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }));
   return { rows, totalDebit, totalCredit, balanced: totalDebit === totalCredit };
 }
+
+/** Subtypes that hold real money. Their balance may not fall below zero (DECISION 23). */
+export const MONEY_SUBTYPES: readonly AccountSubtype[] = ['cash', 'bank'];
+
+/**
+ * Origins that skip the money check: an opening balance may record an overdraft that already
+ * exists, a reversal undoes a journal that was allowed when it was posted, and the year-end
+ * close never touches balance sheet accounts.
+ */
+const ORIGINS_WITHOUT_MONEY_CHECK: readonly JournalOrigin[] = [
+  'opening_balance',
+  'reversal',
+  'closing',
+];
+
+/**
+ * The money each cash or bank account in a journal pays out, net of what the same journal pays
+ * into it. Only accounts that pay out are returned. The caller checks each against the account's
+ * balance before posting.
+ */
+export function moneyOutflows(
+  lines: readonly JournalLine[],
+  accounts: ReadonlyMap<string, Pick<LedgerAccount, 'subtype'>>,
+  origin: JournalOrigin,
+): Map<string, bigint> {
+  const out = new Map<string, bigint>();
+  if (ORIGINS_WITHOUT_MONEY_CHECK.includes(origin)) return out;
+  for (const line of lines) {
+    const account = accounts.get(line.accountId);
+    if (!account || !MONEY_SUBTYPES.includes(account.subtype)) continue;
+    out.set(line.accountId, (out.get(line.accountId) ?? 0n) + line.credit - line.debit);
+  }
+  for (const [id, amount] of out) if (amount <= 0n) out.delete(id);
+  return out;
+}

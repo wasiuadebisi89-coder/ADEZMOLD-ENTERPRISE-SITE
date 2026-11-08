@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { createCompany, resetEmulators, signUp } from './helpers';
+import { createCompany, fundMoneyAccounts, resetEmulators, signUp } from './helpers';
 
 test.beforeEach(async () => {
   await resetEmulators();
@@ -9,6 +9,7 @@ test.beforeEach(async () => {
 test('P1–P6 purchasing: supplier, receipt, matched invoice, payment, advance', async ({ page }) => {
   await signUp(page, 'Ada Owner', 'owner@example.test');
   const companyId = await createCompany(page);
+  await fundMoneyAccounts(companyId);
   const nav = page.getByRole('navigation', { name: 'Company' });
 
   // Supplier and product

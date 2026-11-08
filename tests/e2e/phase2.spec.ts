@@ -46,13 +46,18 @@ test('L1–L5 accountant workflow: chart, journal, reversal, opening balances, t
   await expect(page.getByTestId('total-credit')).toHaveText(/1,250\.50/);
   await page.getByRole('button', { name: 'Post journal' }).click();
 
+  // There is no money in cash yet, so paying out of it is refused with a clear message
+  await expect(page.getByText(/Not enough money in 1110 Cash on hand/)).toBeVisible();
+  await fillLine(page, 2, '3100 · Share capital', 'credit', '1,250.50');
+  await page.getByRole('button', { name: 'Post journal' }).click();
+
   await expect(page.getByRole('heading', { name: 'Journal JV-000001' })).toBeVisible();
   const lines = page.getByRole('table', { name: 'Journal lines' });
   await expect(lines.getByRole('row', { name: /6200 Rent/ })).toContainText('1,250.50');
 
   // Reverse it
   await page.getByRole('button', { name: 'Reverse' }).click();
-  await page.getByLabel('Reason').fill('Paid from the bank, not cash');
+  await page.getByLabel('Reason').fill('Paid by the company, not the owner');
   await page.getByRole('button', { name: 'Reverse journal' }).click();
   await expect(page.getByRole('heading', { name: 'Journal RV-000001' })).toBeVisible();
   await expect(page.getByText('This journal reverses')).toBeVisible();

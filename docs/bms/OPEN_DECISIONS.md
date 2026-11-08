@@ -27,6 +27,7 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
 | 20  | Project costs                       | **Confirmed:** expensed as incurred and tagged to the project; not held as work in progress                  | Phase 9                |
 | 21  | Production costing                  | **Confirmed:** actual cost; materials at the costing method when issued, plus direct costs charged           | Phase 9                |
 | 22  | Production losses                   | **Confirmed:** normal loss spread over good output; abnormal loss written off                                | Phase 9                |
+| 23  | Overdrawn cash and bank accounts    | **Default, to confirm:** blocked; a payment cannot take a cash or bank account below zero                    | Fix (2026-11-08)       |
 
 ## Confirmed decisions
 
@@ -82,3 +83,11 @@ Each has a proposed safe default. Phase 1 can proceed on the defaults; items mar
   - #22: expected (normal) loss is recorded and its cost carried by the good output.
     Loss beyond that (abnormal) takes its share of the order's cost per unit and is written
     off to an expense account chosen when the order is completed.
+- 2026-11-08: the owner reported that a supplier payment posted from a bank account with no money
+  in it. #23 now defaults to blocking: any journal that pays out of a Cash or Bank role account
+  (supplier payments, refunds, cash sales returns, expenses, asset purchases, production costs,
+  manual journals and transfers) is refused if the account's balance would fall below zero,
+  both on the posting date and after every later posting. Opening balances (an overdraft that
+  already exists), reversals and the year-end close are not checked. The owner has been asked
+  whether to allow an agreed overdraft on chosen bank accounts instead; until they decide, no
+  account may go overdrawn.

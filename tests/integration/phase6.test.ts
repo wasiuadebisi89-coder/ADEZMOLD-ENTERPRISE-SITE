@@ -11,6 +11,8 @@ import {
   expectReason,
   makeUser,
   resetEmulators,
+  fundMoneyAccounts,
+  TEST_FUNDING,
 } from './helpers.js';
 
 const TODAY = businessDate(new Date(), 'Africa/Lagos');
@@ -85,6 +87,8 @@ beforeEach(async () => {
   manager = await makeUser('manager@example.test');
   sales = await makeUser('sales@example.test');
   ({ companyId } = await createCompany(admin));
+  // Only cash: the bank reconciliation tests need the bank account to start empty.
+  await fundMoneyAccounts(companyId, ['cash']);
   await addMember(companyId, admin, store, ['store_officer']);
   await addMember(companyId, admin, accountant, ['accountant']);
   await addMember(companyId, admin, manager, ['manager']);
@@ -388,7 +392,7 @@ describe('R3 walk-in returns', () => {
       refundedMinor: 100_000,
       allocatedMinor: 0,
     });
-    expect(await accountBalance('cash')).toBe(0);
+    expect(await accountBalance('cash')).toBe(TEST_FUNDING);
     expect(await accountBalance('revenue')).toBe(0);
     expect(await accountBalance('customerAdvance')).toBe(0);
     expect(await stock(rice)).toEqual({ qty: 10_000, value: 600_000 });
@@ -525,7 +529,7 @@ describe('R5 approvals', () => {
       decidedBy: manager.uid,
     });
     expect((await doc(`customers/${shop}`)).advanceMinor).toBe(30_000);
-    expect(await accountBalance('cash')).toBe(30_000);
+    expect(await accountBalance('cash')).toBe(TEST_FUNDING + 30_000);
 
     // Someone who can approve but raised the refund themselves cannot approve it.
     const { roleId } = await call<{ roleId: string }>(

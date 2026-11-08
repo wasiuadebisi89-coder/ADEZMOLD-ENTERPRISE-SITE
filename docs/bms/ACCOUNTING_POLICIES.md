@@ -40,6 +40,10 @@ other frameworks.
 - Reversals are dated on or after the original, in an open period. Only manual and opening
   journals are reversed from the ledger; module postings are reversed through their source
   document. A reversal cannot itself be reversed (post a new journal instead).
+- Cash and Bank role accounts cannot go below zero (DECISION 23). A journal that pays out of
+  one is refused unless the account holds enough on the posting date and after every later
+  posting. The balance comes from the ledger at posting time. Opening balances, reversals and
+  the year-end close are not checked.
 
 ## 4. Inventory
 
