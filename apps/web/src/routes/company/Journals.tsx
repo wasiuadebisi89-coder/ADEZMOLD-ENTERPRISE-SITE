@@ -3,13 +3,13 @@ import { Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../../components/ui/button';
-import { Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
+import { Alert, Badge, Card, EmptyState, PageHeader, Spinner } from '../../components/ui/feedback';
 import { TBody, THead, Table, Td, Th, Tr } from '../../components/ui/table';
 import { useCompany } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useCollection } from '../../lib/firestore-hooks';
 import { ORIGIN_LABEL, money, type JournalRow } from '../../lib/ledger';
-import { formatDate } from '../../lib/utils';
+import { formatDate, loadErrorMessage } from '../../lib/utils';
 
 const PAGE = 100;
 
@@ -47,7 +47,12 @@ export default function Journals() {
           )
         }
       />
-      {journals.loading ? (
+      {/* A failed load must never look like an empty ledger. */}
+      {journals.error ? (
+        <Alert tone="error">
+          {loadErrorMessage(journals.error, 'Could not load journals. Try again.')}
+        </Alert>
+      ) : journals.loading ? (
         <Spinner />
       ) : journals.data.length === 0 ? (
         <EmptyState title="No journals yet" />

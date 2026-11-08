@@ -1,5 +1,5 @@
 import { collection, getAggregateFromServer, query, sum, where } from 'firebase/firestore';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isIsoDate, trialBalance, type TrialBalance as TB } from '@bms/domain';
 import { useToday } from '../../components/BackdateNotice';
 import { PrintButton, ReportPrintHeader, useReportPrint } from '../../components/ReportPrint';
@@ -67,11 +67,21 @@ export default function TrialBalance() {
     [companyId, accounts.data],
   );
 
+  const chartError = useMemo(
+    () =>
+      accounts.error
+        ? loadErrorMessage(accounts.error, 'Could not load the chart of accounts.')
+        : null,
+    [accounts.error],
+  );
+  const shownError = error ?? chartError;
+
   const report = useReportPrint(
     result ? { title: 'Trial balance', subtitle: `As at ${formatDate(result.asAt)}` } : null,
   );
 
-  const ready = !accounts.loading;
+  // A chart that failed to load would otherwise give an empty trial balance that looks real.
+  const ready = !accounts.loading && !accounts.error;
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
@@ -109,13 +119,13 @@ export default function TrialBalance() {
         </form>
       </Card>
       <ReportPrintHeader report={report} />
-      {error && (
+      {shownError && (
         <Alert tone="error" className="mb-4">
-          {error}
+          {shownError}
         </Alert>
       )}
       {!result ? (
-        <Spinner />
+        !shownError && <Spinner />
       ) : result.tb.rows.length === 0 ? (
         <EmptyState
           title="No balances"
