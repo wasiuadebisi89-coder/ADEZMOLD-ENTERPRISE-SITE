@@ -152,6 +152,81 @@ describe('L1 chart of accounts', () => {
       'missing_permission',
     );
   });
+
+  it('lets an accountant add accounts the chart does not have yet, with the same checks', async () => {
+    const accountant = await makeUser('accountant@example.test');
+    const manager = await makeUser('manager@example.test');
+    const seller = await makeUser('seller@example.test');
+    await addMember(companyId, admin, accountant, ['accountant']);
+    await addMember(companyId, admin, manager, ['manager']);
+    await addMember(companyId, admin, seller, ['sales_officer']);
+    const fuel = { companyId, code: '6250', name: 'Generator fuel', type: 'expense' };
+
+    for (const caller of [manager, seller]) {
+      await expectReason(call('account.create', fuel, caller), 'missing_permission');
+    }
+
+    const { accountId } = await call<{ accountId: string }>(
+      'account.create',
+      { ...fuel, parentId: ids['6000'] },
+      accountant,
+    );
+    const created = (await db.doc(`companies/${companyId}/accounts/${accountId}`).get()).data();
+    expect(created).toMatchObject({
+      code: '6250',
+      type: 'expense',
+      subtype: 'general',
+      parentId: ids['6000'],
+      isPostable: true,
+      isControl: false,
+      createdBy: accountant.uid,
+    });
+    await expectReason(call('account.create', fuel, accountant), 'code_taken');
+
+    // A new heading, then an account under it.
+    const { accountId: headingId } = await call<{ accountId: string }>(
+      'account.create',
+      { companyId, code: '6800', name: 'Generator costs', type: 'expense', isPostable: false },
+      accountant,
+    );
+    await call(
+      'account.create',
+      { ...fuel, code: '6810', name: 'Generator repairs', parentId: headingId },
+      accountant,
+    );
+
+    // A second receivables account is a control account: manual journals cannot touch it.
+    const { accountId: arId } = await call<{ accountId: string }>(
+      'account.create',
+      {
+        companyId,
+        code: '1210',
+        name: 'Staff receivables',
+        type: 'asset',
+        subtype: 'receivable',
+        parentId: ids['1000'],
+      },
+      accountant,
+    );
+    expect((await db.doc(`companies/${companyId}/accounts/${arId}`).get()).get('isControl')).toBe(
+      true,
+    );
+    await expectReason(
+      call(
+        'journal.post',
+        journal({ lines: [{ accountId: arId, debit: '10', credit: '' }, line('4100', '', '10')] }),
+        accountant,
+      ),
+      'control_account',
+    );
+
+    // The new expense account takes postings straight away.
+    await call(
+      'journal.post',
+      journal({ lines: [{ accountId, debit: '25', credit: '' }, line('3100', '', '25')] }),
+      accountant,
+    );
+  });
 });
 
 describe('L2 manual journals', () => {
