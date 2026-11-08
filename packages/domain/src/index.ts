@@ -9,3 +9,4 @@ export * from './sales.js';
 export * from './assets.js';
 export * from './reports.js';
 export * from './daybook.js';
+export * from './expenses.js';

@@ -140,6 +140,7 @@ describe('journalSourcePath', () => {
     expect(journalSourcePath('c', src('supplierPayment'))).toBe('/c/c/purchases/payments/d1');
     expect(journalSourcePath('c', src('stockAdjustment'))).toBe('/c/c/stock-adjustments/d1');
     expect(journalSourcePath('c', src('customerRefund'))).toBe('/c/c/sales/refunds/d1');
+    expect(journalSourcePath('c', src('expense'))).toBe('/c/c/expenses/d1');
   });
   it('falls back to the journal itself', () => {
     expect(journalSourcePath('c', { id: 'j1', source: null })).toBe('/c/c/journals/j1');

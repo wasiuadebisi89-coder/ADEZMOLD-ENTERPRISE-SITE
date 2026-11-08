@@ -1,5 +1,6 @@
 import { formatQuantity, formatRatePercent, toDecimalString } from '@bms/domain';
 import type { UnitCode } from '@bms/domain';
+import type { ExpenseRow } from './expenses';
 import type { InvoiceRow, PaymentRow, ReceiptRow } from './purchasing';
 import type { CustomerReceiptRow, SalesInvoiceRow } from './sales';
 
@@ -382,6 +383,38 @@ export function supplierPaymentReceipt(x: Omit<PaymentRow, 'id'>, h: ReceiptHead
   if (unused > 0) blocks.push({ kind: 'pair', left: 'Advance held', right: m(unused) });
   if (x.memo) blocks.push({ kind: 'blank' }, { kind: 'text', text: x.memo });
   if (onPaper(h))
+    blocks.push({ kind: 'blank' }, { kind: 'text', text: 'Received by: ____________' });
+  blocks.push(...footer(h, null));
+  return { blocks };
+}
+
+export function expenseVoucher(x: Omit<ExpenseRow, 'id'>, h: ReceiptHeader): Receipt {
+  const m = (v: number) => plainMoney(v, h.currency);
+  const paid = x.mode === 'paid';
+  const blocks: ReceiptBlock[] = [
+    ...header(h, 'EXPENSE VOUCHER'),
+    { kind: 'pair', left: 'No.', right: x.number },
+    { kind: 'pair', left: 'Date', right: formatIsoDate(x.expenseDate) },
+    { kind: 'pair', left: paid ? 'Paid to' : 'Owed to', right: x.payee },
+  ];
+  if (paid && x.paymentAccountName)
+    blocks.push({ kind: 'pair', left: 'Paid from', right: accountLabel(x.paymentAccountName) });
+  if (!paid && x.purchaseInvoiceNumber)
+    blocks.push({ kind: 'pair', left: 'Invoice', right: x.purchaseInvoiceNumber });
+  if (!paid && x.dueDate)
+    blocks.push({ kind: 'pair', left: 'Due', right: formatIsoDate(x.dueDate) });
+  if (x.reference) blocks.push({ kind: 'pair', left: 'Ref', right: x.reference });
+  blocks.push({ kind: 'rule' });
+  for (const l of x.lines)
+    blocks.push({ kind: 'pair', left: l.description, right: m(l.amountMinor) });
+  blocks.push({ kind: 'rule' });
+  if (x.inputTaxMinor > 0) {
+    blocks.push({ kind: 'pair', left: 'Subtotal', right: m(x.subtotalMinor) });
+    blocks.push({ kind: 'pair', left: 'Input tax', right: m(x.inputTaxMinor) });
+  }
+  blocks.push({ kind: 'pair', left: `TOTAL ${h.currency}`, right: m(x.totalMinor), bold: true });
+  if (x.memo) blocks.push({ kind: 'blank' }, { kind: 'text', text: x.memo });
+  if (onPaper(h) && paid)
     blocks.push({ kind: 'blank' }, { kind: 'text', text: 'Received by: ____________' });
   blocks.push(...footer(h, null));
   return { blocks };

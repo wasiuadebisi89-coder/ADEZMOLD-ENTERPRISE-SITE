@@ -725,6 +725,46 @@ export const updateBankAccountInput = scoped.extend({
   status: z.enum(['active', 'inactive']).optional(),
 });
 
+// --- Expenses (DECISION 24) ------------------------------------------------------------------
+
+/**
+ * A business expense recorded without a journal: office supplies, services, repairs and
+ * replacements. Each line is charged to an expense account. Paid now, it comes out of a cash or
+ * bank account; on credit, it is owed to a supplier as a purchase invoice.
+ */
+export const postExpenseInput = scoped
+  .extend({
+    branchId: docId,
+    expenseDate: isoDate,
+    lines: documentLines(z.object({ accountId: docId, description: trimmed(2, 200), amount })),
+    /** Recoverable input tax shown on the receipt or invoice, if any. Not computed. */
+    inputTax: amount.optional(),
+    /** The receipt or supplier invoice number. */
+    reference: optionalText(60),
+    memo: optionalText(300),
+    payment: z.discriminatedUnion('mode', [
+      z.object({
+        mode: z.literal('paid'),
+        paymentAccountId: docId,
+        /** Who was paid: a supplier on file, or a name typed in. */
+        supplierId: docId.optional(),
+        payee: optionalText(120),
+      }),
+      z.object({
+        mode: z.literal('credit'),
+        supplierId: docId,
+        dueDate: isoDate.optional(),
+      }),
+    ]),
+    backdateApprovalId: docId.optional(),
+    projectId: docId.optional(),
+  })
+  .refine((v) => v.payment.mode === 'credit' || !!v.payment.supplierId || !!v.payment.payee, {
+    message: 'Enter who was paid',
+    path: ['payment', 'payee'],
+  });
+export type PostExpenseInput = z.infer<typeof postExpenseInput>;
+
 // --- Fixed assets (Phase 7) -----------------------------------------------------------------
 
 export const month = periodId;
@@ -947,6 +987,7 @@ export const COMMAND_SCHEMAS = {
   'supplierPayment.post': postSupplierPaymentInput,
   'supplierPayment.allocate': allocateSupplierPaymentInput,
   'supplierReturn.post': postSupplierReturnInput,
+  'expense.post': postExpenseInput,
   'taxCode.create': createTaxCodeInput,
   'taxCode.update': updateTaxCodeInput,
   'customer.create': createCustomerInput,

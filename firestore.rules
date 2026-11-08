@@ -196,6 +196,11 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      match /expenses/{expenseId} {
+        allow read: if can(companyId, 'purchasing.read');
+        allow write: if false;
+      }
+
       match /supplierReturns/{returnId} {
         allow read: if can(companyId, 'purchasing.read');
         allow write: if false;

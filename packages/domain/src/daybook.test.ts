@@ -42,6 +42,9 @@ describe('voucherType', () => {
       }),
     ).toBe('stockAdjustment');
     expect(
+      voucherType({ origin: 'system', source: { type: 'expense', id: 'a', number: 'EXP-1' } }),
+    ).toBe('expense');
+    expect(
       voucherType({ origin: 'system', source: { type: 'somethingNew', id: 'a', number: 'X' } }),
     ).toBe('other');
   });

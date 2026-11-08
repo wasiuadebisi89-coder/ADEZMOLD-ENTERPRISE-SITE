@@ -158,6 +158,12 @@ built yet (KNOWN_LIMITATIONS.md).
                                      paymentAccountId, amountMinor, allocatedMinor,
                                      allocations[{invoiceId, invoiceNumber, amountMinor,
                                      journalId, allocatedAt}], journalId
+  expenses/{id}                      ★ number EXP-…, mode (paid|credit), branchId, expenseDate,
+                                     payee, supplierId?, paymentAccountId?, purchaseInvoiceId?
+                                     (on credit), dueDate?, reference, memo, lines[{lineNo,
+                                     accountId, accountCode, accountName, description,
+                                     amountMinor}], subtotalMinor, inputTaxMinor, totalMinor,
+                                     projectId, journalId
   supplierReturns/{id}               ★ number SR-…, supplierId, locationId, branchId,
                                      postingDate, reason, lines[{goodsReceiptId, lineNo,
                                      invoiceId?, productId, qtyMilli, costMinor,

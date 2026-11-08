@@ -104,6 +104,7 @@ beforeEach(async () => {
       await setDoc(doc(db, `companies/${companyId}/purchaseInvoices/i1`), { number: 'PI-000001' });
       await setDoc(doc(db, `companies/${companyId}/supplierPayments/sp1`), { number: 'SP-000001' });
       await setDoc(doc(db, `companies/${companyId}/supplierReturns/sr1`), { number: 'SR-000001' });
+      await setDoc(doc(db, `companies/${companyId}/expenses/ex1`), { number: 'EXP-000001' });
       await setDoc(doc(db, `companies/${companyId}/supplierInvoiceKeys/k1`), { invoiceId: 'i1' });
       await setDoc(doc(db, `companies/${companyId}/stockAvailability/p1__HQ-store`), {
         productId: 'p1',
@@ -225,6 +226,7 @@ const COMPANY_PATHS = [
   'companies/A/purchaseInvoices/i1',
   'companies/A/supplierPayments/sp1',
   'companies/A/supplierReturns/sr1',
+  'companies/A/expenses/ex1',
   'companies/A/stockAvailability/p1__HQ-store',
   'companies/A/taxCodes/t1',
   'companies/A/customers/c1',
@@ -290,6 +292,8 @@ describe('C3 no client writes to company data', () => {
     ['companies/A/purchaseInvoices/i1', { paidMinor: 999 }],
     ['companies/A/supplierPayments/sp2', { amountMinor: 1 }],
     ['companies/A/supplierReturns/sr2', { creditMinor: 1 }],
+    ['companies/A/expenses/ex1', { totalMinor: 1 }],
+    ['companies/A/expenses/ex2', { number: 'EXP-000002' }],
     ['companies/A/supplierInvoiceKeys/k2', { invoiceId: 'x' }],
     ['companies/A/stockAvailability/p1__HQ-store', { qtyMilli: 999999 }],
     ['companies/A/taxCodes/t2', { code: 'X', rateBp: 0 }],
@@ -382,6 +386,7 @@ describe('purchasing records (Phase 4)', () => {
     'companies/A/purchaseInvoices/i1',
     'companies/A/supplierPayments/sp1',
     'companies/A/supplierReturns/sr1',
+    'companies/A/expenses/ex1',
   ];
   it('need purchasing read access: auditors yes, sales officers no', async () => {
     for (const path of paths) {

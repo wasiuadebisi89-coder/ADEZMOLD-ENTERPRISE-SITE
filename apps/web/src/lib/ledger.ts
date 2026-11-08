@@ -241,6 +241,8 @@ export function journalSourcePath(companyId: string, j: Pick<JournalRow, 'id' | 
       return `${base}/production/${s.id}`;
     case 'fixedAsset':
       return `${base}/fixed-assets/${s.id}`;
+    case 'expense':
+      return `${base}/expenses/${s.id}`;
     default:
       return `${base}/journals/${j.id}`;
   }
