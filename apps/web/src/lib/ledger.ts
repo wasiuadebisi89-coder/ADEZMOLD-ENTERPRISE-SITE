@@ -213,3 +213,35 @@ export function useMyBackdateApprovals(companyId: string, uid: string | undefine
     `backdate-approvals-${companyId}-${uid}`,
   );
 }
+
+/** Where the document behind a journal lives in the app; the journal itself when it has none. */
+export function journalSourcePath(companyId: string, j: Pick<JournalRow, 'id' | 'source'>): string {
+  const base = `/c/${companyId}`;
+  const s = j.source;
+  switch (s?.type) {
+    case 'salesInvoice':
+      return `${base}/sales/invoices/${s.id}`;
+    case 'customerReceipt':
+      return `${base}/sales/receipts/${s.id}`;
+    case 'creditNote':
+      return `${base}/sales/returns/${s.id}`;
+    case 'customerRefund':
+      return `${base}/sales/refunds/${s.id}`;
+    case 'goodsReceipt':
+      return `${base}/purchases/receipts/${s.id}`;
+    case 'purchaseInvoice':
+      return `${base}/purchases/invoices/${s.id}`;
+    case 'supplierPayment':
+      return `${base}/purchases/payments/${s.id}`;
+    case 'supplierReturn':
+      return `${base}/purchases/returns/${s.id}`;
+    case 'stockAdjustment':
+      return `${base}/stock-adjustments/${s.id}`;
+    case 'productionOrder':
+      return `${base}/production/${s.id}`;
+    case 'fixedAsset':
+      return `${base}/fixed-assets/${s.id}`;
+    default:
+      return `${base}/journals/${j.id}`;
+  }
+}

@@ -33,6 +33,7 @@ const NewJournal = lazy(() => import('./routes/company/NewJournal'));
 const JournalDetail = lazy(() => import('./routes/company/JournalDetail'));
 const OpeningBalances = lazy(() => import('./routes/company/OpeningBalances'));
 const TrialBalance = lazy(() => import('./routes/company/TrialBalance'));
+const DayBook = lazy(() => import('./routes/company/DayBook'));
 const Approvals = lazy(() => import('./routes/company/Approvals'));
 const Products = lazy(() => import('./routes/company/Products'));
 const ProductDetail = lazy(() => import('./routes/company/ProductDetail'));
@@ -163,6 +164,7 @@ const router = createBrowserRouter([
       { path: 'journals/:journalId', element: <JournalDetail /> },
       { path: 'opening-balances', element: <OpeningBalances /> },
       { path: 'trial-balance', element: <TrialBalance /> },
+      { path: 'day-book', element: <DayBook /> },
       { path: 'approvals', element: <Approvals /> },
       { path: 'products', element: <Products /> },
       { path: 'products/:productId', element: <ProductDetail /> },
