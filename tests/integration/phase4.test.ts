@@ -10,6 +10,8 @@ import {
   expectReason,
   makeUser,
   resetEmulators,
+  fundMoneyAccounts,
+  TEST_FUNDING,
 } from './helpers.js';
 
 const TODAY = businessDate(new Date(), 'Africa/Lagos');
@@ -118,6 +120,7 @@ beforeEach(async () => {
   manager = await makeUser('manager@example.test');
   sales = await makeUser('sales@example.test');
   ({ companyId } = await createCompany(admin));
+  await fundMoneyAccounts(companyId);
   await addMember(companyId, admin, store, ['store_officer']);
   await addMember(companyId, admin, accountant, ['accountant']);
   await addMember(companyId, admin, manager, ['manager']);
@@ -340,6 +343,53 @@ describe('P4 expenses, input tax and landed costs', () => {
 });
 
 describe('P5 payments', () => {
+  it('refuses to pay a supplier from a bank account with no money in it', async () => {
+    const main = await accountId('bank');
+    const { accountId: empty } = await call<{ accountId: string }>(
+      'bankAccount.create',
+      {
+        companyId,
+        ledger: { mode: 'new', code: '1125', name: 'GTBank 6789', parentId: null },
+        bankName: 'GTBank',
+        accountName: 'Adezmold Trading Ltd',
+        accountNumber: '0123456789',
+      },
+      admin,
+    );
+    const payment = (amount: string) =>
+      call(
+        'supplierPayment.post',
+        {
+          companyId,
+          supplierId: mills,
+          branchId: 'HQ',
+          postingDate: TODAY,
+          paymentAccountId: empty,
+          amount,
+        },
+        accountant,
+      );
+    await expectReason(payment('3000'), 'insufficient_funds');
+    expect((await doc(`suppliers/${mills}`)).advanceMinor ?? 0).toBe(0);
+    // Once money is moved in, the same payment goes through.
+    await call(
+      'journal.post',
+      {
+        companyId,
+        branchId: 'HQ',
+        postingDate: TODAY,
+        memo: 'Transfer from the main account',
+        lines: [
+          { accountId: empty, debit: '3000', credit: '' },
+          { accountId: main, debit: '', credit: '3000' },
+        ],
+      },
+      admin,
+    );
+    await payment('3000');
+    await expectReason(payment('0.01'), 'insufficient_funds');
+  });
+
   it('settle invoices, keep the rest as an advance, and apply it later', async () => {
     const bank = await accountId('bank');
     const r = await receive(mills, [{ productId: rice, quantity: '2', unitCost: '1000' }]);
@@ -397,7 +447,7 @@ describe('P5 payments', () => {
       accountant,
     );
     expect(pay.number).toBe('SP-000001');
-    expect(await accountBalance('bank')).toBe(-300_000);
+    expect(await accountBalance('bank')).toBe(TEST_FUNDING - 300_000);
     expect(await accountBalance('payable')).toBe(-50_000);
     expect(await accountBalance('supplierAdvance')).toBe(150_000);
     expect(await doc(`suppliers/${mills}`)).toMatchObject({
@@ -569,7 +619,7 @@ describe('P7 opening balances and branch scope', () => {
       accountant,
     );
     expect(await accountBalance('payable')).toBe(-12_500_000);
-    expect(await accountBalance('openingBalanceEquity')).toBe(12_500_000);
+    expect(await accountBalance('openingBalanceEquity')).toBe(12_500_000 - 2 * TEST_FUNDING);
     expect((await doc(`suppliers/${mills}`)).balanceMinor).toBe(12_500_000);
   });
 

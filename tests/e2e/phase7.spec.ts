@@ -1,7 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { addDays, addMonths, businessDate } from '@bms/domain';
-import { approveCompany, createCompany, resetEmulators, signUp } from './helpers';
+import {
+  approveCompany,
+  createCompany,
+  fundMoneyAccounts,
+  resetEmulators,
+  signUp,
+} from './helpers';
 import { newCustomer, stockedRice } from './sales-helpers';
 
 const TODAY = businessDate(new Date(), 'Africa/Lagos');
@@ -29,6 +35,7 @@ async function companyForPastMonths(page: Page) {
   await expect(page.getByRole('heading', { name: 'Waiting for approval' })).toBeVisible();
   const companyId = page.url().split('/c/')[1]!.split('/')[0]!;
   await approveCompany(companyId);
+  await fundMoneyAccounts(companyId);
   await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
   await page.goto(`/c/${companyId}/settings`);
   await page.getByLabel('Backdating window (days)').fill('366');
@@ -80,7 +87,8 @@ test('F1 a fixed asset is bought, depreciated and disposed of, and the books sti
   await expect(page.getByTestId('pl-net')).toHaveText(/6,000\.00/);
   await page.getByRole('tab', { name: 'Balance sheet' }).click();
   await expect(page.getByText('Balanced')).toBeVisible();
-  await expect(page.getByTestId('bs-assets')).toHaveText(/^-.*6,000\.00$/);
+  // Cash and bank were each given 10,000,000 to pay from; the van cost 120,000 of it.
+  await expect(page.getByTestId('bs-assets')).toHaveText(/^₦19,994,000\.00$/);
   await noA11yViolations(page);
 
   await nav(page, 'Fixed assets');

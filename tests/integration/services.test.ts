@@ -10,6 +10,7 @@ import {
   expectReason,
   makeUser,
   resetEmulators,
+  fundMoneyAccounts,
 } from './helpers.js';
 
 const TODAY = businessDate(new Date(), 'Africa/Lagos');
@@ -57,6 +58,7 @@ beforeEach(async () => {
   accountant = await makeUser('accounts@example.test');
   sales = await makeUser('sales@example.test');
   ({ companyId } = await createCompany(admin));
+  await fundMoneyAccounts(companyId);
   await addMember(companyId, admin, manager, ['manager']);
   await addMember(companyId, admin, accountant, ['accountant']);
   await addMember(companyId, admin, sales, ['sales_officer']);

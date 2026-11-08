@@ -11,6 +11,8 @@ import {
   expectReason,
   makeUser,
   resetEmulators,
+  fundMoneyAccounts,
+  TEST_FUNDING,
 } from './helpers.js';
 
 const TODAY = businessDate(new Date(), 'Africa/Lagos');
@@ -43,6 +45,7 @@ beforeEach(async () => {
   accountant = await makeUser('accounts@example.test');
   sales = await makeUser('sales@example.test');
   ({ companyId } = await createCompany(admin, { fiscalYearStartMonth: FY_START_MONTH }));
+  await fundMoneyAccounts(companyId);
   await addMember(companyId, admin, accountant, ['accountant']);
   await addMember(companyId, admin, sales, ['sales_officer']);
   // Depreciation is posted on past month ends; widen the window so no approval is needed.
@@ -186,7 +189,7 @@ describe('fixed asset register and depreciation', () => {
     );
     expect(await balance('1510')).toBe(20_000_000);
     expect(await balance('1590')).toBe(-5_000_000);
-    expect(await balance('3300')).toBe(-15_000_000);
+    expect(await balance('3300')).toBe(-15_000_000 - 2 * TEST_FUNDING);
     const asset = await doc(`fixedAssets/${shop.assetId}`);
     expect(asset).toMatchObject({ firstMonth: month(-1), chargedMonths: 10, baseMonths: 10 });
     // The rest, 150,000 over 30 months, is 5,000 a month from the month after the as-at date.
@@ -244,7 +247,7 @@ describe('disposal', () => {
     expect(await balance('1590')).toBe(0);
     expect(await balance('6600')).toBe(1_000_000);
     expect(await balance('4900')).toBe(-200_000);
-    expect(await balance('1110')).toBe(4_200_000);
+    expect(await balance('1110')).toBe(TEST_FUNDING + 4_200_000);
     const asset = await doc(`fixedAssets/${pc.assetId}`);
     expect(asset.status).toBe('disposed');
     expect(asset.disposal).toMatchObject({ gainMinor: 200_000, proceedsMinor: 4_200_000 });

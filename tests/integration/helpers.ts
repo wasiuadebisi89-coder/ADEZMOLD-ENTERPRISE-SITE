@@ -117,3 +117,58 @@ export async function addMember(
 export async function auditCount(companyId: string): Promise<number> {
   return (await db.collection(`companies/${companyId}/auditLogs`).count().get()).data().count;
 }
+
+/** The amount `fundMoneyAccounts` puts into each cash and bank account: 10 million, in kobo. */
+export const TEST_FUNDING = 1_000_000_000;
+
+/**
+ * Gives every cash and bank account money to pay out of, so tests about other rules are not
+ * stopped by the no-overdraft check (DECISION 23). Writes a balanced pair of ledger entries per
+ * account against opening balance equity, dated long before any test posting. Tests that check a
+ * cash or bank balance subtract TEST_FUNDING.
+ */
+export async function fundMoneyAccounts(
+  companyId: string,
+  subtypes: readonly ('cash' | 'bank')[] = ['cash', 'bank'],
+): Promise<void> {
+  const accounts = await db
+    .collection(`companies/${companyId}/accounts`)
+    .where('subtype', 'in', [...subtypes, 'openingBalanceEquity'])
+    .get();
+  const equity = accounts.docs.find((d) => d.get('subtype') === 'openingBalanceEquity');
+  if (!equity) throw new Error('No opening balance equity account');
+  const batch = db.batch();
+  const entries = db.collection(`companies/${companyId}/ledgerEntries`);
+  const base = {
+    journalId: 'test-funding',
+    journalNumber: 'TEST',
+    postingDate: '2000-01-01',
+    periodId: '2000-01',
+    branchId: 'HQ',
+    projectId: null,
+    origin: 'opening_balance',
+    memo: 'Test funding',
+    postedAt: new Date(0),
+  };
+  accounts.docs
+    .filter((d) => d !== equity)
+    .forEach((d, i) => {
+      batch.set(entries.doc(`test-funding_${2 * i + 1}`), {
+        ...base,
+        lineNo: 2 * i + 1,
+        accountId: d.id,
+        debit: TEST_FUNDING,
+        credit: 0,
+      });
+      batch.set(entries.doc(`test-funding_${2 * i + 2}`), {
+        ...base,
+        lineNo: 2 * i + 2,
+        accountId: equity.id,
+        debit: 0,
+        credit: TEST_FUNDING,
+      });
+    });
+  // Reports only read accounts that have postings.
+  accounts.docs.forEach((d) => batch.update(d.ref, { hasPostings: true }));
+  await batch.commit();
+}

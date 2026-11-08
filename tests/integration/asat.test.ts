@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { addDays, businessDate, openItemsAsAt } from '@bms/domain';
 import type { Caller } from '../../functions/src/lib/command.js';
-import { addMember, call, createCompany, db, makeUser, resetEmulators } from './helpers.js';
+import {
+  addMember,
+  call,
+  createCompany,
+  db,
+  makeUser,
+  resetEmulators,
+  fundMoneyAccounts,
+} from './helpers.js';
 
 const TODAY = businessDate(new Date(), 'Africa/Lagos');
 const FY_START_MONTH = Number(addDays(TODAY, -100).slice(5, 7));
@@ -27,6 +35,7 @@ beforeEach(async () => {
   admin = await makeUser('owner@example.test');
   accountant = await makeUser('accounts@example.test');
   ({ companyId } = await createCompany(admin, { fiscalYearStartMonth: FY_START_MONTH }));
+  await fundMoneyAccounts(companyId);
   await addMember(companyId, admin, accountant, ['accountant']);
   await call('company.updateSettings', { companyId, backdateWindowDays: 366 }, admin);
   const snap = await db.collection(`${base()}/accounts`).get();

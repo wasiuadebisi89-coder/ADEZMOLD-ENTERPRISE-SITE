@@ -10,6 +10,8 @@ import {
   expectReason,
   makeUser,
   resetEmulators,
+  fundMoneyAccounts,
+  TEST_FUNDING,
 } from './helpers.js';
 
 const TODAY = businessDate(new Date(), 'Africa/Lagos');
@@ -81,6 +83,7 @@ beforeEach(async () => {
   accountant = await makeUser('accounts@example.test');
   sales = await makeUser('sales@example.test');
   ({ companyId } = await createCompany(admin));
+  await fundMoneyAccounts(companyId);
   await addMember(companyId, admin, manager, ['manager']);
   await addMember(companyId, admin, store, ['store_officer']);
   await addMember(companyId, admin, accountant, ['accountant']);
@@ -172,7 +175,7 @@ describe('P2 production orders', () => {
     // A direct cost: Dr WIP, Cr the account chosen.
     await addCost(orderId, '1110', '1000');
     expect(await balance('1320')).toBe(700_000);
-    expect(await balance('1110')).toBe(-100_000);
+    expect(await balance('1110')).toBe(TEST_FUNDING - 100_000);
     expect((await doc(`productionOrders/${orderId}`)).wipMinor).toBe(700_000);
 
     // Normal loss is absorbed by the good output; abnormal loss takes its share and is

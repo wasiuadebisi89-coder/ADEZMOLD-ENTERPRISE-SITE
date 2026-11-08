@@ -34,8 +34,8 @@ function journal(overrides: Record<string, unknown> = {}) {
     companyId,
     branchId: 'HQ',
     postingDate: TODAY,
-    memo: 'Owner paid rent from cash',
-    lines: [line('6200', '1,250.50'), line('1110', '', '1250.50')],
+    memo: 'Owner paid the rent personally',
+    lines: [line('6200', '1,250.50'), line('3100', '', '1250.50')],
     ...overrides,
   };
 }
@@ -534,10 +534,14 @@ describe('L5 opening balances', () => {
 
 describe('L6 ledger invariants', () => {
   it('every journal balances and the trial balance agrees with the journals', async () => {
-    await call('journal.post', journal(), admin);
     await call(
       'journal.post',
       journal({ lines: [line('1110', '5000'), line('4100', '', '5000')] }),
+      admin,
+    );
+    await call(
+      'journal.post',
+      journal({ lines: [line('6200', '1,250.50'), line('1110', '', '1250.50')] }),
       admin,
     );
     await call(
@@ -558,5 +562,52 @@ describe('L6 ledger invariants', () => {
     expect(tb.balanced).toBe(true);
     expect(tb.rows.find((r) => r.code === '1110')).toMatchObject({ debit: 500000n - 125050n });
     expect(tb.rows.find((r) => r.code === '4100')).toMatchObject({ credit: 500000n });
+  });
+});
+
+describe('L7 cash and bank cannot go below zero', () => {
+  const pay = (amount: string, overrides: Record<string, unknown> = {}) =>
+    journal({ lines: [line('6200', amount), line('1120', '', amount)], ...overrides });
+  const deposit = (amount: string, overrides: Record<string, unknown> = {}) =>
+    journal({ lines: [line('1120', amount), line('3100', '', amount)], ...overrides });
+
+  it('refuses a payment from an account with no money in it', async () => {
+    const before = await count(`companies/${companyId}/journals`);
+    await expectReason(call('journal.post', pay('100'), admin), 'insufficient_funds');
+    expect(await count(`companies/${companyId}/journals`)).toBe(before);
+  });
+
+  it('allows paying out up to the balance and no more', async () => {
+    await call('journal.post', deposit('500'), admin);
+    await call('journal.post', pay('300'), admin);
+    await expectReason(call('journal.post', pay('200.01'), admin), 'insufficient_funds');
+    await call('journal.post', pay('200'), admin);
+    const tb = await balances(companyId);
+    expect(tb.rows.find((r) => r.code === '1120')).toBeUndefined();
+  });
+
+  it('refuses a backdated payment dated before the money came in', async () => {
+    await call('journal.post', deposit('500'), admin);
+    await expectReason(
+      call('journal.post', pay('100', { postingDate: addDays(TODAY, -1) }), admin),
+      'insufficient_funds',
+    );
+  });
+
+  it('allows transfers in, opening overdrafts and reversals', async () => {
+    await call(
+      'openingBalance.post',
+      { companyId, branchId: 'HQ', asAtDate: TODAY, lines: [line('1120', '', '50')] },
+      admin,
+    );
+    const { journalId } = await call<{ journalId: string }>('journal.post', deposit('80'), admin);
+    await call('journal.post', pay('30'), admin);
+    await call(
+      'journal.reverse',
+      { companyId, journalId, postingDate: TODAY, reason: 'Entered twice' },
+      admin,
+    );
+    const tb = await balances(companyId);
+    expect(tb.rows.find((r) => r.code === '1120')).toMatchObject({ credit: 8000n });
   });
 });

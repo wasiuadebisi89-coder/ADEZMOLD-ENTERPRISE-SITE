@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { createCompany, resetEmulators, signUp } from './helpers';
+import { createCompany, fundMoneyAccounts, resetEmulators, signUp } from './helpers';
 import { newCustomer, stockedRice } from './sales-helpers';
 
 test.beforeEach(async () => {
@@ -77,6 +77,7 @@ test('S1 a service is quoted, invoiced from the quote and shows in its project',
 test('P1 materials and labour become finished goods at actual cost', async ({ page }) => {
   await signUp(page, 'Ada Owner', 'owner@example.test');
   const companyId = await createCompany(page);
+  await fundMoneyAccounts(companyId);
   await stockedRice(page, companyId);
 
   await page.goto(`/c/${companyId}/products`);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CHART_TEMPLATES, TRADING_TEMPLATE } from './chart.js';
 import {
+  moneyOutflows,
   ACCOUNT_CODE,
   LedgerError,
   assertValidJournal,
@@ -257,5 +258,45 @@ describe('trading chart template', () => {
   it('marks the subledger accounts as control accounts', () => {
     const control = TRADING_TEMPLATE.accounts.filter((x) => isControlSubtype(x.subtype));
     expect(control.map((x) => x.code).sort()).toEqual(['1200', '1300', '1320', '2100', '2150']);
+  });
+});
+
+describe('moneyOutflows', () => {
+  const accounts = new Map([
+    ['bank', { subtype: 'bank' as const }],
+    ['cash', { subtype: 'cash' as const }],
+    ['payable', { subtype: 'payable' as const }],
+    ['expense', { subtype: 'general' as const }],
+  ]);
+  const line = (accountId: string, debit: bigint, credit: bigint) => ({ accountId, debit, credit });
+
+  it('returns what each cash or bank account pays out', () => {
+    const out = moneyOutflows(
+      [line('payable', 5000n, 0n), line('bank', 0n, 3000n), line('cash', 0n, 2000n)],
+      accounts,
+      'system',
+    );
+    expect(out).toEqual(
+      new Map([
+        ['bank', 3000n],
+        ['cash', 2000n],
+      ]),
+    );
+  });
+
+  it('nets money in and out of the same account and skips receipts and transfers in', () => {
+    const out = moneyOutflows(
+      [line('bank', 0n, 1000n), line('bank', 400n, 0n), line('cash', 600n, 0n)],
+      accounts,
+      'manual',
+    );
+    expect(out).toEqual(new Map([['bank', 600n]]));
+  });
+
+  it('skips opening balances, reversals and the year-end close', () => {
+    const lines = [line('expense', 100n, 0n), line('bank', 0n, 100n)];
+    for (const origin of ['opening_balance', 'reversal', 'closing'] as const) {
+      expect(moneyOutflows(lines, accounts, origin).size).toBe(0);
+    }
   });
 });

@@ -170,6 +170,8 @@ export interface AccountDoc {
   template: { id: string; version: number } | null;
   /** Set on Bank accounts registered as company bank accounts (bankAccount.create). */
   bank?: BankDetails | null;
+  /** Set when a journal pays out of this cash or bank account; serialises balance checks. */
+  lastPaidOutAt?: Timestamp;
   createdAt: Timestamp;
   createdBy: string;
   updatedAt: Timestamp;
