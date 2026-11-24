@@ -173,21 +173,33 @@ function ProductDialog({
   );
 }
 
-function CategoryDialog({ onClose }: { onClose: () => void }) {
+function CategoryDialog({
+  category,
+  onClose,
+}: {
+  category: CategoryRow | null;
+  onClose: () => void;
+}) {
   const { companyId } = useCompany();
   const action = useAction();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(category?.name ?? '');
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await action.run('category.create', { companyId, name });
+      if (category)
+        await action.run('category.update', { companyId, categoryId: category.id, name });
+      else await action.run('category.create', { companyId, name });
       onClose();
     } catch {
       /* shown below */
     }
   };
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title="New category">
+    <Dialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title={category ? `Rename ${category.name}` : 'New category'}
+    >
       <form onSubmit={submit} className="space-y-4" noValidate>
         {action.error && <Alert tone="error">{action.error.message}</Alert>}
         <Field label="Name" error={action.error?.fields.name}>
@@ -202,6 +214,81 @@ function CategoryDialog({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
       </form>
+    </Dialog>
+  );
+}
+
+/** Lists categories with rename and deactivate; a deactivated one is hidden from new products. */
+function CategoriesDialog({
+  categories,
+  onClose,
+}: {
+  categories: CategoryRow[];
+  onClose: () => void;
+}) {
+  const { companyId } = useCompany();
+  const toggle = useAction();
+  const [editing, setEditing] = useState<CategoryRow | 'new' | null>(null);
+  const sorted = [...categories].sort((a, b) => a.name.localeCompare(b.name));
+  if (editing)
+    return (
+      <CategoryDialog
+        category={editing === 'new' ? null : editing}
+        onClose={() => setEditing(null)}
+      />
+    );
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()} title="Categories">
+      <div className="space-y-4">
+        {toggle.error && <Alert tone="error">{toggle.error.message}</Alert>}
+        {sorted.length === 0 ? (
+          <p className="text-sm text-slate-500">No categories yet.</p>
+        ) : (
+          <ul className="divide-y rounded-md border">
+            {sorted.map((c) => (
+              <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                <span className={c.status === 'active' ? '' : 'text-slate-400 line-through'}>
+                  {c.name}
+                </span>
+                <span className="flex shrink-0 gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={`Rename ${c.name}`}
+                    onClick={() => setEditing(c)}
+                  >
+                    Rename
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={`${c.status === 'active' ? 'Deactivate' : 'Activate'} ${c.name}`}
+                    onClick={() =>
+                      void toggle
+                        .run('category.update', {
+                          companyId,
+                          categoryId: c.id,
+                          status: c.status === 'active' ? 'inactive' : 'active',
+                        })
+                        .catch(() => undefined)
+                    }
+                  >
+                    {c.status === 'active' ? 'Deactivate' : 'Activate'}
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" type="button" onClick={onClose}>
+            Close
+          </Button>
+          <Button type="button" onClick={() => setEditing('new')}>
+            <Plus className="size-4" aria-hidden /> New category
+          </Button>
+        </div>
+      </div>
     </Dialog>
   );
 }
@@ -242,7 +329,7 @@ export default function Products() {
           canManage && (
             <>
               <Button variant="secondary" onClick={() => setAddingCategory(true)}>
-                New category
+                Categories
               </Button>
               <Button onClick={() => setEditing('new')}>
                 <Plus className="size-4" aria-hidden /> New product
@@ -360,7 +447,9 @@ export default function Products() {
           onClose={() => setEditing(null)}
         />
       )}
-      {addingCategory && <CategoryDialog onClose={() => setAddingCategory(false)} />}
+      {addingCategory && (
+        <CategoriesDialog categories={categories.data} onClose={() => setAddingCategory(false)} />
+      )}
     </>
   );
 }
