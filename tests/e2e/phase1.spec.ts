@@ -33,9 +33,10 @@ test('A1/B1/D1/D3/F2 owner sets up a company and a colleague joins with limited 
   // Branch
   await page.getByRole('link', { name: 'Branches' }).click();
   await page.getByRole('button', { name: 'New branch' }).click();
-  await page.getByLabel('Code').fill('LAG');
-  await page.getByLabel('Name').fill('Lagos Island');
-  await page.getByRole('button', { name: 'Save' }).click();
+  const branchDialog = page.getByRole('dialog', { name: 'New branch' });
+  await branchDialog.getByLabel('Code').fill('LAG');
+  await branchDialog.getByLabel('Name').fill('Lagos Island');
+  await branchDialog.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('cell', { name: 'LAG', exact: true })).toBeVisible();
 
   // Close the first period of the year
