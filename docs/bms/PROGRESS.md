@@ -455,3 +455,14 @@ enforced (reCAPTCHA Enterprise).
 
 The trial balance on the new company loads, and the owner confirmed the backup schedule is enabled
 (18:24 UTC). Open: send auth emails from a domain address before customers sign up.
+
+## 2026-11-24: pre-launch fixes for bmsclick.com.ng
+
+- Settings has **Details on documents** (address, phone, email, RC number, TIN). They print at
+  the top of every receipt and voucher, and on A4 reports.
+- The rejected and suspended company screens, the sign-in footer and the legal pages show the
+  support email, phone and WhatsApp (`apps/web/src/lib/support.ts`).
+- Public `/privacy` and `/terms` pages, linked from sign-in and sign-up. Drafted for the
+  owner to review; not legal advice.
+- DEPLOYMENT.md §8: custom domain, App Check key domains, email action URL and moving the
+  auth email sender to the domain. Owner steps, not yet done.

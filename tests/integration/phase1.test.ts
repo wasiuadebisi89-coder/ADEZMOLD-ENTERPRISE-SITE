@@ -153,6 +153,38 @@ describe('B. company registration', () => {
       (await db.doc(`users/${admin.uid}/memberships/${companyId}`).get()).get('companyName'),
     ).toBe('Renamed');
   });
+
+  it('B5b saves and clears the details printed on documents', async () => {
+    const admin = await makeUser('owner@example.test');
+    const { companyId } = await createCompany(admin);
+    const contact = {
+      address: ' 12 Allen Avenue, Ikeja ',
+      phone: '08012345678',
+      email: 'Sales@Example.test',
+      rcNumber: 'RC 1445936',
+      taxId: '',
+    };
+    await call('company.updateSettings', { companyId, contact }, admin);
+    expect((await db.doc(`companies/${companyId}`).get()).get('contact')).toEqual({
+      address: '12 Allen Avenue, Ikeja',
+      phone: '08012345678',
+      email: 'sales@example.test',
+      rcNumber: 'RC 1445936',
+      taxId: null,
+    });
+    await expectReason(
+      call('company.updateSettings', { companyId, contact: { ...contact, email: 'nope' } }, admin),
+      'validation_failed',
+    );
+    await call(
+      'company.updateSettings',
+      { companyId, contact: { ...contact, address: '', rcNumber: '' } },
+      admin,
+    );
+    const saved = (await db.doc(`companies/${companyId}`).get()).get('contact');
+    expect(saved.address).toBeNull();
+    expect(saved.rcNumber).toBeNull();
+  });
 });
 
 describe('C5. tenant isolation in commands', () => {

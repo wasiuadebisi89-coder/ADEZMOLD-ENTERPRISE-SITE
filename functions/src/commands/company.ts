@@ -203,6 +203,16 @@ export const updateCompanySettings = defineCommand({
     if (input.baseCurrency !== undefined) companyPatch.baseCurrency = input.baseCurrency;
     if (input.fiscalYearStartMonth !== undefined)
       companyPatch.fiscalYearStartMonth = input.fiscalYearStartMonth;
+    if (input.contact !== undefined) {
+      const c = input.contact;
+      companyPatch.contact = {
+        address: c.address || null,
+        phone: c.phone || null,
+        email: c.email || null,
+        rcNumber: c.rcNumber || null,
+        taxId: c.taxId || null,
+      };
+    }
     const settingsPatch: Partial<SettingsDoc> = {};
     if (input.backdateWindowDays !== undefined)
       settingsPatch.backdateWindowDays = input.backdateWindowDays;
@@ -230,7 +240,7 @@ export const updateCompanySettings = defineCommand({
     }
 
     const pick = <T extends object>(src: T, keys: string[]) =>
-      Object.fromEntries(keys.map((k) => [k, (src as Record<string, unknown>)[k]]));
+      Object.fromEntries(keys.map((k) => [k, (src as Record<string, unknown>)[k] ?? null]));
     return {
       result: { updated: true },
       audit: {

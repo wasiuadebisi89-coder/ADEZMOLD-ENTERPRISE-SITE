@@ -78,8 +78,29 @@ export const createCompanyInput = base.extend({
 });
 export type CreateCompanyInput = z.infer<typeof createCompanyInput>;
 
+/**
+ * Contact and registration details printed on receipts, invoices and reports. The whole block
+ * is replaced on save; an empty field clears that line.
+ */
+export const companyContact = z.object({
+  address: trimmed(0, 300),
+  phone: trimmed(0, 40),
+  email: z
+    .string()
+    .trim()
+    .max(254)
+    .refine((v) => v === '' || z.email().safeParse(v).success, 'Enter a valid email')
+    .transform((v) => v.toLowerCase()),
+  /** CAC registration number, e.g. RC 1445936. */
+  rcNumber: trimmed(0, 40),
+  /** Tax identification number (TIN). */
+  taxId: trimmed(0, 40),
+});
+export type CompanyContact = z.infer<typeof companyContact>;
+
 export const updateCompanySettingsInput = scoped.extend({
   tradingName: trimmed(1, 160).optional(),
+  contact: companyContact.optional(),
   timeZone: timeZone.optional(),
   baseCurrency: z.enum(SUPPORTED_CURRENCY_CODES).optional(),
   fiscalYearStartMonth: z.number().int().min(1).max(12).optional(),

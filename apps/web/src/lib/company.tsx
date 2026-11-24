@@ -5,6 +5,9 @@ import type { CompanyStatus } from '@bms/schemas';
 import { useAuth } from './auth';
 import { db } from './firebase';
 import { useDoc } from './firestore-hooks';
+import type { CompanyContactDetails } from './companyDetails';
+
+export { contactLine, registrationLine, type CompanyContactDetails } from './companyDetails';
 
 export interface Company {
   id: string;
@@ -15,6 +18,8 @@ export interface Company {
   timeZone: string;
   fiscalYearStartMonth: number;
   costingMethod: string;
+  /** Printed on receipts, invoices and reports; set in Settings. */
+  contact?: CompanyContactDetails;
   status: CompanyStatus;
   statusReason?: string | null;
   locks: { baseCurrency: boolean; costingMethod: boolean; fiscalYearStartMonth: boolean };

@@ -87,6 +87,17 @@ export default function SignUp() {
         <Field label="Confirm password" error={errors.confirm?.message}>
           <PasswordInput autoComplete="new-password" {...form.register('confirm')} />
         </Field>
+        <p className="text-xs text-slate-500">
+          By creating an account you agree to the{' '}
+          <Link className="text-brand-700 hover:underline" to="/terms">
+            terms of use
+          </Link>{' '}
+          and{' '}
+          <Link className="text-brand-700 hover:underline" to="/privacy">
+            privacy policy
+          </Link>
+          .
+        </p>
         <Button type="submit" className="w-full" loading={form.formState.isSubmitting}>
           Create account
         </Button>

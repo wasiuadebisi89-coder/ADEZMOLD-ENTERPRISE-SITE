@@ -5,6 +5,8 @@ import { AuthProvider, useAuth } from './lib/auth';
 import { PublicOnly, RequireAuth } from './routes/guards';
 
 const SignIn = lazy(() => import('./routes/auth/SignIn'));
+const Privacy = lazy(() => import('./routes/legal/Privacy'));
+const Terms = lazy(() => import('./routes/legal/Terms'));
 const SignUp = lazy(() => import('./routes/auth/SignUp'));
 const ForgotPassword = lazy(() => import('./routes/auth/ForgotPassword'));
 const VerifyEmail = lazy(() => import('./routes/auth/VerifyEmail'));
@@ -98,6 +100,8 @@ const router = createBrowserRouter([
       </PublicOnly>
     ),
   },
+  { path: '/privacy', element: <Privacy /> },
+  { path: '/terms', element: <Terms /> },
   {
     path: '/forgot-password',
     element: (

@@ -9,7 +9,7 @@ import {
   PrinterError,
   sendToPrinter,
 } from '../lib/bluetoothPrinter';
-import { useCompany } from '../lib/company';
+import { contactLine, registrationLine, useCompany } from '../lib/company';
 import { encodeReceipt } from '../lib/escpos';
 import { db } from '../lib/firebase';
 import { useDoc } from '../lib/firestore-hooks';
@@ -121,6 +121,9 @@ export function useReceiptHeader(
       legalName: company?.legalName ?? null,
       branchName: branch.data?.name ?? null,
       branchAddress: branch.data?.address ?? null,
+      companyAddress: company?.contact?.address ?? null,
+      contactLine: contactLine(company?.contact) || null,
+      registrationLine: registrationLine(company?.contact) || null,
       currency: company?.baseCurrency ?? 'NGN',
       printedAt,
       medium,

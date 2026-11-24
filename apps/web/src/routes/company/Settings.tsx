@@ -8,6 +8,7 @@ import { useCompany, type Company } from '../../lib/company';
 import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { useAction } from '../../lib/useAction';
+import { SUPPORT } from '../../lib/support';
 import { MONTHS, timeZones } from '../CreateCompany';
 
 interface SettingsDocShape {
@@ -65,7 +66,7 @@ function SettingsForm({
           Settings saved.
         </Alert>
       )}
-      <Field label="Legal name" hint="Contact support to change the legal name.">
+      <Field label="Legal name" hint={`To change the legal name, contact ${SUPPORT.email}.`}>
         <Input value={company.legalName} disabled />
       </Field>
       <Field label="Trading name" error={f.tradingName}>
@@ -187,6 +188,84 @@ function SettingsForm({
   );
 }
 
+const CONTACT_FIELDS = [
+  { key: 'address', label: 'Address', hint: 'Printed when a branch has no address of its own.' },
+  { key: 'phone', label: 'Phone', hint: undefined },
+  { key: 'email', label: 'Email', hint: undefined },
+  { key: 'rcNumber', label: 'RC number', hint: 'CAC registration, for example RC 1445936.' },
+  { key: 'taxId', label: 'TIN', hint: 'Tax identification number.' },
+] as const;
+
+/** Address, phone, email, RC and TIN printed on receipts, invoices and reports. */
+function DocumentDetailsForm({ company, canEdit }: { company: Company; canEdit: boolean }) {
+  const { companyId } = useCompany();
+  const action = useAction();
+  const [saved, setSaved] = useState(false);
+  const [values, setValues] = useState({
+    address: company.contact?.address ?? '',
+    phone: company.contact?.phone ?? '',
+    email: company.contact?.email ?? '',
+    rcNumber: company.contact?.rcNumber ?? '',
+    taxId: company.contact?.taxId ?? '',
+  });
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await action.run('company.updateSettings', { companyId, contact: values });
+      setSaved(true);
+    } catch {
+      /* shown below */
+    }
+  };
+  const f = action.error?.fields ?? {};
+  return (
+    <form onSubmit={submit} className="grid gap-4 p-6 sm:grid-cols-2" noValidate>
+      <div className="sm:col-span-2">
+        <h2 className="text-base font-semibold text-slate-900">Details on documents</h2>
+        <p className="text-sm text-slate-500">
+          Shown at the top of receipts, invoices, vouchers and printed reports.
+        </p>
+      </div>
+      {action.error && (
+        <Alert tone="error" className="sm:col-span-2">
+          {action.error.message}
+        </Alert>
+      )}
+      {saved && (
+        <Alert tone="success" className="sm:col-span-2">
+          Details saved.
+        </Alert>
+      )}
+      {CONTACT_FIELDS.map(({ key, label, hint }) => (
+        <Field
+          key={key}
+          label={label}
+          hint={hint}
+          error={f[`contact.${key}`] ?? f[key]}
+          className={key === 'address' ? 'sm:col-span-2' : undefined}
+        >
+          <Input
+            type={key === 'email' ? 'email' : key === 'phone' ? 'tel' : 'text'}
+            value={values[key]}
+            onChange={(e) => {
+              setSaved(false);
+              setValues((s) => ({ ...s, [key]: e.target.value }));
+            }}
+            disabled={!canEdit}
+          />
+        </Field>
+      ))}
+      {canEdit && (
+        <div className="flex justify-end sm:col-span-2">
+          <Button type="submit" loading={action.pending}>
+            Save details
+          </Button>
+        </div>
+      )}
+    </form>
+  );
+}
+
 export default function Settings() {
   const { companyId, company, can } = useCompany();
   const settingsRef = useMemo(
@@ -212,6 +291,11 @@ export default function Settings() {
           </div>
         )}
       </Card>
+      {company && (
+        <Card className="mt-6">
+          <DocumentDetailsForm company={company} canEdit={can('company.settings.update')} />
+        </Card>
+      )}
     </>
   );
 }

@@ -189,3 +189,56 @@ Check, and note the date and result in PROGRESS.md:
 - [ ] Firestore → **Disaster recovery** shows both backup schedules and PITR enabled.
 - [x] The recovery drill in OPERATIONS.md §5 has been run once on staging (2026-11-03).
 - [ ] The budget alert email address is right.
+
+## 8. Custom domain (production: bmsclick.com.ng)
+
+Production answers on `https://bmsclick.com.ng`, with `www.bmsclick.com.ng` redirecting to it.
+`adezmold-bms-prod.web.app` keeps working. Do the steps in this order: step 3 is the one that
+breaks the app if it is skipped, because production enforces App Check and reCAPTCHA refuses
+tokens for domains not on its key, so every save would fail with "unauthenticated" on the new
+domain.
+
+1. **Firebase console → Hosting → Add custom domain** → `bmsclick.com.ng`. Firebase shows DNS
+   records (A records, and a TXT record to prove ownership). Add them at the `.ng` registrar's
+   DNS page, remove any other A or AAAA records on the bare domain, and wait for Firebase to
+   say **Connected** (minutes to a few hours; the SSL certificate can take up to 24 hours).
+2. **Add custom domain** again → `www.bmsclick.com.ng`, tick **Redirect to an existing
+   website** → `bmsclick.com.ng`, and add the records it shows.
+3. **App Check key.** Google Cloud console (project `adezmold-bms-prod`) → **Security →
+   reCAPTCHA** → the web key used by App Check (its id is the `APPCHECK_SITE_KEY` variable) →
+   **Edit key → Domains**: add `bmsclick.com.ng` and `www.bmsclick.com.ng`, keep the
+   `web.app` and `firebaseapp.com` domains, **Update key**. Nothing needs redeploying.
+4. **Authorized domains.** Firebase console → **Authentication → Settings → Authorized
+   domains**: `bmsclick.com.ng` and `www.bmsclick.com.ng` must be listed (done 2026-11-24).
+5. **Links in emails.** Authentication → **Templates** → for _Email address verification_
+   and _Password reset_: pencil icon → **Customize action URL** →
+   `https://bmsclick.com.ng/__/auth/action` → Save. Hosting serves that page on custom
+   domains, so the links in the emails then open on the new domain.
+6. **Check.** Open `https://bmsclick.com.ng` in a private window, sign in, open a company and
+   save something small (for example Settings → Details on documents). Then request a
+   password reset and check the link opens on `bmsclick.com.ng`. If saving fails with
+   "unauthenticated" or "App Check", recheck step 3.
+
+Invitation links need nothing: they use the address the admin is on when they create them.
+
+### Email sender on the domain
+
+Sign-up and password emails still go out through a personal Gmail app password (PROGRESS.md,
+2026-11-03). Before customers sign up, send them from the domain, for example
+`no-reply@bmsclick.com.ng`. Recommended: a transactional mail service with an SMTP relay and a
+free tier, such as Brevo (300 emails a day free).
+
+1. Create the account with the business email, add the sender `no-reply@bmsclick.com.ng`, and
+   **authenticate the domain**: the service shows DKIM and SPF records (TXT/CNAME) and suggests
+   a DMARC record. Add them at the registrar and wait until the service shows the domain as
+   verified. Without these, Gmail and Yahoo send the emails to spam or reject them.
+2. Create an **SMTP key** in the service (not your login password).
+3. Firebase console → **Authentication → Templates → SMTP settings**: sender address
+   `no-reply@bmsclick.com.ng`, sender name `Adezmold BMS`, host and port from the service
+   (Brevo: `smtp-relay.brevo.com`, port 587, STARTTLS), username and the SMTP key → Save.
+   The key stays in the console; never put it in the repository or in chat.
+4. In each template, set **Reply-to** to the support address so replies reach a person.
+5. Request a password reset to a Gmail and an Outlook/Yahoo address and confirm both arrive
+   in the inbox, from `no-reply@bmsclick.com.ng`.
+6. Then remove the Gmail app password: Google account → **Security → App passwords** →
+   delete the one made for Firebase.
