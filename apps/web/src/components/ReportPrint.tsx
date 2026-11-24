@@ -2,7 +2,7 @@ import { Printer } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useAuth } from '../lib/auth';
-import { useCompany } from '../lib/company';
+import { contactLine, registrationLine, useCompany } from '../lib/company';
 import { formatDateTime } from '../lib/utils';
 import { BmsLogo } from '../routes/auth/AuthLayout';
 import { Button } from './ui/button';
@@ -144,6 +144,17 @@ export function ReportPrintHeader({ report }: { report: ReturnType<typeof useRep
             {company && company.tradingName && company.tradingName !== company.legalName && (
               <p className="text-xs text-slate-600">Trading as {company.tradingName}</p>
             )}
+            {[
+              company?.contact?.address,
+              contactLine(company?.contact),
+              registrationLine(company?.contact),
+            ]
+              .filter(Boolean)
+              .map((line) => (
+                <p key={line} className="text-xs text-slate-600">
+                  {line}
+                </p>
+              ))}
           </div>
         </div>
         <div className="text-right">

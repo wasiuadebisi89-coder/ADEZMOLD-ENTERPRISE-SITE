@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router';
+import { supportMailto } from '../../lib/support';
 import {
   ArrowRight,
   BookOpenCheck,
@@ -46,7 +48,7 @@ export function BmsLogo({ className = 'size-8' }: { className?: string }) {
   );
 }
 
-function Brand({ inverted = false }: { inverted?: boolean }) {
+export function Brand({ inverted = false }: { inverted?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
       <BmsLogo className={inverted ? 'size-10 rounded-lg ring-2 ring-gold-400/60' : 'size-9'} />
@@ -215,8 +217,19 @@ export function AuthLayout({
           </Card>
           {footer && <div className="mt-4 text-center text-sm text-slate-600">{footer}</div>}
         </div>
-        <p className="mt-10 text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} Adezmold Enterprise. All rights reserved.
+        <p className="mt-10 text-center text-xs text-slate-500">
+          &copy; {new Date().getFullYear()} Adezmold Enterprise. All rights reserved. ·{' '}
+          <Link className="hover:underline" to="/privacy">
+            Privacy
+          </Link>{' '}
+          ·{' '}
+          <Link className="hover:underline" to="/terms">
+            Terms
+          </Link>{' '}
+          ·{' '}
+          <a className="hover:underline" href={supportMailto()}>
+            Support
+          </a>
         </p>
       </main>
     </div>

@@ -41,6 +41,12 @@ export interface ReceiptHeader {
   legalName?: string | null;
   branchName?: string | null;
   branchAddress?: string | null;
+  /** The company's own address, printed when the branch has none. */
+  companyAddress?: string | null;
+  /** Phone and email, already joined. */
+  contactLine?: string | null;
+  /** RC and TIN, already joined. */
+  registrationLine?: string | null;
   currency: string;
   /** When the receipt is printed, already formatted. */
   printedAt: string;
@@ -156,7 +162,10 @@ function header(h: ReceiptHeader, title: string): ReceiptBlock[] {
   if (h.legalName && h.legalName !== h.tradingName)
     blocks.push({ kind: 'center', text: h.legalName });
   if (h.branchName) blocks.push({ kind: 'center', text: h.branchName });
-  if (h.branchAddress) blocks.push({ kind: 'center', text: h.branchAddress });
+  const address = h.branchAddress || h.companyAddress;
+  if (address) blocks.push({ kind: 'center', text: address });
+  if (h.contactLine) blocks.push({ kind: 'center', text: h.contactLine });
+  if (h.registrationLine) blocks.push({ kind: 'center', text: h.registrationLine });
   blocks.push({ kind: 'rule' }, { kind: 'center', text: title, bold: true }, { kind: 'rule' });
   return blocks;
 }

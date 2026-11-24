@@ -251,3 +251,44 @@ describe('encodeReceipt', () => {
     expect(parts.reduce((n, p) => n + p.length, 0)).toBe(bytes.length);
   });
 });
+
+describe('company details on receipts', () => {
+  const payment = {
+    number: 'RCT-000009',
+    customerId: 'c',
+    customerName: 'Bola Stores',
+    branchId: 'b1',
+    postingDate: '2026-11-06',
+    depositAccountId: 'a',
+    depositAccountName: 'GTBank',
+    amountMinor: 50000,
+    allocatedMinor: 0,
+    reference: null,
+    memo: null,
+    allocations: [],
+    journalId: 'j',
+    postedAt: null as never,
+    postedBy: 'u',
+  };
+  const lines = (h: ReceiptHeader) =>
+    layoutReceipt(customerPaymentReceipt(payment, h), 48).map((r) => r.text.trim());
+
+  it('prints the company address, contact and registration lines', () => {
+    const rows = lines({
+      ...header,
+      branchAddress: null,
+      companyAddress: '5 Broad Street, Lagos',
+      contactLine: '08012345678 · sales@example.test',
+      registrationLine: 'RC 1445936 · TIN 1234-5678',
+    });
+    expect(rows).toContain('5 Broad Street, Lagos');
+    expect(rows).toContain('08012345678 - sales@example.test');
+    expect(rows).toContain('RC 1445936 - TIN 1234-5678');
+  });
+
+  it('prefers the branch address over the company address', () => {
+    const rows = lines({ ...header, companyAddress: '5 Broad Street, Lagos' });
+    expect(rows).toContain('12 Allen Avenue, Ikeja, Lagos');
+    expect(rows).not.toContain('5 Broad Street, Lagos');
+  });
+});

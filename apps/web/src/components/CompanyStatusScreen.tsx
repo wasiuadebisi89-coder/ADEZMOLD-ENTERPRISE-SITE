@@ -2,6 +2,7 @@ import { Clock, ShieldOff, XCircle } from 'lucide-react';
 import { Link } from 'react-router';
 import type { CompanyStatus } from '@bms/schemas';
 import { TopBar } from '../routes/TopBar';
+import { SupportContact } from './SupportContact';
 import { Button } from './ui/button';
 import { Card } from './ui/feedback';
 
@@ -16,13 +17,13 @@ const COPY = {
     Icon: XCircle,
     tone: 'text-red-600',
     title: 'Registration not approved',
-    body: 'This company was not approved. Contact us if you think this is a mistake.',
+    body: 'This company was not approved. Contact us below if you think this is a mistake.',
   },
   suspended: {
     Icon: ShieldOff,
     tone: 'text-slate-600',
     title: 'Company suspended',
-    body: 'This company has been suspended. Your records are safe and nothing has been deleted. Contact us to restore access.',
+    body: 'This company has been suspended. Your records are safe and nothing has been deleted. Contact us below to restore access.',
   },
 } as const;
 
@@ -51,6 +52,7 @@ export function CompanyStatusScreen({
               <span className="font-medium">Reason:</span> {reason}
             </p>
           )}
+          <SupportContact className="mt-5" subject={`${name}: ${title}`} />
           <div className="mt-6 flex justify-center">
             <Button variant="secondary" asChild>
               <Link to="/companies">Back to your companies</Link>

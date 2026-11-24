@@ -24,6 +24,14 @@ export interface CompanyDoc {
   fiscalYearStartMonth: number;
   costingMethod: 'weighted_average' | 'fifo';
   businessTypes: string[];
+  /** Printed on receipts, invoices and reports; set in Settings. Absent until first saved. */
+  contact?: {
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    rcNumber: string | null;
+    taxId: string | null;
+  };
   /**
    * `pending` until the platform owner approves the registration. Only `active` companies can
    * run commands. Companies created before approvals existed are already `active`.
