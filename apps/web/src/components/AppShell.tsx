@@ -40,6 +40,7 @@ import { useAuth } from '../lib/auth';
 import { useCompany } from '../lib/company';
 import { runCommand } from '../lib/api';
 import { cn } from '../lib/utils';
+import { InstallAppButton } from './InstallAppButton';
 
 interface NavItem {
   to: string;
@@ -253,6 +254,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mt-4 flex-1">
           <Nav />
         </div>
+        <InstallAppButton size="sm" variant="ghost" className="mb-1 w-full justify-start" />
         <UserMenu />
       </aside>
 
@@ -297,6 +299,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
               <Nav onNavigate={() => setOpen(false)} />
             </div>
+            <InstallAppButton size="sm" variant="ghost" className="mb-1 w-full justify-start" />
             <UserMenu />
           </div>
         </div>

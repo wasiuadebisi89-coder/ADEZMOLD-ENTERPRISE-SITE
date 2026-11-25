@@ -35,6 +35,10 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/web/public/sw.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
+  {
     // The web app must not import server-only code (docs/bms/adr/0001-monorepo-and-stack.md).
     files: ['apps/web/**/*.{ts,tsx}'],
     rules: {

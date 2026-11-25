@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <title>You are offline · Adezmold BMS</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        background: #f0fdfa;
+        color: #0b3f3b;
+        padding: 16px;
+        box-sizing: border-box;
+      }
+      main {
+        max-width: 22rem;
+        text-align: center;
+        background: #fff;
+        border-top: 4px solid #f5b301;
+        border-radius: 12px;
+        padding: 32px 24px;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+      }
+      svg {
+        width: 56px;
+        height: 56px;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 16px 0 8px;
+      }
+      p {
+        color: #475569;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin: 0 0 20px;
+      }
+      a {
+        display: inline-block;
+        background: #0f766e;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg
+        width="56"
+        height="56"
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 32 32"
+      >
+        <rect width="32" height="32" rx="7" fill="#0f766e" />
+        <text
+          x="16"
+          y="18.5"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="11"
+          font-weight="700"
+          fill="#fff"
+          letter-spacing="0.2"
+        >
+          BMS
+        </text>
+        <rect x="8" y="22" width="16" height="2.5" rx="1.25" fill="#f5b301" />
+      </svg>
+      <h1>You are offline</h1>
+      <p>
+        BMS needs an internet connection to keep your figures up to date. Check your data or Wi-Fi,
+        then try again.
+      </p>
+      <a href="/">Try again</a>
+    </main>
+  </body>
+</html>
