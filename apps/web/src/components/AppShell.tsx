@@ -40,6 +40,7 @@ import { useAuth } from '../lib/auth';
 import { useCompany } from '../lib/company';
 import { runCommand } from '../lib/api';
 import { cn } from '../lib/utils';
+import { HelpButton } from './HelpPanel';
 import { InstallAppButton } from './InstallAppButton';
 
 interface NavItem {
@@ -254,6 +255,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mt-4 flex-1">
           <Nav />
         </div>
+        <HelpButton className="mb-1 w-full justify-start" />
         <InstallAppButton size="sm" variant="ghost" className="mb-1 w-full justify-start" />
         <UserMenu />
       </aside>
@@ -275,6 +277,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="min-w-0 flex-1">
           <CompanyHeader />
         </div>
+        <HelpButton iconOnly />
       </header>
       {open && (
         <div
