@@ -18,6 +18,8 @@ export interface Company {
   timeZone: string;
   fiscalYearStartMonth: number;
   costingMethod: string;
+  /** What the business does; decides which optional menu areas show. See lib/modules.ts. */
+  businessTypes?: string[];
   /** Printed on receipts, invoices and reports; set in Settings. */
   contact?: CompanyContactDetails;
   status: CompanyStatus;

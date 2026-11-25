@@ -1,14 +1,21 @@
 import type { Permission } from '@bms/domain';
+import { pageHidden } from '../modules';
 import { HELP_TOPICS, type HelpTopic } from './topics';
 
-/** Topics this member may read. Company admins read every topic. */
+/**
+ * Topics this member may read. Company admins read every topic. When the company's business
+ * types are given, topics only about areas the company has turned off (such as Production
+ * for a trading company) are left out, matching the menu.
+ */
 export function topicsFor(
   can: (p: Permission) => boolean,
   isAdmin: boolean,
   topics: readonly HelpTopic[] = HELP_TOPICS,
+  businessTypes?: ReadonlySet<string>,
 ): HelpTopic[] {
-  if (isAdmin) return [...topics];
-  return topics.filter((t) => !t.anyOf || t.anyOf.some((p) => can(p)));
+  const inUse = (t: HelpTopic) =>
+    !businessTypes || t.pages.length === 0 || !t.pages.every((p) => pageHidden(p, businessTypes));
+  return topics.filter((t) => inUse(t) && (isAdmin || !t.anyOf || t.anyOf.some((p) => can(p))));
 }
 
 /** The page part of a company URL: `/c/abc/sales/new` -> `sales/new`. */

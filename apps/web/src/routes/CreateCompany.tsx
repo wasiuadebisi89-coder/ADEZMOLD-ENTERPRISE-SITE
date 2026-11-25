@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router';
 import type { z } from 'zod';
 import { SUPPORTED_CURRENCY_CODES } from '@bms/domain';
 import { createCompanyInput } from '@bms/schemas';
+import { BusinessTypePicker } from '../components/BusinessTypes';
 import { Button } from '../components/ui/button';
 import { Alert, Card, PageHeader } from '../components/ui/feedback';
 import { Field, Input, Select } from '../components/ui/form';
@@ -52,6 +53,7 @@ export default function CreateCompany() {
       timeZone: 'Africa/Lagos',
       fiscalYearStartMonth: 1,
       headOffice: { code: 'HQ', name: 'Head office' },
+      businessTypes: ['trading'],
     },
   });
   const errors = form.formState.errors;
@@ -138,6 +140,19 @@ export default function CreateCompany() {
             <Field label="Head office name" error={errors.headOffice?.name?.message}>
               <Input {...form.register('headOffice.name')} />
             </Field>
+            <div className="sm:col-span-2">
+              <p className="mb-1 text-sm font-medium text-slate-800">What does the business do?</p>
+              <p className="mb-2 text-xs text-slate-500">
+                Decides which areas appear in the menu. You can change this later in Settings.
+              </p>
+              <Controller
+                control={form.control}
+                name="businessTypes"
+                render={({ field }) => (
+                  <BusinessTypePicker value={field.value ?? []} onChange={field.onChange} />
+                )}
+              />
+            </div>
             <div className="flex justify-end gap-2 sm:col-span-2">
               <Button variant="secondary" asChild>
                 <Link to="/companies">Cancel</Link>

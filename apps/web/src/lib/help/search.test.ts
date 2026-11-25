@@ -104,3 +104,20 @@ describe('page topics', () => {
     expect(topicsForPage('settings', HELP_TOPICS).map((x) => x.id)).not.toContain('find-your-way');
   });
 });
+
+describe('help topics and business types', () => {
+  const all = () => true;
+  it('hide Projects and Production help for a trading company, even from admins', () => {
+    const shown = topicsFor(all, true, HELP_TOPICS, new Set(['trading'])).map((t) => t.id);
+    expect(shown).not.toContain('production');
+    expect(shown).not.toContain('projects');
+    expect(shown).toContain('new-product');
+  });
+  it('show them once the company does that work', () => {
+    const shown = topicsFor(all, true, HELP_TOPICS, new Set(['trading', 'production'])).map(
+      (t) => t.id,
+    );
+    expect(shown).toContain('production');
+    expect(shown).not.toContain('projects');
+  });
+});

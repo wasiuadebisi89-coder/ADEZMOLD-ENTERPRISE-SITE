@@ -1,174 +1,140 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import {
-  Armchair,
-  BarChart3,
-  BookOpen,
-  Building,
-  CheckSquare,
-  FileText,
-  Factory,
-  FolderKanban,
-  Contact,
-  ClipboardList,
-  ListTree,
-  Scale,
-  CalendarDays,
-  CalendarRange,
-  ChevronsUpDown,
-  HandCoins,
-  History,
-  Landmark,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Package,
-  Percent,
-  Receipt,
-  Settings,
-  ShieldCheck,
-  ShoppingCart,
-  Store,
-  Truck,
-  Users,
-  Wallet,
-  X,
-} from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
-import { Link, NavLink } from 'react-router';
-import type { Permission } from '@bms/domain';
+import { ChevronDown, ChevronsUpDown, LogOut, Menu, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link, NavLink, useLocation } from 'react-router';
 import { useAuth } from '../lib/auth';
 import { useCompany } from '../lib/company';
 import { runCommand } from '../lib/api';
+import { pageOf } from '../lib/help/search';
+import { businessTypesOf } from '../lib/modules';
+import { isGroup, visibleNav, type NavEntry, type NavItem } from '../lib/nav';
 import { cn } from '../lib/utils';
 import { HelpButton } from './HelpPanel';
 import { InstallAppButton } from './InstallAppButton';
 
-interface NavItem {
-  to: string;
-  label: string;
-  icon: typeof LayoutDashboard;
-  /** Shown when the member has any of these. */
-  permission?: Permission | readonly Permission[];
+/** Which group holds the page now open, so it starts expanded. */
+function activeGroupId(entries: readonly NavEntry[], page: string): string | undefined {
+  const matches = (to: string) =>
+    to === '' ? page === '' : page === to || page.startsWith(`${to}/`);
+  return entries.filter(isGroup).find((g) => g.items.some((i) => matches(i.to)))?.id;
 }
 
-const NAV: NavItem[] = [
-  { to: '', label: 'Overview', icon: LayoutDashboard },
-  {
-    to: 'accounts',
-    label: 'Chart of accounts',
-    icon: ListTree,
-    permission: 'ledger.accounts.read',
-  },
-  { to: 'journals', label: 'Journals', icon: BookOpen, permission: 'ledger.journal.read' },
-  {
-    to: 'day-book',
-    label: 'Day book',
-    icon: CalendarDays,
-    permission: ['ledger.journal.read', 'reports.financial.read'],
-  },
-  {
-    to: 'trial-balance',
-    label: 'Trial balance',
-    icon: Scale,
-    permission: 'reports.financial.read',
-  },
-  {
-    to: 'reports',
-    label: 'Reports',
-    icon: BarChart3,
-    permission: ['reports.financial.read', 'reports.stock.read', 'sales.read', 'purchasing.read'],
-  },
-  { to: 'fixed-assets', label: 'Fixed assets', icon: Armchair, permission: 'assets.read' },
-  {
-    to: 'bank-accounts',
-    label: 'Bank accounts',
-    icon: Wallet,
-    permission: 'ledger.accounts.read',
-  },
-  {
-    to: 'bank-reconciliation',
-    label: 'Bank reconciliation',
-    icon: Landmark,
-    permission: ['ledger.bank.reconcile', 'ledger.journal.read'],
-  },
-  { to: 'products', label: 'Products', icon: Package, permission: 'inventory.products.read' },
-  {
-    to: 'stock-adjustments',
-    label: 'Stock adjustments',
-    icon: ClipboardList,
-    permission: 'reports.stock.read',
-  },
-  {
-    to: 'sales/new',
-    label: 'New sale',
-    icon: Store,
-    permission: 'sales.invoice.post',
-  },
-  {
-    to: 'sales',
-    label: 'Sales',
-    icon: Receipt,
-    permission: ['sales.read', 'sales.readOwn'],
-  },
-  {
-    to: 'quotations',
-    label: 'Quotations',
-    icon: FileText,
-    permission: ['sales.read', 'sales.quotation.manage'],
-  },
-  { to: 'projects', label: 'Projects', icon: FolderKanban, permission: 'projects.read' },
-  { to: 'production', label: 'Production', icon: Factory, permission: 'production.read' },
-  {
-    to: 'customers',
-    label: 'Customers',
-    icon: Contact,
-    permission: ['sales.read', 'sales.readOwn', 'sales.invoice.post'],
-  },
-  { to: 'suppliers', label: 'Suppliers', icon: Truck, permission: 'purchasing.read' },
-  { to: 'purchases', label: 'Purchases', icon: ShoppingCart, permission: 'purchasing.read' },
-  { to: 'expenses', label: 'Expenses', icon: HandCoins, permission: 'purchasing.read' },
-  { to: 'approvals', label: 'Approvals', icon: CheckSquare, permission: 'approvals.read' },
-  { to: 'members', label: 'Users', icon: Users, permission: 'company.members.read' },
-  { to: 'roles', label: 'Roles', icon: ShieldCheck, permission: 'company.members.read' },
-  { to: 'branches', label: 'Branches', icon: Building },
-  {
-    to: 'periods',
-    label: 'Financial periods',
-    icon: CalendarRange,
-    permission: 'settings.periods.read',
-  },
-  { to: 'audit', label: 'Audit log', icon: History, permission: 'company.audit.read' },
-  { to: 'tax-codes', label: 'Tax codes', icon: Percent, permission: 'company.settings.read' },
-  { to: 'settings', label: 'Settings', icon: Settings, permission: 'company.settings.read' },
-];
+const OPEN_KEY = 'bms.nav.open';
+
+function readOpen(): string[] {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem(OPEN_KEY) ?? '[]');
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function NavLinkItem({
+  item,
+  companyId,
+  nested,
+  onNavigate,
+}: {
+  item: NavItem;
+  companyId: string;
+  nested?: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <NavLink
+      to={`/c/${companyId}/${item.to}`}
+      end={item.to === '' || item.to === 'sales'}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        cn(
+          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium',
+          nested && 'py-1.5 pl-9',
+          isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 hover:bg-slate-100',
+        )
+      }
+    >
+      {!nested && <item.icon className="size-4" aria-hidden />}
+      {item.label}
+    </NavLink>
+  );
+}
 
 function Nav({ onNavigate }: { onNavigate?: () => void }) {
-  const { companyId, can } = useCompany();
+  const { companyId, can, company } = useCompany();
+  const { pathname } = useLocation();
+  const types = useMemo(() => businessTypesOf(company), [company]);
+  const entries = useMemo(() => visibleNav(can, types), [can, types]);
+  const page = pageOf(pathname);
+  const current = activeGroupId(entries, page);
+  // Headings the member opened (remembered on this device). The heading of the page now open
+  // is also open, unless the member closed it.
+  const [open, setOpen] = useState<string[]>(readOpen);
+  const [closedCurrent, setClosedCurrent] = useState<string | null>(null);
+  const isOpen = (id: string) => open.includes(id) || (id === current && closedCurrent !== current);
+  const toggle = (id: string) => {
+    const next = isOpen(id) ? open.filter((x) => x !== id) : [...open, id];
+    if (id === current) setClosedCurrent(isOpen(id) ? id : null);
+    setOpen(next);
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify(next));
+    } catch {
+      /* the menu still works without remembering */
+    }
+  };
+
   return (
     <nav aria-label="Company" className="space-y-1">
-      {NAV.filter(
-        (item) =>
-          !item.permission ||
-          (typeof item.permission === 'string'
-            ? can(item.permission)
-            : item.permission.some((p) => can(p))),
-      ).map((item) => (
-        <NavLink
-          key={item.label}
-          to={`/c/${companyId}/${item.to}`}
-          end={item.to === '' || item.to === 'sales'}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium',
-              isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 hover:bg-slate-100',
-            )
-          }
-        >
-          <item.icon className="size-4" aria-hidden />
-          {item.label}
-        </NavLink>
-      ))}
+      {entries.map((entry) => {
+        if (!isGroup(entry))
+          return (
+            <NavLinkItem
+              key={entry.to}
+              item={entry}
+              companyId={companyId}
+              onNavigate={onNavigate}
+            />
+          );
+        const expanded = isOpen(entry.id);
+        const panelId = `nav-${entry.id}`;
+        return (
+          <div key={entry.id}>
+            <button
+              type="button"
+              onClick={() => toggle(entry.id)}
+              aria-expanded={expanded}
+              aria-controls={panelId}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium hover:bg-slate-100',
+                entry.id === current && !expanded ? 'text-brand-800' : 'text-slate-700',
+              )}
+            >
+              <entry.icon className="size-4" aria-hidden />
+              <span className="flex-1">{entry.label}</span>
+              <ChevronDown
+                className={cn(
+                  'size-4 text-slate-400 transition-transform',
+                  expanded && 'rotate-180',
+                )}
+                aria-hidden
+              />
+            </button>
+            {expanded && (
+              <div id={panelId} className="mt-0.5 space-y-0.5">
+                {entry.items.map((item) => (
+                  <NavLinkItem
+                    key={item.to}
+                    item={item}
+                    companyId={companyId}
+                    nested
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </nav>
   );
 }
@@ -249,10 +215,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <aside
         data-print-hide
-        className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white p-3 lg:flex"
+        className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-slate-200 bg-white p-3 lg:flex"
       >
         <CompanyHeader />
-        <div className="mt-4 flex-1">
+        {/* The menu scrolls on its own so Help and the user menu stay in view. */}
+        <div className="-mx-1 mt-4 min-h-0 flex-1 overflow-y-auto px-1">
           <Nav />
         </div>
         <HelpButton className="mb-1 w-full justify-start" />
