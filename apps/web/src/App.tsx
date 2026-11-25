@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router';
+import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router';
 import { Spinner } from './components/ui/feedback';
 import { AuthProvider, useAuth } from './lib/auth';
 import { PublicOnly, RequireAuth } from './routes/guards';
+import RouteError from './routes/RouteError';
 
 const SignIn = lazy(() => import('./routes/auth/SignIn'));
 const Privacy = lazy(() => import('./routes/legal/Privacy'));
@@ -83,143 +84,150 @@ function Home() {
 }
 
 const router = createBrowserRouter([
-  { path: '/', element: <Home /> },
   {
-    path: '/sign-in',
-    element: (
-      <PublicOnly>
-        <SignIn />
-      </PublicOnly>
-    ),
-  },
-  {
-    path: '/sign-up',
-    element: (
-      <PublicOnly>
-        <SignUp />
-      </PublicOnly>
-    ),
-  },
-  { path: '/privacy', element: <Privacy /> },
-  { path: '/terms', element: <Terms /> },
-  {
-    path: '/forgot-password',
-    element: (
-      <PublicOnly>
-        <ForgotPassword />
-      </PublicOnly>
-    ),
-  },
-  {
-    path: '/verify-email',
-    element: (
-      <RequireAuth verified={false}>
-        <VerifyEmail />
-      </RequireAuth>
-    ),
-  },
-  {
-    path: '/companies',
-    element: (
-      <RequireAuth>
-        <Companies />
-      </RequireAuth>
-    ),
-  },
-  {
-    path: '/companies/new',
-    element: (
-      <RequireAuth>
-        <CreateCompany />
-      </RequireAuth>
-    ),
-  },
-  {
-    path: '/platform',
-    element: (
-      <RequireAuth>
-        <Platform />
-      </RequireAuth>
-    ),
-  },
-  {
-    path: '/invite/:invitationId',
-    element: (
-      <RequireAuth>
-        <AcceptInvite />
-      </RequireAuth>
-    ),
-  },
-  {
-    path: '/c/:companyId',
-    element: (
-      <RequireAuth>
-        <CompanyLayout />
-      </RequireAuth>
-    ),
+    // Catches errors from every page, including page files missing after a deploy.
+    element: <Outlet />,
+    errorElement: <RouteError />,
     children: [
-      { index: true, element: <Dashboard /> },
-      { path: 'members', element: <Members /> },
-      { path: 'roles', element: <Roles /> },
-      { path: 'branches', element: <Branches /> },
-      { path: 'periods', element: <Periods /> },
-      { path: 'settings', element: <Settings /> },
-      { path: 'audit', element: <AuditLog /> },
-      { path: 'accounts', element: <Accounts /> },
-      { path: 'journals', element: <Journals /> },
-      { path: 'journals/new', element: <NewJournal /> },
-      { path: 'journals/:journalId', element: <JournalDetail /> },
-      { path: 'opening-balances', element: <OpeningBalances /> },
-      { path: 'trial-balance', element: <TrialBalance /> },
-      { path: 'day-book', element: <DayBook /> },
-      { path: 'approvals', element: <Approvals /> },
-      { path: 'products', element: <Products /> },
-      { path: 'products/:productId', element: <ProductDetail /> },
-      { path: 'stock-adjustments', element: <StockAdjustments /> },
-      { path: 'stock-adjustments/new', element: <NewStockAdjustment /> },
-      { path: 'stock-adjustments/:adjustmentId', element: <StockAdjustmentDetail /> },
-      { path: 'suppliers', element: <Suppliers /> },
-      { path: 'suppliers/:supplierId', element: <SupplierDetail /> },
-      { path: 'tax-codes', element: <TaxCodes /> },
-      { path: 'customers', element: <Customers /> },
-      { path: 'customers/:customerId', element: <CustomerDetail /> },
-      { path: 'sales', element: <Sales /> },
-      { path: 'sales/new', element: <NewSale /> },
-      { path: 'sales/invoices/:invoiceId', element: <SalesInvoiceDetail /> },
-      { path: 'sales/receipts/new', element: <NewCustomerReceipt /> },
-      { path: 'sales/receipts/:receiptId', element: <CustomerReceiptDetail /> },
-      { path: 'sales/invoices/:invoiceId/return', element: <NewCreditNote /> },
-      { path: 'sales/returns/:creditNoteId', element: <CreditNoteDetail /> },
-      { path: 'sales/refunds/:refundId', element: <CustomerRefundDetail /> },
-      { path: 'bank-accounts', element: <BankAccounts /> },
-      { path: 'bank-reconciliation', element: <BankReconciliation /> },
-      { path: 'reports', element: <Reports /> },
-      { path: 'fixed-assets', element: <FixedAssets /> },
-      { path: 'fixed-assets/new', element: <NewFixedAsset /> },
-      { path: 'fixed-assets/:assetId', element: <FixedAssetDetail /> },
-      { path: 'projects', element: <Projects /> },
-      { path: 'projects/:projectId', element: <ProjectDetail /> },
-      { path: 'production', element: <Production /> },
-      { path: 'production/boms', element: <Boms /> },
-      { path: 'production/:orderId', element: <ProductionOrderDetail /> },
-      { path: 'quotations', element: <Quotations /> },
-      { path: 'quotations/new', element: <NewQuotation /> },
-      { path: 'quotations/:quotationId', element: <QuotationDetail /> },
-      { path: 'expenses', element: <Expenses /> },
-      { path: 'expenses/new', element: <NewExpense /> },
-      { path: 'expenses/:expenseId', element: <ExpenseDetail /> },
-      { path: 'purchases', element: <Purchases /> },
-      { path: 'purchases/receipts/new', element: <NewGoodsReceipt /> },
-      { path: 'purchases/receipts/:receiptId', element: <GoodsReceiptDetail /> },
-      { path: 'purchases/invoices/new', element: <NewPurchaseInvoice /> },
-      { path: 'purchases/invoices/:invoiceId', element: <PurchaseInvoiceDetail /> },
-      { path: 'purchases/payments/new', element: <NewSupplierPayment /> },
-      { path: 'purchases/payments/:paymentId', element: <SupplierPaymentDetail /> },
-      { path: 'purchases/returns/new', element: <NewSupplierReturn /> },
-      { path: 'purchases/returns/:returnId', element: <SupplierReturnDetail /> },
+      { path: '/', element: <Home /> },
+      {
+        path: '/sign-in',
+        element: (
+          <PublicOnly>
+            <SignIn />
+          </PublicOnly>
+        ),
+      },
+      {
+        path: '/sign-up',
+        element: (
+          <PublicOnly>
+            <SignUp />
+          </PublicOnly>
+        ),
+      },
+      { path: '/privacy', element: <Privacy /> },
+      { path: '/terms', element: <Terms /> },
+      {
+        path: '/forgot-password',
+        element: (
+          <PublicOnly>
+            <ForgotPassword />
+          </PublicOnly>
+        ),
+      },
+      {
+        path: '/verify-email',
+        element: (
+          <RequireAuth verified={false}>
+            <VerifyEmail />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/companies',
+        element: (
+          <RequireAuth>
+            <Companies />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/companies/new',
+        element: (
+          <RequireAuth>
+            <CreateCompany />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/platform',
+        element: (
+          <RequireAuth>
+            <Platform />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/invite/:invitationId',
+        element: (
+          <RequireAuth>
+            <AcceptInvite />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/c/:companyId',
+        element: (
+          <RequireAuth>
+            <CompanyLayout />
+          </RequireAuth>
+        ),
+        children: [
+          { index: true, element: <Dashboard /> },
+          { path: 'members', element: <Members /> },
+          { path: 'roles', element: <Roles /> },
+          { path: 'branches', element: <Branches /> },
+          { path: 'periods', element: <Periods /> },
+          { path: 'settings', element: <Settings /> },
+          { path: 'audit', element: <AuditLog /> },
+          { path: 'accounts', element: <Accounts /> },
+          { path: 'journals', element: <Journals /> },
+          { path: 'journals/new', element: <NewJournal /> },
+          { path: 'journals/:journalId', element: <JournalDetail /> },
+          { path: 'opening-balances', element: <OpeningBalances /> },
+          { path: 'trial-balance', element: <TrialBalance /> },
+          { path: 'day-book', element: <DayBook /> },
+          { path: 'approvals', element: <Approvals /> },
+          { path: 'products', element: <Products /> },
+          { path: 'products/:productId', element: <ProductDetail /> },
+          { path: 'stock-adjustments', element: <StockAdjustments /> },
+          { path: 'stock-adjustments/new', element: <NewStockAdjustment /> },
+          { path: 'stock-adjustments/:adjustmentId', element: <StockAdjustmentDetail /> },
+          { path: 'suppliers', element: <Suppliers /> },
+          { path: 'suppliers/:supplierId', element: <SupplierDetail /> },
+          { path: 'tax-codes', element: <TaxCodes /> },
+          { path: 'customers', element: <Customers /> },
+          { path: 'customers/:customerId', element: <CustomerDetail /> },
+          { path: 'sales', element: <Sales /> },
+          { path: 'sales/new', element: <NewSale /> },
+          { path: 'sales/invoices/:invoiceId', element: <SalesInvoiceDetail /> },
+          { path: 'sales/receipts/new', element: <NewCustomerReceipt /> },
+          { path: 'sales/receipts/:receiptId', element: <CustomerReceiptDetail /> },
+          { path: 'sales/invoices/:invoiceId/return', element: <NewCreditNote /> },
+          { path: 'sales/returns/:creditNoteId', element: <CreditNoteDetail /> },
+          { path: 'sales/refunds/:refundId', element: <CustomerRefundDetail /> },
+          { path: 'bank-accounts', element: <BankAccounts /> },
+          { path: 'bank-reconciliation', element: <BankReconciliation /> },
+          { path: 'reports', element: <Reports /> },
+          { path: 'fixed-assets', element: <FixedAssets /> },
+          { path: 'fixed-assets/new', element: <NewFixedAsset /> },
+          { path: 'fixed-assets/:assetId', element: <FixedAssetDetail /> },
+          { path: 'projects', element: <Projects /> },
+          { path: 'projects/:projectId', element: <ProjectDetail /> },
+          { path: 'production', element: <Production /> },
+          { path: 'production/boms', element: <Boms /> },
+          { path: 'production/:orderId', element: <ProductionOrderDetail /> },
+          { path: 'quotations', element: <Quotations /> },
+          { path: 'quotations/new', element: <NewQuotation /> },
+          { path: 'quotations/:quotationId', element: <QuotationDetail /> },
+          { path: 'expenses', element: <Expenses /> },
+          { path: 'expenses/new', element: <NewExpense /> },
+          { path: 'expenses/:expenseId', element: <ExpenseDetail /> },
+          { path: 'purchases', element: <Purchases /> },
+          { path: 'purchases/receipts/new', element: <NewGoodsReceipt /> },
+          { path: 'purchases/receipts/:receiptId', element: <GoodsReceiptDetail /> },
+          { path: 'purchases/invoices/new', element: <NewPurchaseInvoice /> },
+          { path: 'purchases/invoices/:invoiceId', element: <PurchaseInvoiceDetail /> },
+          { path: 'purchases/payments/new', element: <NewSupplierPayment /> },
+          { path: 'purchases/payments/:paymentId', element: <SupplierPaymentDetail /> },
+          { path: 'purchases/returns/new', element: <NewSupplierReturn /> },
+          { path: 'purchases/returns/:returnId', element: <SupplierReturnDetail /> },
+        ],
+      },
+      { path: '*', element: <NotFound /> },
     ],
   },
-  { path: '*', element: <NotFound /> },
 ]);
 
 export default function App() {
