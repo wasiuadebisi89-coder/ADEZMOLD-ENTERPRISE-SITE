@@ -63,6 +63,15 @@
         ]
       },
       {
+        "source": "/{sw.js,manifest.webmanifest,offline.html}",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
         "source": "{/,/index.html,**/!(*.*)}",
         "headers": [
           {

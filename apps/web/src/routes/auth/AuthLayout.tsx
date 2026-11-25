@@ -13,6 +13,7 @@ import {
   Truck,
 } from 'lucide-react';
 import { Card } from '../../components/ui/feedback';
+import { InstallAppButton } from '../../components/InstallAppButton';
 
 /** Modules around the ledger, clockwise from the top. */
 const modules = [
@@ -216,6 +217,7 @@ export function AuthLayout({
             <div className="mt-6">{children}</div>
           </Card>
           {footer && <div className="mt-4 text-center text-sm text-slate-600">{footer}</div>}
+          <InstallAppButton className="mt-6 w-full" label="Install the BMS app on this device" />
         </div>
         <p className="mt-10 text-center text-xs text-slate-500">
           &copy; {new Date().getFullYear()} Adezmold Enterprise. All rights reserved. ·{' '}

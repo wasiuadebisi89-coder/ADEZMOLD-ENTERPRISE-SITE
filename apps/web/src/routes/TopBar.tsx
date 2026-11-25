@@ -1,5 +1,6 @@
 import { LayoutDashboard, LogOut } from 'lucide-react';
 import { Link } from 'react-router';
+import { InstallAppButton } from '../components/InstallAppButton';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../lib/auth';
 import { usePlatformAdmin } from '../lib/platform';
@@ -22,6 +23,7 @@ export function TopBar() {
               </Link>
             </Button>
           )}
+          <InstallAppButton size="sm" variant="ghost" />
           <span className="hidden sm:inline">{user?.email}</span>
           <Button variant="ghost" size="sm" onClick={() => void signOut()}>
             <LogOut className="size-4" aria-hidden /> Sign out
