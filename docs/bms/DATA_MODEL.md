@@ -38,7 +38,7 @@ companies/{companyId}                ★ legalName, tradingName, country, baseCu
                                        status (pending|active|rejected|suspended), registrant,
                                        statusReason, statusChangedAt/By,
                                        costingMethod (locked after first stock posting),
-                                       businessTypes: ['trading'] (later 'services','production')
+                                       businessTypes: ['trading', +'services', +'production'] (menu only)
   branches/{branchId}                ★ code, name, address, status, isHeadOffice
   members/{uid}                      ★ email, displayName, status (active|suspended|removed),
                                        roleIds[], branchScope ('all' | branchIds[]),

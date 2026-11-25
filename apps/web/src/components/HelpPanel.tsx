@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, CircleHelp, Lightbulb, Search } from 'lucide-rea
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useCompany } from '../lib/company';
+import { businessTypesOf } from '../lib/modules';
 import { pageOf, searchTopics, topicsFor, topicsForPage } from '../lib/help/search';
 import { HELP_TOPICS, type HelpTopic } from '../lib/help/topics';
 import { cn } from '../lib/utils';
@@ -135,13 +136,14 @@ export function HelpDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { companyId, can, member } = useCompany();
+  const { companyId, can, member, company } = useCompany();
   const { pathname } = useLocation();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<HelpTopic | null>(null);
 
   const isAdmin = member?.roleIds?.includes(ADMIN_ROLE) ?? false;
-  const mine = useMemo(() => topicsFor(can, isAdmin), [can, isAdmin]);
+  const types = useMemo(() => businessTypesOf(company), [company]);
+  const mine = useMemo(() => topicsFor(can, isAdmin, HELP_TOPICS, types), [can, isAdmin, types]);
   const page = pageOf(pathname);
   const here = useMemo(() => topicsForPage(page, mine).slice(0, 6), [page, mine]);
   const popular = useMemo(
@@ -150,8 +152,11 @@ export function HelpDialog({
   );
   const results = useMemo(() => searchTopics(query, mine).slice(0, 8), [query, mine]);
   // Only says that something exists outside the member's role, never what it is.
-  const outsideRole =
-    query.trim() !== '' && results.length === 0 && searchTopics(query, HELP_TOPICS).length > 0;
+  const noResults = query.trim() !== '' && results.length === 0;
+  const inUse = useMemo(() => topicsFor(() => true, true, HELP_TOPICS, types), [types]);
+  const outsideRole = noResults && searchTopics(query, inUse).length > 0;
+  // An area the company has turned off in Settings, such as Production for a trading company.
+  const turnedOff = noResults && !outsideRole && searchTopics(query, HELP_TOPICS).length > 0;
 
   const close = () => onOpenChange(false);
   const change = (next: boolean) => {
@@ -180,6 +185,11 @@ export function HelpDialog({
         <div className="rounded-md bg-slate-50 p-4 text-sm text-slate-700">
           {outsideRole ? (
             <p>That task isn’t part of your role. Ask your Company Admin if you need it.</p>
+          ) : turnedOff ? (
+            <p>
+              That area is turned off for this company. A Company Admin can turn it on in Settings,
+              under What the business does.
+            </p>
           ) : (
             <p>No help found for that. Try other words, such as “sale”, “receipt” or “stock”.</p>
           )}

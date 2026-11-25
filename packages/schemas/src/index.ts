@@ -64,6 +64,17 @@ const scoped = base.extend({ companyId });
 
 // --- Company -------------------------------------------------------------------------------
 
+/**
+ * What the business does. Buying and selling goods ('trading') is always on; 'services' adds
+ * Projects and 'production' adds Production to the menu. It only shapes the menu and help.
+ */
+export const BUSINESS_TYPES = ['trading', 'services', 'production'] as const;
+export type BusinessType = (typeof BUSINESS_TYPES)[number];
+export const businessTypes = z
+  .array(z.enum(BUSINESS_TYPES))
+  .max(BUSINESS_TYPES.length)
+  .transform((v): BusinessType[] => BUSINESS_TYPES.filter((t) => t === 'trading' || v.includes(t)));
+
 export const createCompanyInput = base.extend({
   legalName: trimmed(2, 160),
   tradingName: optionalText(160),
@@ -75,6 +86,7 @@ export const createCompanyInput = base.extend({
     code: branchCode,
     name: trimmed(1, 120),
   }),
+  businessTypes: businessTypes.optional(),
 });
 export type CreateCompanyInput = z.infer<typeof createCompanyInput>;
 
@@ -108,6 +120,7 @@ export const updateCompanySettingsInput = scoped.extend({
   costingMethod: z.enum(['weighted_average', 'fifo']).optional(),
   /** DECISION 9: whether sale prices include tax. Applies to sales posted afterwards. */
   pricesIncludeTax: z.boolean().optional(),
+  businessTypes: businessTypes.optional(),
 });
 export type UpdateCompanySettingsInput = z.infer<typeof updateCompanySettingsInput>;
 

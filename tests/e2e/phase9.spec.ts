@@ -20,11 +20,20 @@ const nav = (page: Page, name: string) =>
     .getByRole('link', { name, exact: true })
     .click();
 
+/** Projects and Production show only for companies that say they do that kind of work. */
+async function turnOn(page: Page, companyId: string, area: RegExp) {
+  await page.goto(`/c/${companyId}/settings`);
+  await page.getByRole('checkbox', { name: area }).check();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Saved. The menu has been updated.')).toBeVisible();
+}
+
 test('S1 a service is quoted, invoiced from the quote and shows in its project', async ({
   page,
 }) => {
   await signUp(page, 'Ada Owner', 'owner@example.test');
   const companyId = await createCompany(page);
+  await turnOn(page, companyId, /Services and projects/);
 
   await page.goto(`/c/${companyId}/products`);
   await page.getByRole('button', { name: 'New product' }).click();
@@ -77,6 +86,7 @@ test('S1 a service is quoted, invoiced from the quote and shows in its project',
 test('P1 materials and labour become finished goods at actual cost', async ({ page }) => {
   await signUp(page, 'Ada Owner', 'owner@example.test');
   const companyId = await createCompany(page);
+  await turnOn(page, companyId, /Production/);
   await fundMoneyAccounts(companyId);
   await stockedRice(page, companyId);
 

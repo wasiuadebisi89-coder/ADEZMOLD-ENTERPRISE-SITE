@@ -185,6 +185,25 @@ describe('B. company registration', () => {
     expect(saved.address).toBeNull();
     expect(saved.rcNumber).toBeNull();
   });
+
+  it('B5c records what the business does, always keeping trading', async () => {
+    const admin = await makeUser('owner@example.test');
+    const { companyId } = await createCompany(admin);
+    const types = async () => (await db.doc(`companies/${companyId}`).get()).get('businessTypes');
+    expect(await types()).toEqual(['trading']);
+    await call('company.updateSettings', { companyId, businessTypes: ['production'] }, admin);
+    expect(await types()).toEqual(['trading', 'production']);
+    await expectReason(
+      call('company.updateSettings', { companyId, businessTypes: ['farming'] }, admin),
+      'validation_failed',
+    );
+    const sales = await makeUser('sales@example.test');
+    await addMember(companyId, admin, sales, ['sales_officer']);
+    await expectReason(
+      call('company.updateSettings', { companyId, businessTypes: ['services'] }, sales),
+      'missing_permission',
+    );
+  });
 });
 
 describe('C5. tenant isolation in commands', () => {

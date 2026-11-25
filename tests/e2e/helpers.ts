@@ -37,6 +37,29 @@ export async function verifyEmail(email: string): Promise<void> {
   expect(res.ok).toBe(true);
 }
 
+/**
+ * Opens every menu heading on this page's device, as if the member had clicked each one, so
+ * tests can click any menu link. Menu-specific tests set the remembered state themselves.
+ */
+export async function openAllMenus(page: Page) {
+  await page.addInitScript(() => {
+    const key = 'bms.nav.open';
+    if (localStorage.getItem(key) === null)
+      localStorage.setItem(
+        key,
+        JSON.stringify([
+          'sales',
+          'purchasing',
+          'stock',
+          'operations',
+          'accounting',
+          'reports',
+          'company',
+        ]),
+      );
+  });
+}
+
 export async function signUp(
   page: Page,
   name: string,
@@ -44,6 +67,7 @@ export async function signUp(
   password = 'CorrectHorse9!',
   next?: string,
 ) {
+  await openAllMenus(page);
   await page.goto(next ? `/sign-up?next=${encodeURIComponent(next)}` : '/sign-up');
   await page.getByLabel('Your name').fill(name);
   await page.getByLabel('Email').fill(email);

@@ -36,7 +36,7 @@ export const createCompany = defineCommand({
       timeZone: input.timeZone,
       fiscalYearStartMonth: input.fiscalYearStartMonth,
       costingMethod: 'weighted_average',
-      businessTypes: ['trading'],
+      businessTypes: input.businessTypes ?? ['trading'],
       status,
       registrant: {
         uid: caller.uid,
@@ -203,6 +203,7 @@ export const updateCompanySettings = defineCommand({
     if (input.baseCurrency !== undefined) companyPatch.baseCurrency = input.baseCurrency;
     if (input.fiscalYearStartMonth !== undefined)
       companyPatch.fiscalYearStartMonth = input.fiscalYearStartMonth;
+    if (input.businessTypes !== undefined) companyPatch.businessTypes = input.businessTypes;
     if (input.contact !== undefined) {
       const c = input.contact;
       companyPatch.contact = {

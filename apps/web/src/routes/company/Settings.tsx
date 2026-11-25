@@ -1,10 +1,13 @@
 import { doc } from 'firebase/firestore';
 import { useMemo, useState } from 'react';
 import { SUPPORTED_CURRENCY_CODES } from '@bms/domain';
+import { BUSINESS_TYPES } from '@bms/schemas';
 import { Button } from '../../components/ui/button';
 import { Alert, Card, PageHeader, Spinner } from '../../components/ui/feedback';
 import { Field, Input, Select } from '../../components/ui/form';
+import { BusinessTypePicker } from '../../components/BusinessTypes';
 import { useCompany, type Company } from '../../lib/company';
+import { businessTypesOf } from '../../lib/modules';
 import { db } from '../../lib/firebase';
 import { useDoc } from '../../lib/firestore-hooks';
 import { useAction } from '../../lib/useAction';
@@ -188,6 +191,54 @@ function SettingsForm({
   );
 }
 
+/** What the business does, which decides whether Projects and Production show in the menu. */
+function BusinessTypesForm({ company, canEdit }: { company: Company; canEdit: boolean }) {
+  const { companyId } = useCompany();
+  const action = useAction();
+  const [saved, setSaved] = useState(false);
+  const [types, setTypes] = useState<string[]>(() => [...businessTypesOf(company)]);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await action.run('company.updateSettings', {
+        companyId,
+        businessTypes: BUSINESS_TYPES.filter((t) => types.includes(t)),
+      });
+      setSaved(true);
+    } catch {
+      /* shown below */
+    }
+  };
+  return (
+    <form onSubmit={submit} className="grid gap-4 p-6" noValidate>
+      <div>
+        <h2 className="text-base font-semibold text-slate-900">What the business does</h2>
+        <p className="text-sm text-slate-500">
+          Keeps the menu short: areas the business doesn’t use are hidden for everyone. Turning an
+          area off hides it from the menu only; nothing recorded there is deleted.
+        </p>
+      </div>
+      {action.error && <Alert tone="error">{action.error.message}</Alert>}
+      {saved && <Alert tone="success">Saved. The menu has been updated.</Alert>}
+      <BusinessTypePicker
+        value={types}
+        onChange={(next) => {
+          setSaved(false);
+          setTypes(next);
+        }}
+        disabled={!canEdit}
+      />
+      {canEdit && (
+        <div className="flex justify-end">
+          <Button type="submit" loading={action.pending}>
+            Save
+          </Button>
+        </div>
+      )}
+    </form>
+  );
+}
+
 const CONTACT_FIELDS = [
   { key: 'address', label: 'Address', hint: 'Printed when a branch has no address of its own.' },
   { key: 'phone', label: 'Phone', hint: undefined },
@@ -291,6 +342,11 @@ export default function Settings() {
           </div>
         )}
       </Card>
+      {company && (
+        <Card className="mt-6">
+          <BusinessTypesForm company={company} canEdit={can('company.settings.update')} />
+        </Card>
+      )}
       {company && (
         <Card className="mt-6">
           <DocumentDetailsForm company={company} canEdit={can('company.settings.update')} />
